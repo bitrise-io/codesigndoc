@@ -19,6 +19,8 @@ const (
 
 	// FileParamKey ...
 	FileParamKey = "file"
+	// SchemeParamKey ...
+	SchemeParamKey = "scheme"
 )
 
 var (
@@ -31,7 +33,12 @@ var (
 				cli.StringFlag{
 					Name:  FileParamKey,
 					Value: "",
-					Usage: "Xcode Project/Workspace file to scan",
+					Usage: "Xcode Project/Workspace file",
+				},
+				cli.StringFlag{
+					Name:  SchemeParamKey,
+					Value: "",
+					Usage: "Xcode Scheme",
 				},
 			},
 		},

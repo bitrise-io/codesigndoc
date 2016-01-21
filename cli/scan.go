@@ -31,20 +31,24 @@ func scan(c *cli.Context) {
 		ProjectFilePath: projectPath,
 	}
 
-	log.Println("Scanning Schemes ...")
-	schemes, err := xcodeCmd.ScanSchemes()
-	if err != nil {
-		log.Fatalf("Failed to scan Schemes: %s", err)
-	}
-	log.Debugf("schemes: %v", schemes)
+	schemeToUse := c.String(SchemeParamKey)
+	if schemeToUse == "" {
+		log.Println("Scanning Schemes ...")
+		schemes, err := xcodeCmd.ScanSchemes()
+		if err != nil {
+			log.Fatalf("Failed to scan Schemes: %s", err)
+		}
+		log.Debugf("schemes: %v", schemes)
 
-	fmt.Println()
-	selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
-	if err != nil {
-		log.Fatalf("Failed to select Scheme: %s", err)
+		fmt.Println()
+		selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
+		if err != nil {
+			log.Fatalf("Failed to select Scheme: %s", err)
+		}
+		log.Debugf("selected scheme: %v", selectedScheme)
+		schemeToUse = selectedScheme
 	}
-	log.Debugf("selected scheme: %v", selectedScheme)
-	xcodeCmd.Scheme = selectedScheme
+	xcodeCmd.Scheme = schemeToUse
 
 	fmt.Println()
 	fmt.Println("Running an Xcode Archive, to get all the required code signing settings...")
