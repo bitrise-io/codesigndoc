@@ -75,11 +75,11 @@ func AskForBool(messageToPrint string) (bool, error) {
 // SelectFromStringsFromReader ...
 func SelectFromStringsFromReader(messageToPrint string, options []string, inputReader io.Reader) (string, error) {
 	fmt.Printf("%s\n", messageToPrint)
-	fmt.Println("Please select from the list (type in the option's number, then hit Enter):")
+	fmt.Println("Please select from the list:")
 	for idx, anOption := range options {
-		fmt.Printf("%d : %s\n", idx+1, anOption)
+		fmt.Printf("[%d] : %s\n", idx+1, anOption)
 	}
-	selectedOptionNum, err := AskForIntFromReader("", inputReader)
+	selectedOptionNum, err := AskForIntFromReader("(type in the option's number, then hit Enter)", inputReader)
 	if err != nil {
 		return "", err
 	}

@@ -33,7 +33,7 @@ func scan(c *cli.Context) {
 
 	schemeToUse := c.String(SchemeParamKey)
 	if schemeToUse == "" {
-		log.Println("Scanning Schemes ...")
+		log.Println("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
 			log.Fatalf("Failed to scan Schemes: %s", err)
@@ -51,8 +51,10 @@ func scan(c *cli.Context) {
 	xcodeCmd.Scheme = schemeToUse
 
 	fmt.Println()
-	fmt.Println("Running an Xcode Archive, to get all the required code signing settings...")
-	if err := xcodeCmd.ScanCodeSigningSettings(); err != nil {
+	log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
+	codeSigningSettings, err := xcodeCmd.ScanCodeSigningSettings()
+	if err != nil {
 		log.Fatalf("Failed to detect code signing settings: %s", err)
 	}
+	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 }

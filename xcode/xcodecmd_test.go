@@ -3,6 +3,7 @@ package xcode
 import (
 	"testing"
 
+	"github.com/bitrise-io/go-utils/testutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,4 +23,62 @@ func Test_parseSchemesFromXcodeOutput(t *testing.T) {
         SampleAppWithCocoapods`
 	parsedSchemes := parseSchemesFromXcodeOutput(xcout)
 	require.Equal(t, []string{"SampleAppWithCocoapods"}, parsedSchemes)
+}
+
+func Test_parseCodeSigningSettingsFromXcodeOutput(t *testing.T) {
+	t.Log("A single Identity & Prov Profile")
+	{
+		xcout := `CodeSign /Users/bitrise/Library/...
+    cd /Users/...
+    export CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/codesign_allocate
+    export PATH="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform...
+
+Signing Identity:     "iPhone Developer: First Last (F72Z82XD37)"
+Provisioning Profile: "Prov Profile 42"
+                      (87af6d83-cb65-4dbe-aee7-f97a87d6fec1)
+
+    /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
+
+		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
+		require.Equal(t, []CodeSigningIdentityInfo{
+			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+		}, parsedCodeSigningSettings.Identities)
+		require.Equal(t, []ProvisioningProfileInfo{
+			ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		}, parsedCodeSigningSettings.ProvProfiles)
+	}
+
+	t.Log("Multiple Identity & Prov Profiles")
+	{
+		xcout := `CodeSign /Users/bitrise/Library/...
+    cd /Users/...
+    export CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/codesign_allocate
+    export PATH="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform...
+
+Signing Identity:     "iPhone Developer: First Last (F72Z82XD37)"
+Provisioning Profile: "Prov Profile 42"
+                      (87af6d83-cb65-4dbe-aee7-f97a87d6fec1)
+
+    /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...
+CodeSign /Users/bitrise/Library/...
+    cd /Users/...
+    export CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/codesign_allocate
+    export PATH="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform...
+
+Signing Identity:     "iPhone Distribution: BFirst BLast (B72Z82XD37)"
+Provisioning Profile: "Prov Profile 43"
+                      (97af6d83-cb65-4dbe-aee7-f97a87d6fec1)
+
+    /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
+
+		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
+		testutil.EqualSlicesWithoutOrder(t, []CodeSigningIdentityInfo{
+			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+			CodeSigningIdentityInfo{Title: "iPhone Distribution: BFirst BLast (B72Z82XD37)"},
+		}, parsedCodeSigningSettings.Identities)
+		testutil.EqualSlicesWithoutOrder(t, []ProvisioningProfileInfo{
+			ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+			ProvisioningProfileInfo{Title: "Prov Profile 43", UUID: "97af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		}, parsedCodeSigningSettings.ProvProfiles)
+	}
 }

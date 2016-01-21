@@ -12,27 +12,31 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/builtinutil",
-			"Rev": "b28e3fadff5e73bb462d2bf437a8f9f604f0e6c3"
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/cmdex",
-			"Rev": "b28e3fadff5e73bb462d2bf437a8f9f604f0e6c3"
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/colorstring",
-			"Rev": "b28e3fadff5e73bb462d2bf437a8f9f604f0e6c3"
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/pathutil",
-			"Rev": "b28e3fadff5e73bb462d2bf437a8f9f604f0e6c3"
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
+		},
+		{
+			"ImportPath": "github.com/bitrise-io/go-utils/regexputil",
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/testutil",
-			"Rev": "b28e3fadff5e73bb462d2bf437a8f9f604f0e6c3"
+			"Rev": "873d35c6b6e0db94f60666a966b732b1ff6c6aa2"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/goinp/goinp",
-			"Rev": "64616810fb5437d716016b96cb6830a0fe520940"
+			"Rev": "0bf138e4604aee59e6ba7c6f1fa4ea4db3647fd2"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",

@@ -8,6 +8,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/regexputil"
 )
 
 // CommandModel ...
@@ -15,6 +16,23 @@ type CommandModel struct {
 	// ProjectFilePath - might be a `xcodeproj` or `xcworkspace`
 	ProjectFilePath string
 	Scheme          string
+}
+
+// CodeSigningIdentityInfo ...
+type CodeSigningIdentityInfo struct {
+	Title string
+}
+
+// ProvisioningProfileInfo ...
+type ProvisioningProfileInfo struct {
+	Title string
+	UUID  string
+}
+
+// CodeSigningSettings ...
+type CodeSigningSettings struct {
+	Identities   []CodeSigningIdentityInfo
+	ProvProfiles []ProvisioningProfileInfo
 }
 
 func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
@@ -34,28 +52,74 @@ func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
 	return foundSchemes
 }
 
-func findCodeSigningSettingsFromXcodeOutput(xcodeOutput string) {
+func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSettings {
 	scanner := bufio.NewScanner(strings.NewReader(xcodeOutput))
 
+	identitiesMap := map[string]CodeSigningIdentityInfo{}
+	provProfilesMap := map[string]ProvisioningProfileInfo{}
 	for scanner.Scan() {
 		line := scanner.Text()
-		if regexp.MustCompile(`^[ ]*Signing Identity: .*`).MatchString(line) {
+
+		// Signing Identity
+		if rexp := regexp.MustCompile(`^[ ]*Signing Identity:[ ]*"(?P<title>.+)"`); rexp.MatchString(line) {
 			fmt.Println("-> line: ", line)
+			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
+			if err != nil {
+				log.Errorf("Failed to scan Signing Identity title: %s", err)
+				continue
+			}
+			codeSigningID := CodeSigningIdentityInfo{Title: results["title"]}
+			identitiesMap[codeSigningID.Title] = codeSigningID
 		}
-		if regexp.MustCompile(`^[ ]*Provisioning Profile: .*`).MatchString(line) {
+		// Prov. Profile - title line
+		if rexp := regexp.MustCompile(`^[ ]*Provisioning Profile:[ ]*"(?P<title>.+)"`); rexp.MatchString(line) {
 			fmt.Println("-> line: ", line)
+			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
+			if err != nil {
+				log.Errorf("Failed to scan Provisioning Profile title: %s", err)
+				continue
+			}
+			tmpProvProfile := ProvisioningProfileInfo{Title: results["title"]}
+			if !scanner.Scan() {
+				log.Error("Failed to scan Provisioning Profile UUID: no more lines to scan")
+				continue
+			}
+			provProfileUUIDLine := scanner.Text()
+
+			rexp = regexp.MustCompile(`^[ ]*\((?P<uuid>[a-zA-Z0-9-]{36})\)`)
+			results, err = regexputil.NamedFindStringSubmatch(rexp, provProfileUUIDLine)
+			if err != nil {
+				log.Errorf("Failed to scan Provisioning Profile UUID: %s | line was: %s", err, provProfileUUIDLine)
+				continue
+			}
+			tmpProvProfile.UUID = results["uuid"]
+			provProfilesMap[tmpProvProfile.Title] = tmpProvProfile
 		}
+	}
+
+	identities := []CodeSigningIdentityInfo{}
+	for _, v := range identitiesMap {
+		identities = append(identities, v)
+	}
+	provProfiles := []ProvisioningProfileInfo{}
+	for _, v := range provProfilesMap {
+		provProfiles = append(provProfiles, v)
+	}
+
+	return CodeSigningSettings{
+		Identities:   identities,
+		ProvProfiles: provProfiles,
 	}
 }
 
 // ScanCodeSigningSettings ...
-func (xccmd CommandModel) ScanCodeSigningSettings() error {
+func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, error) {
 	xcoutput, err := xccmd.RunXcodebuildCommand("clean", "archive")
 	if err != nil {
-		return fmt.Errorf("Failed to Archive: %s | full output: %s", err, xcoutput)
+		return CodeSigningSettings{}, fmt.Errorf("Failed to Archive: %s | full output: %s", err, xcoutput)
 	}
-	findCodeSigningSettingsFromXcodeOutput(xcoutput)
-	return nil
+
+	return parseCodeSigningSettingsFromXcodeOutput(xcoutput), nil
 }
 
 func (xccmd CommandModel) xcodeProjectOrWorkspaceParam() (string, error) {
