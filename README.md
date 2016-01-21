@@ -1,2 +1,3 @@
 # codesigndoc
-Your friendly iOS Code Signing Doctor
+
+Your friendly iOS Code Signing Doctor.

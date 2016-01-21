@@ -17,6 +17,7 @@ func before(c *cli.Context) error {
 		log.Fatal("Failed to parse log level:", err)
 	} else {
 		log.SetLevel(logLevel)
+		log.Debugf("Loglevel: %s", logLevel)
 	}
 
 	return nil

@@ -1,7 +1,9 @@
 package cli
 
 import (
-	"log"
+	"fmt"
+
+	log "github.com/Sirupsen/logrus"
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/goinp/goinp"
@@ -9,21 +11,44 @@ import (
 	"github.com/codegangsta/cli"
 )
 
-func getAvailableSchemes(xcode.CommandModel) {
-
-}
-
 func scan(c *cli.Context) {
-	askText := `Please drang-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
- or Workspace (` + colorstring.Green(".xcworkspace") + `) file, the one you usually open in Xcode,
- then hit Enter.
+	projectPath := c.String(FileParamKey)
+	if projectPath == "" {
+		askText := `Please drang-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
+   or Workspace (` + colorstring.Green(".xcworkspace") + `) file, the one you usually open in Xcode,
+   then hit Enter.
 
-(Note: if you have a Workspace file you should use that)`
-	projectPath, err := goinp.AskForString(askText)
-	if err != nil {
-		log.Fatalf("Failed to read input: %s", err)
+  (Note: if you have a Workspace file you should use that)`
+		fmt.Println()
+		projpth, err := goinp.AskForString(askText)
+		if err != nil {
+			log.Fatalf("Failed to read input: %s", err)
+		}
+		projectPath = projpth
 	}
-	xcodeCmd := xcode.CommandModel{ProjectFilePath: projectPath}
+	log.Debugf("projectPath: %s", projectPath)
+	xcodeCmd := xcode.CommandModel{
+		ProjectFilePath: projectPath,
+	}
 
-	getAvailableSchemes(xcodeCmd)
+	log.Println("Scanning Schemes ...")
+	schemes, err := xcodeCmd.ScanSchemes()
+	if err != nil {
+		log.Fatalf("Failed to scan Schemes: %s", err)
+	}
+	log.Debugf("schemes: %v", schemes)
+
+	fmt.Println()
+	selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
+	if err != nil {
+		log.Fatalf("Failed to select Scheme: %s", err)
+	}
+	log.Debugf("selected scheme: %v", selectedScheme)
+	xcodeCmd.Scheme = selectedScheme
+
+	fmt.Println()
+	fmt.Println("Running an Xcode Archive, to get all the required code signing settings...")
+	if err := xcodeCmd.ScanCodeSigningSettings(); err != nil {
+		log.Fatalf("Failed to detect code signing settings: %s", err)
+	}
 }

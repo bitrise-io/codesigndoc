@@ -3,20 +3,11 @@ package cli
 import "github.com/codegangsta/cli"
 
 const (
-	// WorkdirEnvKey ...
-	WorkdirEnvKey = "BITRISE_MACHINE_WORKDIR"
-	// WorkdirKey ...
-	WorkdirKey = "workdir"
-
 	// LogLevelEnvKey ...
 	LogLevelEnvKey = "LOGLEVEL"
 	// LogLevelKey ...
 	LogLevelKey      = "loglevel"
 	logLevelKeyShort = "l"
-
-	// EnvironmentParamKey ...
-	EnvironmentParamKey      = "environment"
-	environmentParamKeyShort = "e"
 
 	// HelpKey ...
 	HelpKey      = "help"
@@ -26,16 +17,8 @@ const (
 	VersionKey      = "version"
 	versionKeyShort = "v"
 
-	// --- Command flags
-
-	// TimeoutFlagKey ...
-	TimeoutFlagKey = "timeout"
-	// AbortCheckURLFlagKey ...
-	AbortCheckURLFlagKey = "abort-check-url"
-	// LogFormatFlagKey ...
-	LogFormatFlagKey = "logformat"
-	// ForceFlagKey ...
-	ForceFlagKey = "force"
+	// FileParamKey ...
+	FileParamKey = "file"
 )
 
 var (
@@ -44,6 +27,13 @@ var (
 			Name:   "scan",
 			Usage:  "Scan",
 			Action: scan,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  FileParamKey,
+					Value: "",
+					Usage: "Xcode Project/Workspace file to scan",
+				},
+			},
 		},
 	}
 
