@@ -7,6 +7,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/utils"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/codegangsta/cli"
 )
@@ -57,4 +58,18 @@ func scan(c *cli.Context) {
 		log.Fatalf("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
+
+	fmt.Println()
+	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
+	for idx, anIdentity := range codeSigningSettings.Identities {
+		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
+	}
+	fmt.Println("========================================")
+
+	fmt.Println()
+	utils.Printlnf("=== Required Provisioning Profiles (%d) ===", len(codeSigningSettings.ProvProfiles))
+	for idx, aProvProfile := range codeSigningSettings.ProvProfiles {
+		utils.Printlnf(" * (%d): %s (UUID: %s)", idx+1, aProvProfile.Title, aProvProfile.UUID)
+	}
+	fmt.Println("======================================")
 }
