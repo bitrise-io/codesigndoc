@@ -7,6 +7,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/utils"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/codegangsta/cli"
@@ -15,11 +16,11 @@ import (
 func scan(c *cli.Context) {
 	projectPath := c.String(FileParamKey)
 	if projectPath == "" {
-		askText := `Please drang-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
+		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
    or Workspace (` + colorstring.Green(".xcworkspace") + `) file, the one you usually open in Xcode,
    then hit Enter.
 
-  (Note: if you have a Workspace file you should use that)`
+  (Note: if you have a Workspace file you should most likely use that)`
 		fmt.Println()
 		projpth, err := goinp.AskForString(askText)
 		if err != nil {
@@ -72,4 +73,40 @@ func scan(c *cli.Context) {
 		utils.Printlnf(" * (%d): %s (UUID: %s)", idx+1, aProvProfile.Title, aProvProfile.UUID)
 	}
 	fmt.Println("======================================")
+
+	if len(codeSigningSettings.Identities) < 1 {
+		log.Fatal("No Code Signing Identity detected!")
+	}
+	if len(codeSigningSettings.Identities) > 1 {
+		log.Warning("More than one Code Signing Identity (certificate) is required to sign your app!")
+		log.Warning("You should check your settings and make sure a single Identity/Certificate can be used")
+		log.Warning(" for Archiving your app!")
+	}
+
+	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
+	defer func() {
+		// release the refs
+		for _, itm := range identityExportRefs {
+			osxkeychain.ReleaseReference(itm)
+		}
+	}()
+
+	for _, aIdentity := range codeSigningSettings.Identities {
+		identityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
+		if err != nil {
+			log.Fatalf("Failed to Export Identity: %s", err)
+		}
+		log.Printf("identityRefs: %d", len(identityRefs))
+		if len(identityRefs) < 1 {
+			log.Fatalf("No Identity found in Keychain!")
+		}
+		if len(identityRefs) > 1 {
+			log.Fatalf("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain")
+		}
+		identityExportRefs = append(identityExportRefs, identityRefs...)
+	}
+
+	if err := osxkeychain.ExportFromKeychain(identityExportRefs); err != nil {
+		log.Fatalf("Failed to export from Keychain: %s", err)
+	}
 }
