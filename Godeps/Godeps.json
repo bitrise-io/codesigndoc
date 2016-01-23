@@ -1,6 +1,9 @@
 {
 	"ImportPath": "github.com/bitrise-tools/codesigndoc",
 	"GoVersion": "go1.5",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
@@ -41,8 +44,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-187-gc31a797",
-			"Rev": "c31a7975863e7810c92e2e288a9ab074f9a88f29"
+			"Comment": "1.2.0-193-gf9cc300",
+			"Rev": "f9cc3001e04f9783cb4ad08ca6791aa07134787c"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
