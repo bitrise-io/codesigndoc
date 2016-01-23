@@ -49,7 +49,7 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) e
 	// do the export!
 	status := C.SecItemExport(C.CFTypeRef(cfArrayForExport),
 		C.kSecFormatPKCS12,
-		C.kSecItemPemArmour, /* Use kSecItemPemArmour to add PEM armor */
+		C.kSecItemPemArmour, // Use kSecItemPemArmour to add PEM armor
 		&exportParams,
 		&exportedData)
 
