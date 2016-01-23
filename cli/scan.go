@@ -13,6 +13,12 @@ import (
 	"github.com/codegangsta/cli"
 )
 
+func printFinished() {
+	fmt.Println()
+	fmt.Println(colorstring.Green("That's all."))
+	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
+}
+
 func scan(c *cli.Context) {
 	projectPath := c.String(FileParamKey)
 	if projectPath == "" {
@@ -74,6 +80,10 @@ func scan(c *cli.Context) {
 	}
 	fmt.Println("======================================")
 
+	//
+	// --- Code Signing issue checks / report
+	//
+
 	if len(codeSigningSettings.Identities) < 1 {
 		log.Fatal("No Code Signing Identity detected!")
 	}
@@ -83,6 +93,25 @@ func scan(c *cli.Context) {
 		log.Warning(" for Archiving your app!")
 	}
 
+	//
+	// --- Export
+	//
+
+	isShouldExport, err := goinp.AskForBool("Do you want to export these files?")
+	if err != nil {
+		log.Fatalf("Failed to process your input: %s", err)
+	}
+	if !isShouldExport {
+		printFinished()
+		return
+	}
+
+	fmt.Println()
+	log.Println("Exporting the required Identities (Certificates) ...")
+	fmt.Println(" You'll most likely see popups (one for each Identity) from Keychain,")
+	fmt.Println(" you will have to accept (Allow) those to be able to export the Identity")
+	fmt.Println()
+
 	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
 	defer osxkeychain.ReleaseRefList(identityExportRefs)
 
@@ -91,7 +120,7 @@ func scan(c *cli.Context) {
 		if err != nil {
 			log.Fatalf("Failed to Export Identity: %s", err)
 		}
-		log.Printf("identityRefs: %d", len(identityRefs))
+		log.Debugf("identityRefs: %d", len(identityRefs))
 		if len(identityRefs) < 1 {
 			log.Fatalf("No Identity found in Keychain!")
 		}
@@ -104,4 +133,6 @@ func scan(c *cli.Context) {
 	if err := osxkeychain.ExportFromKeychain(identityExportRefs, "./Identities.p12"); err != nil {
 		log.Fatalf("Failed to export from Keychain: %s", err)
 	}
+
+	printFinished()
 }

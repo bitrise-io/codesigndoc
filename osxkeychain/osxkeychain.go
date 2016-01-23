@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 )
 
@@ -20,7 +21,9 @@ import "C"
 
 // ExportFromKeychain ...
 func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) error {
-	log.Info("Exporting from Keychain, using empty Passphrase ...")
+	log.Infof("Exporting from Keychain, %s ...", colorstring.Yellow("using empty Passphrase"))
+	log.Info(" This means that if you want to import the file the Passphare at import should be left empty,")
+	log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
 
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
@@ -147,7 +150,6 @@ func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 		retIdentityRefs = append(retIdentityRefs, vrefRef)
 	}
 
-	fmt.Println("-- DONE --")
 	return retIdentityRefs, nil
 }
 

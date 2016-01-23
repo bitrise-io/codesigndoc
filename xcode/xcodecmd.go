@@ -62,7 +62,6 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 
 		// Signing Identity
 		if rexp := regexp.MustCompile(`^[ ]*Signing Identity:[ ]*"(?P<title>.+)"`); rexp.MatchString(line) {
-			fmt.Println("-> line: ", line)
 			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
 			if err != nil {
 				log.Errorf("Failed to scan Signing Identity title: %s", err)
@@ -73,7 +72,6 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 		}
 		// Prov. Profile - title line
 		if rexp := regexp.MustCompile(`^[ ]*Provisioning Profile:[ ]*"(?P<title>.+)"`); rexp.MatchString(line) {
-			fmt.Println("-> line: ", line)
 			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
 			if err != nil {
 				log.Errorf("Failed to scan Provisioning Profile title: %s", err)
