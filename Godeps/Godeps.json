@@ -40,7 +40,7 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/goinp/goinp",
-			"Rev": "0bf138e4604aee59e6ba7c6f1fa4ea4db3647fd2"
+			"Rev": "4107565279986f05ccd88626b67a63747d41ee8d"
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
@@ -50,6 +50,10 @@
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
 			"Rev": "5215b55f46b2b919f50a1df0eaa5886afe4e3b3d"
+		},
+		{
+			"ImportPath": "github.com/going/toolkit/log",
+			"Rev": "5bff591dc40da25dcc875d3fa1a3373d74d45411"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",

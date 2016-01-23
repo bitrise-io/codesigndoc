@@ -59,7 +59,7 @@ func ParseBool(userInputStr string) (bool, error) {
 
 // AskForBoolFromReader ...
 func AskForBoolFromReader(messageToPrint string, inputReader io.Reader) (bool, error) {
-	userInputStr, err := AskForStringFromReader(messageToPrint, inputReader)
+	userInputStr, err := AskForStringFromReader(messageToPrint+" [yes/no]", inputReader)
 	if err != nil {
 		return false, err
 	}
