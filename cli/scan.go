@@ -102,6 +102,10 @@ func scan(c *cli.Context) {
 		log.Warning(" for Archiving your app!")
 	}
 
+	if len(codeSigningSettings.ProvProfiles) < 1 {
+		log.Fatal("No Provisioning Profiles detected!")
+	}
+
 	//
 	// --- Export
 	//
