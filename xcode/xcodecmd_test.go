@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bitrise-io/go-utils/testutil"
+	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,8 +44,8 @@ Provisioning Profile: "Prov Profile 42"
 		require.Equal(t, []CodeSigningIdentityInfo{
 			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
-		require.Equal(t, []ProvisioningProfileInfo{
-			ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		require.Equal(t, []provprofile.ProvisioningProfileInfo{
+			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
 		}, parsedCodeSigningSettings.ProvProfiles)
 	}
 
@@ -76,9 +77,9 @@ Provisioning Profile: "Prov Profile 43"
 			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
 			CodeSigningIdentityInfo{Title: "iPhone Distribution: BFirst BLast (B72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
-		testutil.EqualSlicesWithoutOrder(t, []ProvisioningProfileInfo{
-			ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
-			ProvisioningProfileInfo{Title: "Prov Profile 43", UUID: "97af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		testutil.EqualSlicesWithoutOrder(t, []provprofile.ProvisioningProfileInfo{
+			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 43", UUID: "97af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
 		}, parsedCodeSigningSettings.ProvProfiles)
 	}
 }

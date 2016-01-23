@@ -34,7 +34,7 @@ func FindProvProfileFile(provProfileInfo ProvisioningProfileInfo) (string, error
 	}
 
 	macProvProfPth := path.Join(absProvProfileDirPath, provProfileInfo.UUID+".provisionprofile")
-	pathutil.IsPathExists(macProvProfPth)
+	exist, err = pathutil.IsPathExists(macProvProfPth)
 	if !exist || err != nil {
 		log.Debugf("No provisionprofile file found at: %s | err: %s", macProvProfPth, err)
 		return "", fmt.Errorf("Failed to find Provisioning Profile with UUID: %s", provProfileInfo.UUID)
