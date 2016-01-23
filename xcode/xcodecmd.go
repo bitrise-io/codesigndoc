@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/regexputil"
+	"github.com/bitrise-tools/codesigndoc/provprofile"
 )
 
 // CommandModel ...
@@ -23,16 +24,10 @@ type CodeSigningIdentityInfo struct {
 	Title string
 }
 
-// ProvisioningProfileInfo ...
-type ProvisioningProfileInfo struct {
-	Title string
-	UUID  string
-}
-
 // CodeSigningSettings ...
 type CodeSigningSettings struct {
 	Identities   []CodeSigningIdentityInfo
-	ProvProfiles []ProvisioningProfileInfo
+	ProvProfiles []provprofile.ProvisioningProfileInfo
 }
 
 func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
@@ -56,7 +51,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 	scanner := bufio.NewScanner(strings.NewReader(xcodeOutput))
 
 	identitiesMap := map[string]CodeSigningIdentityInfo{}
-	provProfilesMap := map[string]ProvisioningProfileInfo{}
+	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
 	for scanner.Scan() {
 		line := scanner.Text()
 
@@ -77,7 +72,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 				log.Errorf("Failed to scan Provisioning Profile title: %s", err)
 				continue
 			}
-			tmpProvProfile := ProvisioningProfileInfo{Title: results["title"]}
+			tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
 			if !scanner.Scan() {
 				log.Error("Failed to scan Provisioning Profile UUID: no more lines to scan")
 				continue
@@ -99,7 +94,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 	for _, v := range identitiesMap {
 		identities = append(identities, v)
 	}
-	provProfiles := []ProvisioningProfileInfo{}
+	provProfiles := []provprofile.ProvisioningProfileInfo{}
 	for _, v := range provProfilesMap {
 		provProfiles = append(provProfiles, v)
 	}

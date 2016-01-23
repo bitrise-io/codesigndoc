@@ -2,15 +2,24 @@ package cli
 
 import (
 	"fmt"
+	"os"
+	"path"
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
+	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/utils"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/codegangsta/cli"
+)
+
+const (
+	confExportOutputDirPath = "./codesigndoc_exports"
 )
 
 func printFinished() {
@@ -112,10 +121,27 @@ func scan(c *cli.Context) {
 	fmt.Println(" you will have to accept (Allow) those to be able to export the Identity")
 	fmt.Println()
 
+	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
+	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
+	if err != nil {
+		log.Fatalf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
+	}
+	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
+		log.Fatalf("Failed to determin whether the export directory already exists: %s", err)
+	} else if !exist {
+		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
+			log.Fatalf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
+		}
+	} else {
+		log.Debugf("Export output dir already exists at path: %s", absExportOutputDirPath)
+	}
+
 	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
 	defer osxkeychain.ReleaseRefList(identityExportRefs)
 
+	fmt.Println()
 	for _, aIdentity := range codeSigningSettings.Identities {
+		log.Infof(" * Exporting Identity: %s", aIdentity.Title)
 		identityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
 		if err != nil {
 			log.Fatalf("Failed to Export Identity: %s", err)
@@ -130,9 +156,33 @@ func scan(c *cli.Context) {
 		identityExportRefs = append(identityExportRefs, identityRefs...)
 	}
 
-	if err := osxkeychain.ExportFromKeychain(identityExportRefs, "./Identities.p12"); err != nil {
+	if err := osxkeychain.ExportFromKeychain(identityExportRefs, path.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
 		log.Fatalf("Failed to export from Keychain: %s", err)
 	}
+
+	fmt.Println()
+	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
+		log.Infof(" * Exporting Provisioning Profile: %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
+		filePth, err := provprofile.FindProvProfileFile(aProvProfile)
+		if err != nil {
+			log.Fatalf("Failed to find Provisioning Profile: %s", err)
+		}
+		log.Infof("  File found at: %s", filePth)
+
+		cmdex.RunCommandAndReturnCombinedStdoutAndStderr("cp", filePth, absExportOutputDirPath+"/")
+
+		// if err := provprofile.PrintFileInfo(filePth); err != nil {
+		// 	log.Fatalf("Err: %s", err)
+		// }
+	}
+
+	fmt.Println()
+	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s", absExportOutputDirPath)
+	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
+		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
+	}
+	fmt.Println("Opened the directory in Finder.")
+	fmt.Println()
 
 	printFinished()
 }

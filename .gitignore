@@ -2,3 +2,4 @@
 .bitrise*
 Identities.p12
 _bin
+codesigndoc_exports
