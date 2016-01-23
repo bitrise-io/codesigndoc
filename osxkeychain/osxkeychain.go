@@ -19,29 +19,23 @@ import (
 import "C"
 
 // ExportFromKeychain ...
-func ExportFromKeychain(itemRefsToExport []C.CFTypeRef) error {
+func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) error {
 	log.Info("Exporting from Keychain, using empty Passphrase ...")
 
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
 
 	var exportedData C.CFDataRef
-	var params C.SecItemImportExportKeyParameters
-	params.passphrase = (C.CFTypeRef)(convertCStringToCFString(passphraseCString))
-	params.keyUsage = nil
-	params.keyAttributes = nil
-	params.version = C.SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION
-	params.flags = 0
-	params.alertTitle = nil
-	params.alertPrompt = nil
+	var exportParams C.SecItemImportExportKeyParameters
+	exportParams.passphrase = (C.CFTypeRef)(convertCStringToCFString(passphraseCString))
+	exportParams.keyUsage = nil
+	exportParams.keyAttributes = nil
+	exportParams.version = C.SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION
+	exportParams.flags = 0
+	exportParams.alertTitle = nil
+	exportParams.alertPrompt = nil
 
-	// var arrType C.CFTypeRef
-	// arrItms := C.malloc(C.size_t(unsafe.Sizeof(arrType)) * C.size_t(len(itemRefsToExport)))
-	// defer C.free(arrItms)
-	// for idx, itm := range itemRefsToExport {
-	// 	arrItms[idx] = itm
-	// }
-	// anArray = CFArrayCreate(NULL, (void *)strs, 3, &kCFTypeArrayCallBacks);
+	// create a C array from the input
 	ptr := (*unsafe.Pointer)(&itemRefsToExport[0])
 	cfArrayForExport := C.CFArrayCreate(
 		C.kCFAllocatorDefault,
@@ -49,22 +43,24 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef) error {
 		C.CFIndex(len(itemRefsToExport)),
 		&C.kCFTypeArrayCallBacks)
 
+	// do the export!
 	status := C.SecItemExport(C.CFTypeRef(cfArrayForExport),
 		C.kSecFormatPKCS12,
 		C.kSecItemPemArmour, /* Use kSecItemPemArmour to add PEM armor */
-		&params,
+		&exportParams,
 		&exportedData)
 
 	if status != C.errSecSuccess {
 		return fmt.Errorf("SecItemExport: error (OSStatus): %d", status)
 	}
 	// exportedData now contains your PKCS12 data
+	//  make sure it'll be released properly!
 	defer C.CFRelease(C.CFTypeRef(exportedData))
 
 	dataBytes := C.GoBytes(unsafe.Pointer(C.CFDataGetBytePtr(exportedData)), (C.int)(C.CFDataGetLength(exportedData)))
 	log.Debugf("dataBytes: %#v", dataBytes)
 
-	if err := fileutil.WriteBytesToFile("./Identities.p12", dataBytes); err != nil {
+	if err := fileutil.WriteBytesToFile(outputFilePath, dataBytes); err != nil {
 		return fmt.Errorf("ExportFromKeychain: failed to write into file: %s", err)
 	}
 
@@ -73,9 +69,16 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef) error {
 	return nil
 }
 
-// ReleaseReference ...
-func ReleaseReference(refItem C.CFTypeRef) {
+// ReleaseRef ...
+func ReleaseRef(refItem C.CFTypeRef) {
 	C.CFRelease(refItem)
+}
+
+// ReleaseRefList ...
+func ReleaseRefList(refItems []C.CFTypeRef) {
+	for _, itm := range refItems {
+		ReleaseRef(itm)
+	}
 }
 
 // CreateEmptyCFTypeRefSlice ...
@@ -85,6 +88,7 @@ func CreateEmptyCFTypeRefSlice() []C.CFTypeRef {
 
 // FindIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
+//             you can use the ReleaseRefList method to do that
 func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 
 	queryDict := C.CFDictionaryCreateMutable(nil, 0, nil, nil)

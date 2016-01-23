@@ -84,12 +84,7 @@ func scan(c *cli.Context) {
 	}
 
 	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
-	defer func() {
-		// release the refs
-		for _, itm := range identityExportRefs {
-			osxkeychain.ReleaseReference(itm)
-		}
-	}()
+	defer osxkeychain.ReleaseRefList(identityExportRefs)
 
 	for _, aIdentity := range codeSigningSettings.Identities {
 		identityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
@@ -106,7 +101,7 @@ func scan(c *cli.Context) {
 		identityExportRefs = append(identityExportRefs, identityRefs...)
 	}
 
-	if err := osxkeychain.ExportFromKeychain(identityExportRefs); err != nil {
+	if err := osxkeychain.ExportFromKeychain(identityExportRefs, "./Identities.p12"); err != nil {
 		log.Fatalf("Failed to export from Keychain: %s", err)
 	}
 }
