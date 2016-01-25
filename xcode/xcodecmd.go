@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
@@ -107,7 +108,25 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 
 // ScanCodeSigningSettings ...
 func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, error) {
-	xcoutput, err := xccmd.RunXcodebuildCommand("clean", "archive")
+	xcoutput := ""
+	var err error
+
+	// run async
+	finishedChan := make(chan bool)
+	go func() {
+		xcoutput, err = xccmd.RunXcodebuildCommand("clean", "archive")
+		finishedChan <- true
+	}()
+	isRunFinished := false
+	for !isRunFinished {
+		select {
+		case <-finishedChan:
+			isRunFinished = true
+		case <-time.Tick(1000 * time.Millisecond):
+			fmt.Printf(".")
+		}
+	}
+
 	if err != nil {
 		return CodeSigningSettings{}, fmt.Errorf("Failed to Archive: %s | full output: %s", err, xcoutput)
 	}
