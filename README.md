@@ -7,7 +7,7 @@ it prints. At the end of the process you'll have all the code signing files
 (`.p12` Identity file including the Certificate and Private Key, and the required Provisioning Profiles)
 required to do a successful Xcode Archive of your Xcode project.
 
-This tool can also help detecting issues with your project,
+This tool can also help detecting code signing issues with your project,
 for example it prints a warning if your build requires multiple Code Signing Identities
 in order to complete an Xcode Archive.
 
