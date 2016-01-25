@@ -11,6 +11,15 @@ This tool can also help detecting issues with your project,
 for example it prints a warning if your build requires multiple Code Signing Identities
 in order to complete an Xcode Archive.
 
+What this tool does:
+
+* Gathers all information required to do a clean Xcode Archive with your project.
+* Runs a clean Xcode Archive on your Xcode project.
+* From the Xcode logs it collects the Code Signing settings Xcode used during the Archive.
+* Prints the list of required code signing files.
+* Optionally it can also search for and export these files.
+
+
 ## Install / Run
 
 ### One-liner
