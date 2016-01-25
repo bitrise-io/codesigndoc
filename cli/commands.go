@@ -21,6 +21,9 @@ const (
 	FileParamKey = "file"
 	// SchemeParamKey ...
 	SchemeParamKey = "scheme"
+
+	// AllowExportParamKey ...
+	AllowExportParamKey = "allow-export"
 )
 
 var (
@@ -39,6 +42,10 @@ var (
 					Name:  SchemeParamKey,
 					Value: "",
 					Usage: "Xcode Scheme",
+				},
+				cli.BoolFlag{
+					Name:  AllowExportParamKey,
+					Usage: "Automatically allow export of discovered files",
 				},
 			},
 		},

@@ -110,13 +110,17 @@ func scan(c *cli.Context) {
 	// --- Export
 	//
 
-	isShouldExport, err := goinp.AskForBool("Do you want to export these files?")
-	if err != nil {
-		log.Fatalf("Failed to process your input: %s", err)
-	}
-	if !isShouldExport {
-		printFinished()
-		return
+	if !c.Bool(AllowExportParamKey) {
+		isShouldExport, err := goinp.AskForBool("Do you want to export these files?")
+		if err != nil {
+			log.Fatalf("Failed to process your input: %s", err)
+		}
+		if !isShouldExport {
+			printFinished()
+			return
+		}
+	} else {
+		log.Debug("Allow Export flag was set - doing export without asking")
 	}
 
 	fmt.Println()

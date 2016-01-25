@@ -136,6 +136,20 @@ workflows:
             mv _bin/tmpbin "${finalpth}"
             # register the version for next steps
             envman add --key RELEASE_VERSION --value "${binversion}"
+    - script:
+        title: Creating release install_wrap
+        inputs:
+        - content: |-
+            template_path = "./_scripts/install_wrap.md.template"
+            puts " * template_path: #{template_path}"
+            target_path = "./_scripts/install_wrap.md"
+            puts " * target_path: #{target_path}"
+            template_content = File.read(template_path)
+            final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
+            File.open(target_path, "w") do |f|
+              f.write(final_content)
+            end
+        - runner_bin: ruby
     # - script:
     #     title: Creating release changelog template
     #     inputs:

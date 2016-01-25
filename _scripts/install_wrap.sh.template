@@ -1,0 +1,10 @@
+#!/bin/bash
+set -x
+
+temp_dir="$(mktemp -d -t codesigndoc)"
+
+cd $temp_dir
+
+curl -fL https://github.com/bitrise-tools/codesigndoc/releases/download/{{version}}/codesigndoc-Darwin-x86_64 > ./codesigndoc
+chmod +x ./codesigndoc
+./codesigndoc scan
