@@ -187,7 +187,7 @@ func scan(c *cli.Context) {
 	}
 
 	fmt.Println()
-	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s", absExportOutputDirPath)
+	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
 	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
 		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
 	}

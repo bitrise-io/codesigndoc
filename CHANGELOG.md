@@ -1,3 +1,7 @@
+## 0.9.3
+
+- log: newline fix
+
 ## 0.9.2
 
 - `--allow-export` flag : automatically allow exporting of discovered files.
