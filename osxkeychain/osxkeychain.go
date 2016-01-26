@@ -199,11 +199,13 @@ func getCFDictValueUTF8String(dict C.CFDictionaryRef, key C.CFTypeRef) (string, 
 		return "", errors.New("getCFDictValueUTF8String: Nil value")
 	}
 
-	cstr := C.CFStringGetCStringPtr(valCFStringRef, C.kCFStringEncodingUTF8)
-	log.Debugf("cstr: %#v", cstr)
-	if cstr == nil {
-		return "", errors.New("getCFDictValueUTF8String: failed to convert value to string")
+	strLen := C.CFStringGetLength(valCFStringRef)
+	log.Debugf("strLen: %d", strLen)
+	charUTF8Len := C.CFStringGetMaximumSizeForEncoding(strLen, C.kCFStringEncodingUTF8) + 1
+	log.Debugf("charUTF8Len: %d", charUTF8Len)
+	cstrBytes := make([]byte, charUTF8Len, charUTF8Len)
+	if C.Boolean(0) == C.CFStringGetCString(valCFStringRef, (*C.char)(unsafe.Pointer(&cstrBytes[0])), charUTF8Len, C.kCFStringEncodingUTF8) {
+		return "", errors.New("getCFDictValueUTF8String: CFStringGetCString: failed to convert value to string")
 	}
-
-	return C.GoString(cstr), nil
+	return C.GoString((*C.char)(unsafe.Pointer(&cstrBytes[0]))), nil
 }
