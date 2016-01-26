@@ -166,25 +166,3 @@ workflows:
     #     title: Open _bin folder
     #     inputs:
     #     - content: open _bin
-
-  create-test-binaries:
-    steps:
-    - script:
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -e
-            set -x
-
-            export ARCH=x86_64
-            export GOARCH=amd64
-
-            export OS=Darwin
-            export GOOS=darwin
-            deploy_pth="./_bin/test-bins/$BITRISE_BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
-
-            export OS=Linux
-            export GOOS=linux
-            deploy_pth="./_bin/test-bins/$BITRISE_BIN_NAME-$OS-$ARCH"
-            go build -o "$deploy_pth"
