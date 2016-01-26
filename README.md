@@ -31,6 +31,7 @@ hit Enter to run:
 bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap.sh)"
 ```
 
+
 ### Manual install & run
 
 You can follow the steps in the [https://github.com/bitrise-tools/codesigndoc/blob/master/_scripts/install_wrap.sh](https://github.com/bitrise-tools/codesigndoc/blob/master/_scripts/install_wrap.sh)
