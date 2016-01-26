@@ -167,20 +167,6 @@ workflows:
     #     inputs:
     #     - content: open _bin
 
-  create-release-with-docker-compose:
-    steps:
-    - script:
-        title: Creating deploy
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -e
-            set -v
-
-            docker-compose build --no-cache app
-            # docker-compose build app
-            docker-compose run --rm app bitrise run create-release
-
   create-test-binaries:
     steps:
     - script:
