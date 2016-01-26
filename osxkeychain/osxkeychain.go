@@ -117,7 +117,7 @@ func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 
 	// filter the identities, by label
 	retIdentityRefs := []C.CFTypeRef{}
-	for i := identitiesCount - 1; i > 0; i-- {
+	for i := C.CFIndex(0); i < identitiesCount; i++ {
 		aIdentityRef := C.CFArrayGetValueAtIndex(identitiesArrRef, i)
 		log.Debugf("aIdentityRef: %#v", aIdentityRef)
 		aIdentityDictRef := C.CFDictionaryRef(aIdentityRef)
