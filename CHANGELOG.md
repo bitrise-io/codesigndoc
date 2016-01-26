@@ -1,3 +1,8 @@
+## 0.9.5
+
+- FIX : Identities enumeration fix
+- FIX : typos
+
 ## 0.9.4
 
 - progress indicator: print a `.` every second, to indicate the Archive is still running
