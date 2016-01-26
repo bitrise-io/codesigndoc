@@ -6,8 +6,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-
-	certrevoke "github.com/cloudflare/cfssl/revoke"
 )
 
 // CheckCertificateValidity ...
@@ -24,9 +22,6 @@ func CheckCertificateValidity(cert *x509.Certificate) error {
 		return fmt.Errorf("Certificate is not valid anymore - validity ended at: %s", cert.NotAfter)
 	}
 	log.Debugf("Certificate is Valid, based on it's validity date-times")
-
-	revoked, ok := certrevoke.VerifyCertificate(cert)
-	log.Debugf("revoked: %#v, ok: %#v", revoked, ok)
 
 	return nil
 }

@@ -49,4 +49,5 @@ In short:
 
 ## TODO
 
+- Check if Certificate is revoked
 - List files by project, which project used what
