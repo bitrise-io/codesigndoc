@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -150,18 +151,45 @@ func scan(c *cli.Context) {
 	fmt.Println()
 	for _, aIdentity := range codeSigningSettings.Identities {
 		log.Infof(" * Exporting Identity: %s", aIdentity.Title)
-		identityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
+		foundIdentityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
 		if err != nil {
 			log.Fatalf("Failed to Export Identity: %s", err)
 		}
-		log.Debugf("identityRefs: %d", len(identityRefs))
-		if len(identityRefs) < 1 {
+		log.Debugf("identityRefs: %d", len(foundIdentityRefs))
+		if len(foundIdentityRefs) < 1 {
 			log.Fatalf("No Identity found in Keychain!")
 		}
-		if len(identityRefs) > 1 {
+
+		// check validity
+		validIdentityRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
+		for _, aIdentityRef := range foundIdentityRefs {
+			cert, err := osxkeychain.GetCertificateDataFromIdentityRef(aIdentityRef)
+			if err != nil {
+				log.Fatalf("Failed to read certificate data: %s", err)
+			}
+			log.Debugf("cert - valid - NotBefore: %#v", cert.NotBefore)
+			log.Debugf("cert - valid - NotAfter: %#v", cert.NotAfter)
+
+			timeNow := time.Now()
+			if !timeNow.After(cert.NotBefore) {
+				log.Warningf("Certificate is not yet valid - validity starts at: %s", cert.NotBefore)
+				continue
+			}
+			if !timeNow.Before(cert.NotAfter) {
+				log.Warningf("Certificate is not valid anymore - validity ended at: %s", cert.NotAfter)
+				continue
+			}
+			log.Debugf("Certificate is Valid, based on it's validity date-times")
+			validIdentityRefs = append(validIdentityRefs, aIdentityRef)
+		}
+
+		if len(validIdentityRefs) < 1 {
+			log.Fatalf("Identity found found in Keychain, but no Valid identity found!")
+		}
+		if len(validIdentityRefs) > 1 {
 			log.Fatalf("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain")
 		}
-		identityExportRefs = append(identityExportRefs, identityRefs...)
+		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
 	}
 
 	if err := osxkeychain.ExportFromKeychain(identityExportRefs, path.Join(absExportOutputDirPath, "Identities.p12")); err != nil {

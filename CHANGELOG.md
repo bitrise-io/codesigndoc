@@ -2,6 +2,8 @@
 
 - FIX : Identities enumeration fix
 - FIX : typos
+- Exporting only non-expired Certificates
+- FIX : Certificate label is force converted to UTF8 before using it, to not to break in case there's a non UTF8 character
 
 ## 0.9.4
 

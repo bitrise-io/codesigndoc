@@ -1,6 +1,7 @@
 package osxkeychain
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"unsafe"
@@ -60,8 +61,10 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) e
 	//  make sure it'll be released properly!
 	defer C.CFRelease(C.CFTypeRef(exportedData))
 
-	dataBytes := C.GoBytes(unsafe.Pointer(C.CFDataGetBytePtr(exportedData)), (C.int)(C.CFDataGetLength(exportedData)))
-	log.Debugf("dataBytes: %#v", dataBytes)
+	dataBytes := convertCFDataRefToGoBytes(exportedData)
+	if dataBytes == nil || len(dataBytes) < 1 {
+		return errors.New("ExportFromKeychain: failed to convert export data - nil or empty")
+	}
 
 	if err := fileutil.WriteBytesToFile(outputFilePath, dataBytes); err != nil {
 		return fmt.Errorf("ExportFromKeychain: failed to write into file: %s", err)
@@ -70,6 +73,10 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) e
 	log.Debug("Export - success")
 
 	return nil
+}
+
+func convertCFDataRefToGoBytes(cfdata C.CFDataRef) []byte {
+	return C.GoBytes(unsafe.Pointer(C.CFDataGetBytePtr(cfdata)), (C.int)(C.CFDataGetLength(cfdata)))
 }
 
 // ReleaseRef ...
@@ -87,6 +94,26 @@ func ReleaseRefList(refItems []C.CFTypeRef) {
 // CreateEmptyCFTypeRefSlice ...
 func CreateEmptyCFTypeRefSlice() []C.CFTypeRef {
 	return []C.CFTypeRef{}
+}
+
+// GetCertificateDataFromIdentityRef ...
+func GetCertificateDataFromIdentityRef(identityRef C.CFTypeRef) (*x509.Certificate, error) {
+	secIdentityRef := C.SecIdentityRef(identityRef)
+	var secCertificateRef C.SecCertificateRef
+	osStatusCode := C.SecIdentityCopyCertificate(secIdentityRef, &secCertificateRef)
+	if osStatusCode != C.errSecSuccess {
+		return nil, fmt.Errorf("Failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
+	}
+
+	certificateCFData := C.SecCertificateCopyData(secCertificateRef)
+	if certificateCFData == nil {
+		return nil, errors.New("GetCertificateDataFromIdentityRef: SecCertificateCopyData: Failed to convert certificate data")
+	}
+	defer C.CFRelease(C.CFTypeRef(certificateCFData))
+
+	certData := convertCFDataRefToGoBytes(certificateCFData)
+
+	return x509.ParseCertificate(certData)
 }
 
 // FindIdentity ...
