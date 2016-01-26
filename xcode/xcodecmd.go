@@ -126,6 +126,7 @@ func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, error)
 			fmt.Printf(".")
 		}
 	}
+	fmt.Println()
 
 	if err != nil {
 		return CodeSigningSettings{}, fmt.Errorf("Failed to Archive: %s | full output: %s", err, xcoutput)

@@ -1,3 +1,9 @@
+## 0.9.6
+
+- LOG : Log color revisions & additional highlights
+- LOG : Better highlight for more important Warning lines
+
+
 ## 0.9.5
 
 - FIX : Identities enumeration fix

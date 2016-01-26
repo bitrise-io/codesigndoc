@@ -150,7 +150,7 @@ func scan(c *cli.Context) {
 
 	fmt.Println()
 	for _, aIdentity := range codeSigningSettings.Identities {
-		log.Infof(" * Exporting Identity: %s", aIdentity.Title)
+		log.Infof(" * "+colorstring.Blue("Exporting Identity")+": %s", aIdentity.Title)
 		foundIdentityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
 		if err != nil {
 			log.Fatalf("Failed to Export Identity: %s", err)
@@ -192,12 +192,12 @@ func scan(c *cli.Context) {
 
 	fmt.Println()
 	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
-		log.Infof(" * Exporting Provisioning Profile: %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
+		log.Infof(" * "+colorstring.Blue("Exporting Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
 		filePth, err := provprofile.FindProvProfileFile(aProvProfile)
 		if err != nil {
 			log.Fatalf("Failed to find Provisioning Profile: %s", err)
 		}
-		log.Infof("  File found at: %s", filePth)
+		log.Infof("   File found at: %s", filePth)
 
 		if err := cmdex.RunCommand("cp", filePth, absExportOutputDirPath+"/"); err != nil {
 			log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
