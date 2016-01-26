@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/certutil"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/utils"
@@ -167,20 +167,12 @@ func scan(c *cli.Context) {
 			if err != nil {
 				log.Fatalf("Failed to read certificate data: %s", err)
 			}
-			log.Debugf("cert - valid - NotBefore: %#v", cert.NotBefore)
-			log.Debugf("cert - valid - NotAfter: %#v", cert.NotAfter)
 
-			timeNow := time.Now()
-			log.Debugf("cert - time now: %#v", timeNow)
-			if !timeNow.After(cert.NotBefore) {
-				log.Warningf("Certificate is not yet valid - validity starts at: %s", cert.NotBefore)
+			if err := certutil.CheckCertificateValidity(cert); err != nil {
+				log.Warningf("Certificate is not valid, skipping: %s", err)
 				continue
 			}
-			if !timeNow.Before(cert.NotAfter) {
-				log.Warningf("Certificate is not valid anymore - validity ended at: %s", cert.NotAfter)
-				continue
-			}
-			log.Debugf("Certificate is Valid, based on it's validity date-times")
+
 			validIdentityRefs = append(validIdentityRefs, aIdentityRef)
 		}
 
@@ -188,7 +180,8 @@ func scan(c *cli.Context) {
 			log.Fatalf("Identity found found in Keychain, but no Valid identity found!")
 		}
 		if len(validIdentityRefs) > 1 {
-			log.Fatalf("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain")
+			log.Warning("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain,")
+			log.Warning(" or you have revoked versions of the Certificate too.")
 		}
 		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
 	}
