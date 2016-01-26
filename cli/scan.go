@@ -98,7 +98,7 @@ func scan(c *cli.Context) {
 		log.Fatal("No Code Signing Identity detected!")
 	}
 	if len(codeSigningSettings.Identities) > 1 {
-		log.Warning("More than one Code Signing Identity (certificate) is required to sign your app!")
+		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
 		log.Warning("You should check your settings and make sure a single Identity/Certificate can be used")
 		log.Warning(" for Archiving your app!")
 	}
@@ -169,7 +169,7 @@ func scan(c *cli.Context) {
 			}
 
 			if err := certutil.CheckCertificateValidity(cert); err != nil {
-				log.Warningf("Certificate is not valid, skipping: %s", err)
+				log.Warning(colorstring.Yellowf("Certificate is not valid, skipping: %s", err))
 				continue
 			}
 
@@ -180,8 +180,8 @@ func scan(c *cli.Context) {
 			log.Fatalf("Identity found found in Keychain, but no Valid identity found!")
 		}
 		if len(validIdentityRefs) > 1 {
-			log.Warning("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain,")
-			log.Warning(" or you have revoked versions of the Certificate too.")
+			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain,"))
+			log.Warning(colorstring.Yellow(" or you have revoked versions of the Certificate too."))
 		}
 		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
 	}
