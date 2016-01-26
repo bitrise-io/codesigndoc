@@ -155,7 +155,7 @@ func scan(c *cli.Context) {
 		if err != nil {
 			log.Fatalf("Failed to Export Identity: %s", err)
 		}
-		log.Debugf("identityRefs: %d", len(foundIdentityRefs))
+		log.Debugf("foundIdentityRefs: %d", len(foundIdentityRefs))
 		if len(foundIdentityRefs) < 1 {
 			log.Fatalf("No Identity found in Keychain!")
 		}
@@ -171,6 +171,7 @@ func scan(c *cli.Context) {
 			log.Debugf("cert - valid - NotAfter: %#v", cert.NotAfter)
 
 			timeNow := time.Now()
+			log.Debugf("cert - time now: %#v", timeNow)
 			if !timeNow.After(cert.NotBefore) {
 				log.Warningf("Certificate is not yet valid - validity starts at: %s", cert.NotBefore)
 				continue
