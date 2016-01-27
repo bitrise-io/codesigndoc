@@ -1,4 +1,4 @@
-## 0.9.7
+## 0.9.7 (not yet released)
 
 - FIX : Typo fix
 - LOG : Separator style fix
