@@ -1,6 +1,6 @@
 #!/bin/bash
-set -x
 set -e
+set -x
 
 temp_dir="$(mktemp -d -t codesigndoc)"
 
