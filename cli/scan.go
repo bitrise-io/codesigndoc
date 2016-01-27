@@ -81,14 +81,14 @@ func scan(c *cli.Context) {
 	for idx, anIdentity := range codeSigningSettings.Identities {
 		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
 	}
-	fmt.Println("========================================")
+	fmt.Println("============================================")
 
 	fmt.Println()
 	utils.Printlnf("=== Required Provisioning Profiles (%d) ===", len(codeSigningSettings.ProvProfiles))
 	for idx, aProvProfile := range codeSigningSettings.ProvProfiles {
 		utils.Printlnf(" * (%d): %s (UUID: %s)", idx+1, aProvProfile.Title, aProvProfile.UUID)
 	}
-	fmt.Println("======================================")
+	fmt.Println("==========================================")
 
 	//
 	// --- Code Signing issue checks / report
