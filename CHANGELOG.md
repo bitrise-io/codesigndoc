@@ -1,6 +1,7 @@
 ## 0.9.7
 
 - FIX : Typo fix
+- LOG : Separator style fix
 
 
 ## 0.9.6
