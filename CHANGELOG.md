@@ -1,3 +1,8 @@
+## 0.9.7
+
+- FIX : Typo fix
+
+
 ## 0.9.6
 
 - LOG : Log color revisions & additional highlights

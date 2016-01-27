@@ -180,8 +180,7 @@ func scan(c *cli.Context) {
 			log.Fatalf("Identity found found in Keychain, but no Valid identity found!")
 		}
 		if len(validIdentityRefs) > 1 {
-			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicate identity in separate Keychains, like one in System.keychain and one in your Login.keychain,"))
-			log.Warning(colorstring.Yellow(" or you have revoked versions of the Certificate too."))
+			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, like one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
 		}
 		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
 	}
