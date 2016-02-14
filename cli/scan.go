@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -42,7 +43,7 @@ func scan(c *cli.Context) {
 		if err != nil {
 			log.Fatalf("Failed to read input: %s", err)
 		}
-		projectPath = projpth
+		projectPath = strings.Replace(projpth, "\\", "", -1)
 	}
 	log.Debugf("projectPath: %s", projectPath)
 	xcodeCmd := xcode.CommandModel{
