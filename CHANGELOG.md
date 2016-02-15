@@ -1,7 +1,13 @@
-## 0.9.7 (not yet released)
 
-- FIX : Typo fix
-- LOG : Separator style fix
+### 0.9.7 (2016 Feb 15)
+
+* removed "create-test-binaries" workflow
+* FIX : typo
+* LOG : log separator style fix
+* changelog
+* use the new AskForPath goinp function for getting the project/workspace path, instead of the generic "string" version
+* Godeps update
+* releaseman config
 
 
 ## 0.9.6
