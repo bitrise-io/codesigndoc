@@ -38,7 +38,7 @@ func scan(c *cli.Context) {
 
   (Note: if you have a Workspace file you should most likely use that)`
 		fmt.Println()
-		projpth, err := goinp.AskForString(askText)
+		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
 			log.Fatalf("Failed to read input: %s", err)
 		}
