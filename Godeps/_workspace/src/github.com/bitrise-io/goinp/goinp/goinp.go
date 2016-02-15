@@ -26,6 +26,26 @@ func AskForString(messageToPrint string) (string, error) {
 	return AskForStringFromReader(messageToPrint, os.Stdin)
 }
 
+// AskForPathFromReader asks for a path. The difference between this
+//  and the generic "AskForString..." functions is that this'll
+//  clean up the input. For example, if the user drag-and-drops a file/dir
+//  for the input then the input might include back-slash escapes for
+//  spaces in the path - these will be removed, so the
+//  returned path will be "path/with space" instead of "path/with\ space".
+func AskForPathFromReader(messageToPrint string, inputReader io.Reader) (string, error) {
+	str, err := AskForStringFromReader(messageToPrint, inputReader)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Replace(str, "\\", "", -1), nil
+}
+
+// AskForPath ...
+func AskForPath(messageToPrint string) (string, error) {
+	return AskForPathFromReader(messageToPrint, os.Stdin)
+}
+
 // AskForIntFromReader ...
 func AskForIntFromReader(messageToPrint string, inputReader io.Reader) (int64, error) {
 	userInputStr, err := AskForStringFromReader(messageToPrint, inputReader)
