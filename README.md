@@ -50,5 +50,7 @@ In short:
 
 ## TODO
 
+- Save the `xcodebuild` output to a debug file, so that if there's an issue with `codesigndoc` this output can be attached to an issue
+- Log the full command it runs (`xcodebuild .. clean archive ..`), for troubleshooting
 - Check if Certificate is revoked
 - List files by project, which project used what
