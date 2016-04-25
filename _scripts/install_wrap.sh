@@ -1,11 +1,14 @@
 #!/bin/bash
 set -e
-set -x
 
+echo " * Creating a temporary directory for codesigndoc ..."
 temp_dir="$(mktemp -d -t codesigndoc)"
+codesigndoc_bin_path="${temp_dir}/codesigndoc"
 
-cd "$temp_dir"
-
-curl -sfL https://github.com/bitrise-tools/codesigndoc/releases/download/0.9.7/codesigndoc-Darwin-x86_64 > ./codesigndoc
-chmod +x ./codesigndoc
-./codesigndoc scan
+codesigndoc_download_url="https://github.com/bitrise-tools/codesigndoc/releases/download/0.9.8/codesigndoc-Darwin-x86_64"
+echo " * Downloading codesigndoc from (${codesigndoc_download_url}) to (${codesigndoc_bin_path}) ..."
+curl -sfL "$codesigndoc_download_url > "${codesigndoc_bin_path}"
+echo " * Making it executable ..."
+chmod +x "${codesigndoc_bin_path}"
+echo " * Running codesigndoc scan ..."
+${codesigndoc_bin_path} scan
