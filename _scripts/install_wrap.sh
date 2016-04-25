@@ -10,5 +10,9 @@ echo " * Downloading codesigndoc from (${codesigndoc_download_url}) to (${codesi
 curl -sfL "$codesigndoc_download_url" > "${codesigndoc_bin_path}"
 echo " * Making it executable ..."
 chmod +x "${codesigndoc_bin_path}"
+echo
+echo " * codesigndoc version:"
+codesigndoc -version
+echo
 echo " * Running codesigndoc scan ..."
 ${codesigndoc_bin_path} scan

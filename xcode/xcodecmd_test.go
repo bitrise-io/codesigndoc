@@ -73,6 +73,25 @@ Provisioning Profile: "com.domain.app AdHoc"
 		}, parsedCodeSigningSettings.ProvProfiles)
 	}
 
+	t.Log("A single Identity & Prov Profile - wildcard Prov Profile")
+	{
+		xcout := `CodeSign /Users/bitrise/Library/...
+    cd /Users/...
+Signing Identity:     "iPhone Developer: First Last (F72Z82XD37)"
+Provisioning Profile: "iOS Team Provisioning Profile: *"
+                      (87af6d83-cb65-4dbe-aee7-f97a87d6fec1)
+
+    /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
+
+		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
+		require.Equal(t, []CodeSigningIdentityInfo{
+			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+		}, parsedCodeSigningSettings.Identities)
+		require.Equal(t, []provprofile.ProvisioningProfileInfo{
+			provprofile.ProvisioningProfileInfo{Title: "iOS Team Provisioning Profile: *", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		}, parsedCodeSigningSettings.ProvProfiles)
+	}
+
 	t.Log("Multiple Identity & Prov Profiles")
 	{
 		xcout := `CodeSign /Users/bitrise/Library/...
