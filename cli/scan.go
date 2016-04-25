@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/certutil"
@@ -30,6 +32,21 @@ func printFinished() {
 }
 
 func scan(c *cli.Context) {
+	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
+	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
+	if err != nil {
+		log.Fatalf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
+	}
+	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
+		log.Fatalf("Failed to determin whether the export directory already exists: %s", err)
+	} else if !exist {
+		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
+			log.Fatalf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
+		}
+	} else {
+		log.Infof("Export output dir already exists at path: %s", absExportOutputDirPath)
+	}
+
 	projectPath := c.String(FileParamKey)
 	if projectPath == "" {
 		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
@@ -69,13 +86,23 @@ func scan(c *cli.Context) {
 	xcodeCmd.Scheme = schemeToUse
 
 	fmt.Println()
+	fmt.Println()
 	log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
-	codeSigningSettings, err := xcodeCmd.ScanCodeSigningSettings()
+	codeSigningSettings, xcodebuildOutput, err := xcodeCmd.ScanCodeSigningSettings()
+	// save the xcodebuild output into a debug log file
+	{
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+		log.Infof("  💡  Saving xcodebuild output into file: %s", xcodebuildOutputFilePath)
+		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		}
+	}
 	if err != nil {
 		log.Fatalf("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
+	fmt.Println()
 	fmt.Println()
 	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
 	for idx, anIdentity := range codeSigningSettings.Identities {
@@ -129,21 +156,6 @@ func scan(c *cli.Context) {
 	fmt.Println(" You'll most likely see popups (one for each Identity) from Keychain,")
 	fmt.Println(" you will have to accept (Allow) those to be able to export the Identity")
 	fmt.Println()
-
-	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
-	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
-	if err != nil {
-		log.Fatalf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
-	}
-	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
-		log.Fatalf("Failed to determin whether the export directory already exists: %s", err)
-	} else if !exist {
-		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
-			log.Fatalf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
-		}
-	} else {
-		log.Debugf("Export output dir already exists at path: %s", absExportOutputDirPath)
-	}
 
 	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
 	defer osxkeychain.ReleaseRefList(identityExportRefs)

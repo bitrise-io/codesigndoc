@@ -107,7 +107,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 }
 
 // ScanCodeSigningSettings ...
-func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, error) {
+func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, string, error) {
 	xcoutput := ""
 	var err error
 
@@ -129,10 +129,10 @@ func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, error)
 	fmt.Println()
 
 	if err != nil {
-		return CodeSigningSettings{}, fmt.Errorf("Failed to Archive: %s | full output: %s", err, xcoutput)
+		return CodeSigningSettings{}, xcoutput, fmt.Errorf("Failed to Archive, error: %s", err)
 	}
 
-	return parseCodeSigningSettingsFromXcodeOutput(xcoutput), nil
+	return parseCodeSigningSettingsFromXcodeOutput(xcoutput), xcoutput, nil
 }
 
 func (xccmd CommandModel) xcodeProjectOrWorkspaceParam() (string, error) {
