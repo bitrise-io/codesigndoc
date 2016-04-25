@@ -164,8 +164,8 @@ func (xccmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (
 		return "", err
 	}
 
-	log.Debugf("$ xcodebuild %s", cmdex.PrintableCommandArgs(true, xcodeCmdParamsToRun))
-	xcoutput, err := cmdex.RunCommandInDirAndReturnCombinedStdoutAndStderr("", "xcodebuild", xcodeCmdParamsToRun...)
+	log.Infof("$ xcodebuild %s", cmdex.PrintableCommandArgs(true, xcodeCmdParamsToRun))
+	xcoutput, err := cmdex.RunCommandAndReturnCombinedStdoutAndStderr("xcodebuild", xcodeCmdParamsToRun...)
 	if err != nil {
 		return "", fmt.Errorf("Failed to run 'xcodebuild -list': %s | error: %s", xcoutput, err)
 	}

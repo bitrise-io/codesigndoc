@@ -49,6 +49,30 @@ Provisioning Profile: "Prov Profile 42"
 		}, parsedCodeSigningSettings.ProvProfiles)
 	}
 
+	t.Log("A single Identity & Prov Profile - different style, and not after each other")
+	{
+		xcout := `CodeSign /Users/bitrise/Library/...
+    cd /Users/...
+    export CODESIGN_ALLOCATE=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/codesign_allocate
+
+Signing Identity:     "iPhone Distribution: First Last Company (F72Z82XD37)"
+
+    export PATH="/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform...
+
+Provisioning Profile: "com.domain.app AdHoc"
+                      (87af6d83-cb65-4dbe-aee7-f97a87d6fec1)
+
+    /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
+
+		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
+		require.Equal(t, []CodeSigningIdentityInfo{
+			CodeSigningIdentityInfo{Title: "iPhone Distribution: First Last Company (F72Z82XD37)"},
+		}, parsedCodeSigningSettings.Identities)
+		require.Equal(t, []provprofile.ProvisioningProfileInfo{
+			provprofile.ProvisioningProfileInfo{Title: "com.domain.app AdHoc", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
+		}, parsedCodeSigningSettings.ProvProfiles)
+	}
+
 	t.Log("Multiple Identity & Prov Profiles")
 	{
 		xcout := `CodeSign /Users/bitrise/Library/...
