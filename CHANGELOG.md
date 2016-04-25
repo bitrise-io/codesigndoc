@@ -1,4 +1,16 @@
 
+### 0.9.8 - 0.9.7 (2016 Apr 25)
+
+* [04ef48b] Viktor Benei - install wrap script fix (2016 Apr 25)
+* [0cdf10e] Viktor Benei - v0.9.8, with updated install wrap script (2016 Apr 25)
+* [1fa67db] Viktor Benei - save xcodebuild output into a debug log file (2016 Apr 25)
+* [3e820d8] Viktor Benei - better install_wrap.sh script (template) (2016 Apr 25)
+* [1001373] Viktor Benei - always print the xcodebuild command (2016 Apr 25)
+* [4272309] Viktor Benei - generic update for bitrise.yml and .gitignore (2016 Apr 25)
+* [5f94fe1] Viktor Benei - godeps update - switched to Go 1.6 vendor (2016 Apr 25)
+* [97610ec] Viktor Benei - TODO (2016 Mar 09)
+
+
 ### 0.9.7 (2016 Feb 15)
 
 * removed "create-test-binaries" workflow
@@ -44,3 +56,4 @@
 ## 0.9.1
 
 - First public (beta) version
+
