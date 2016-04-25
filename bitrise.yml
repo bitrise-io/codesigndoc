@@ -15,8 +15,7 @@ workflows:
         inputs:
         - content: |-
             #!/bin/bash
-            set -e
-            set -v
+            set -ex
 
             # Install dependencies
             go get -u github.com/tools/godep
@@ -30,21 +29,33 @@ workflows:
   _test:
     steps:
     - script:
-        title: Godeps - GOPATH patch
+        title: GOLIST_WITHOUT_VENDOR
         inputs:
         - content: |-
-            set -e
-            set -v
-            envman add --key ORIG_GOPATH --value "$GOPATH"
-            envman add --key GOPATH --value "$(godep path):$GOPATH"
+            set -ex
+            no_vendor_paths="$(go list ./... | grep -v vendor)"
+            envman add --key GOLIST_WITHOUT_VENDOR --value "$no_vendor_paths"
     - script:
         title: Go Test
         inputs:
-        - content: godep go test ./...
+        - content: |-
+            #!/bin/bash
+            set -ex
+            go test $GOLIST_WITHOUT_VENDOR
+    - script:
+        title: Go Vet
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            go vet $GOLIST_WITHOUT_VENDOR
     - script:
         title: Err check
         inputs:
-        - content: errcheck -asserts=true -blank=true $(godep go list ./...)
+        - content: |-
+            #!/bin/bash
+            set -ex
+            errcheck -asserts=true -blank=true $GOLIST_WITHOUT_VENDOR
     - script:
         title: Go Lint
         inputs:
@@ -52,16 +63,15 @@ workflows:
             #!/bin/bash
             set -e
 
-            golint_out="$(golint ./...)"
-            if [[ "${golint_out}" != "" ]] ; then
-              echo "=> Golint issues found:"
-              echo "${golint_out}"
-              exit 1
-            fi
-    - script:
-        title: Restore original GOPATH
-        inputs:
-        - content: envman add --key GOPATH --value "$ORIG_GOPATH"
+            while read -r line; do
+              echo "-> Linting: $line"
+              golint_out="$(golint $line)"
+              if [[ "${golint_out}" != "" ]] ; then
+                echo "=> Golint issues found:"
+                echo "${golint_out}"
+                exit 1
+              fi
+            done <<< "$GOLIST_WITHOUT_VENDOR"
 
   install:
     before_run:
@@ -72,8 +82,7 @@ workflows:
         inputs:
         - content: |-
             #!/bin/bash
-            set -v
-            set -e
+            set -ex
 
             go install
 
@@ -84,8 +93,7 @@ workflows:
         inputs:
         - content: |-
             #!/bin/bash
-            set -e
-            set -x
+            set -ex
             go get -u ./...
             rm -rf ./Godeps
             godep save ./...
@@ -122,8 +130,7 @@ workflows:
         inputs:
         - content: |-
             #!/bin/bash
-            set -v
-            set -e
+            set -ex
             if [ -f _bin/tmpbin ] ; then
               rm _bin/tmpbin
             fi
