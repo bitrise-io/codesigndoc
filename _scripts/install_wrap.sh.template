@@ -9,6 +9,9 @@ version_to_use="{{version}}"
 if [ "$1" != "" ] ; then
     version_to_use="$1"
 fi
+if [ ! -z "${CODESIGNDOC_VERSION}" ] ; then
+    version_to_use="${CODESIGNDOC_VERSION}"
+fi
 echo " => Downloading version: ${version_to_use}"
 
 codesigndoc_download_url="https://github.com/bitrise-tools/codesigndoc/releases/download/${version_to_use}/codesigndoc-Darwin-x86_64"
