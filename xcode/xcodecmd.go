@@ -16,8 +16,9 @@ import (
 // CommandModel ...
 type CommandModel struct {
 	// ProjectFilePath - might be a `xcodeproj` or `xcworkspace`
-	ProjectFilePath string
-	Scheme          string
+	ProjectFilePath  string
+	Scheme           string
+	CodeSignIdentity string
 }
 
 // CodeSigningIdentityInfo ...
@@ -153,6 +154,10 @@ func (xccmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...st
 	baseArgs := []string{projParam, xccmd.ProjectFilePath}
 	if xccmd.Scheme != "" {
 		baseArgs = append(baseArgs, "-scheme", xccmd.Scheme)
+	}
+
+	if xccmd.CodeSignIdentity != "" {
+		baseArgs = append(baseArgs, `CODE_SIGN_IDENTITY=`+xccmd.CodeSignIdentity)
 	}
 	return append(baseArgs, xcodebuildActionArgs...), nil
 }
