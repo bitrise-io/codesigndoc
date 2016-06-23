@@ -16,7 +16,7 @@ echo " => Downloading codesigndoc from (${codesigndoc_download_url}) to (${codes
 curl -sfL "$codesigndoc_download_url" > "${codesigndoc_bin_path}"
 echo " => Making it executable ..."
 chmod +x "${codesigndoc_bin_path}"
-echo " => codesigndoc version: $(codesigndoc -version)"
+echo " => codesigndoc version: $(${codesigndoc_bin_path} -version)"
 echo " => Running codesigndoc scan ..."
 echo
 ${codesigndoc_bin_path} scan
