@@ -9,6 +9,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/regexputil"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 )
@@ -30,6 +31,8 @@ type CodeSigningIdentityInfo struct {
 type CodeSigningSettings struct {
 	Identities   []CodeSigningIdentityInfo
 	ProvProfiles []provprofile.ProvisioningProfileInfo
+	TeamIDs      []string
+	AppBundleIDs []string
 }
 
 func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
@@ -54,8 +57,30 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 
 	identitiesMap := map[string]CodeSigningIdentityInfo{}
 	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
+	teamIDsMap := map[string]interface{}{}
+	appBundleIDsMap := map[string]interface{}{}
 	for scanner.Scan() {
 		line := scanner.Text()
+
+		// Team ID
+		if rexp := regexp.MustCompile(`^[ ]*"com.apple.developer.team-identifier" = (?P<teamid>[a-zA-Z0-9]+);$`); rexp.MatchString(line) {
+			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
+			if err != nil {
+				log.Errorf("Failed to scan TeamID: %s", err)
+				continue
+			}
+			teamIDsMap[results["teamid"]] = 1
+		}
+
+		// App Bundle ID
+		if rexp := regexp.MustCompile(`^[ ]*"application-identifier" = "(?P<appbundleid>.+)";$`); rexp.MatchString(line) {
+			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
+			if err != nil {
+				log.Errorf("Failed to scan App Bundle ID: %s", err)
+				continue
+			}
+			appBundleIDsMap[results["appbundleid"]] = 1
+		}
 
 		// Signing Identity
 		if rexp := regexp.MustCompile(`^[ ]*Signing Identity:[ ]*"(?P<title>.+)"`); rexp.MatchString(line) {
@@ -100,10 +125,14 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) CodeSigningSett
 	for _, v := range provProfilesMap {
 		provProfiles = append(provProfiles, v)
 	}
+	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
+	appBundleIDs := maputil.KeysOfStringInterfaceMap(appBundleIDsMap)
 
 	return CodeSigningSettings{
 		Identities:   identities,
 		ProvProfiles: provProfiles,
+		TeamIDs:      teamIDs,
+		AppBundleIDs: appBundleIDs,
 	}
 }
 
