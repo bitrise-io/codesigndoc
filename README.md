@@ -14,10 +14,11 @@ in order to complete an Xcode Archive.
 What this tool does:
 
 1. Gathers all information required to do a clean Xcode Archive of your project.
-2. Runs a clean Xcode Archive on your Xcode project.
-3. From the Xcode logs it collects the Code Signing settings Xcode used during the Archive.
-4. Prints the list of required code signing files.
-5. Optionally it can also search for, and export these files.
+1. Runs a clean Xcode Archive on your Xcode project.
+1. From the Xcode logs it collects the Code Signing settings Xcode used during the Archive.
+1. Prints the list of required code signing files.
+1. Prints the Team ID and App/Bundle ID info of the project.
+1. Optionally it can also search for, and export these files.
 
 
 ## Install / Run
