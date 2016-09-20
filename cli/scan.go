@@ -166,18 +166,15 @@ func scan(c *cli.Context) {
 	}
 
 	fmt.Println()
-	log.Println("Exporting the required Identities (Certificates) ...")
-	fmt.Println(" You'll most likely see popups (one for each Identity) from Keychain,")
-	fmt.Println(" you will have to accept (Allow) those to be able to export the Identity")
+	log.Println("Collecting the required Identities (Certificates) for a base Xcode Archive ...")
 	fmt.Println()
 
-	identityExportRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
-	defer osxkeychain.ReleaseRefList(identityExportRefs)
+	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
+	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
 
-	fmt.Println()
 	for _, aIdentity := range codeSigningSettings.Identities {
-		log.Infof(" * "+colorstring.Blue("Exporting Identity")+": %s", aIdentity.Title)
-		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title)
+		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
+		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
 		if err != nil {
 			log.Fatalf("Failed to export, error: %s", err)
 		}
@@ -189,10 +186,46 @@ func scan(c *cli.Context) {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
 		}
 
-		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
+		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
 	}
 
-	if err := osxkeychain.ExportFromKeychain(identityExportRefs, path.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
+	fmt.Println()
+	log.Println("Collecting additional identities, for Distribution builds ...")
+	fmt.Println()
+
+	for _, aTeamID := range codeSigningSettings.TeamIDs {
+		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
+		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
+		if err != nil {
+			log.Fatalf("Failed to export, error: %s", err)
+		}
+
+		if len(validIdentityRefs) < 1 {
+			log.Infoln("No valid identity found for this Team ID")
+		}
+
+		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
+	}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Exporting the Identities") + " (Certificates):")
+	fmt.Println()
+
+	identityKechainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
+	for _, aIdentityWithRefItm := range identitiesWithKeychainRefs {
+		fmt.Println(" * "+colorstring.Blue("Identity")+":", aIdentityWithRefItm.Label)
+		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
+	}
+
+	fmt.Println()
+	log.Infoln(colorstring.Blue("Exporting from Keychain") + ", " + colorstring.Yellow("using empty Passphrase") + " ...")
+	log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
+	log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
+	fmt.Println()
+	log.Info(colorstring.Blue("You'll most likely see popups") + " (one for each Identity) from Keychain,")
+	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
+	fmt.Println()
+	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, path.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
 		log.Fatalf("Failed to export from Keychain: %s", err)
 	}
 

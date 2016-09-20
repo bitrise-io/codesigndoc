@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"strings"
 	"unsafe"
 
 	log "github.com/Sirupsen/logrus"
@@ -23,10 +24,6 @@ import "C"
 
 // ExportFromKeychain ...
 func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) error {
-	log.Infof("Exporting from Keychain, %s ...", colorstring.Yellow("using empty Passphrase"))
-	log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
-	log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
-
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
 
@@ -92,6 +89,13 @@ func ReleaseRefList(refItems []C.CFTypeRef) {
 	}
 }
 
+// ReleaseIdentityWithRefList ...
+func ReleaseIdentityWithRefList(refItems []IdentityWithRefModel) {
+	for _, itm := range refItems {
+		ReleaseRef(itm.KeychainRef)
+	}
+}
+
 // CreateEmptyCFTypeRefSlice ...
 func CreateEmptyCFTypeRefSlice() []C.CFTypeRef {
 	return []C.CFTypeRef{}
@@ -117,11 +121,17 @@ func GetCertificateDataFromIdentityRef(identityRef C.CFTypeRef) (*x509.Certifica
 	return x509.ParseCertificate(certData)
 }
 
+// IdentityWithRefModel ...
+type IdentityWithRefModel struct {
+	KeychainRef C.CFTypeRef
+	Label       string
+}
+
 // FindAndValidateIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
-//             you can use the ReleaseRefList method to do that
-func FindAndValidateIdentity(identityLabel string) ([]C.CFTypeRef, error) {
-	foundIdentityRefs, err := FindIdentity(identityLabel)
+//             you can use the ReleaseIdentityWithRefList method to do that
+func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRefModel, error) {
+	foundIdentityRefs, err := FindIdentity(identityLabel, isFullLabelMatch)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to find Identity, error: %s", err)
 	}
@@ -130,9 +140,9 @@ func FindAndValidateIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 	}
 
 	// check validity
-	validIdentityRefs := CreateEmptyCFTypeRefSlice()
+	validIdentityRefs := []IdentityWithRefModel{}
 	for _, aIdentityRef := range foundIdentityRefs {
-		cert, err := GetCertificateDataFromIdentityRef(aIdentityRef)
+		cert, err := GetCertificateDataFromIdentityRef(aIdentityRef.KeychainRef)
 		if err != nil {
 			return validIdentityRefs, fmt.Errorf("Failed to read certificate data, error: %s", err)
 		}
@@ -150,8 +160,8 @@ func FindAndValidateIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 
 // FindIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
-//             you can use the ReleaseRefList method to do that
-func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
+//             you can use the ReleaseIdentityWithRefList method to do that
+func FindIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRefModel, error) {
 
 	queryDict := C.CFDictionaryCreateMutable(nil, 0, nil, nil)
 	defer C.CFRelease(C.CFTypeRef(queryDict))
@@ -170,12 +180,12 @@ func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 	identitiesArrRef := C.CFArrayRef(resultRefs)
 	identitiesCount := C.CFArrayGetCount(identitiesArrRef)
 	if identitiesCount < 1 {
-		return nil, fmt.Errorf("No Identity found in your Keychain with the specified Label!")
+		return nil, fmt.Errorf("No Identity (certificate + related private key) found in your Keychain!")
 	}
 	log.Debugf("identitiesCount: %d", identitiesCount)
 
 	// filter the identities, by label
-	retIdentityRefs := []C.CFTypeRef{}
+	retIdentityRefs := []IdentityWithRefModel{}
 	for i := C.CFIndex(0); i < identitiesCount; i++ {
 		aIdentityRef := C.CFArrayGetValueAtIndex(identitiesArrRef, i)
 		log.Debugf("aIdentityRef: %#v", aIdentityRef)
@@ -192,8 +202,14 @@ func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 			return nil, fmt.Errorf("FindIdentity: failed to get 'labl' property: %s", err)
 		}
 		log.Debugf("labl: %#v", labl)
-		if labl != identityLabel {
-			continue
+		if isFullLabelMatch {
+			if labl != identityLabel {
+				continue
+			}
+		} else {
+			if !strings.Contains(labl, identityLabel) {
+				continue
+			}
 		}
 		log.Debugf("Found identity with label: %s", labl)
 
@@ -206,7 +222,10 @@ func FindIdentity(identityLabel string) ([]C.CFTypeRef, error) {
 		// retain the pointer
 		vrefRef = C.CFRetain(vrefRef)
 		// store it
-		retIdentityRefs = append(retIdentityRefs, vrefRef)
+		retIdentityRefs = append(retIdentityRefs, IdentityWithRefModel{
+			KeychainRef: vrefRef,
+			Label:       labl,
+		})
 	}
 
 	return retIdentityRefs, nil
