@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -240,7 +242,9 @@ func scan(c *cli.Context) {
 		}
 		log.Infof("   File found at: %s", filePth)
 
-		if err := cmdex.RunCommand("cp", filePth, absExportOutputDirPath+"/"); err != nil {
+		exportFileName := provProfileExportFileName(aProvProfile.UUID, aProvProfile.Title)
+		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
+		if err := cmdex.RunCommand("cp", filePth, exportPth); err != nil {
 			log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
 		}
 	}
@@ -261,7 +265,12 @@ func scan(c *cli.Context) {
 
 		for _, aFilePth := range filePths {
 			log.Info("   " + colorstring.Green("Exporting Provisioning Profile:") + " " + aFilePth)
-			if err := cmdex.RunCommand("cp", aFilePth, absExportOutputDirPath+"/"); err != nil {
+			exportFileName := provProfileExportFileName(
+				strings.TrimSuffix(filepath.Base(aFilePth), ".mobileprovision"),
+				aAppBundleID,
+			)
+			exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
+			if err := cmdex.RunCommand("cp", aFilePth, exportPth); err != nil {
 				log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
 			}
 		}
@@ -276,4 +285,15 @@ func scan(c *cli.Context) {
 	fmt.Println()
 
 	printFinished()
+}
+
+func provProfileExportFileName(provProfileUUID, title string) string {
+	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
+	if err != nil {
+		log.Warn("Invalid regex, error: %s", err)
+		return ""
+	}
+	safeTitle := replaceRexp.ReplaceAllString(title, "")
+
+	return provProfileUUID + "_" + safeTitle + ".mobileprovision"
 }
