@@ -241,10 +241,6 @@ func scan(c *cli.Context) {
 		if err := cmdex.RunCommand("cp", filePth, absExportOutputDirPath+"/"); err != nil {
 			log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
 		}
-
-		// if err := provprofile.PrintFileInfo(filePth); err != nil {
-		// 	log.Fatalf("Err: %s", err)
-		// }
 	}
 
 	fmt.Println()
