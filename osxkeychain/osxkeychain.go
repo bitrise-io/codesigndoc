@@ -9,6 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-tools/codesigndoc/certutil"
 )
 
 /*
@@ -22,8 +23,8 @@ import "C"
 
 // ExportFromKeychain ...
 func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) error {
-	log.Infof("Exporting from Keychain, %s ...", colorstring.Blue("using empty Passphrase"))
-	log.Info(" This means that if you want to import the file the passphrase at import should be left empty,")
+	log.Infof("Exporting from Keychain, %s ...", colorstring.Yellow("using empty Passphrase"))
+	log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
 	log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
 
 	passphraseCString := C.CString("")
@@ -114,6 +115,37 @@ func GetCertificateDataFromIdentityRef(identityRef C.CFTypeRef) (*x509.Certifica
 	certData := convertCFDataRefToGoBytes(certificateCFData)
 
 	return x509.ParseCertificate(certData)
+}
+
+// FindAndValidateIdentity ...
+//  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
+//             you can use the ReleaseRefList method to do that
+func FindAndValidateIdentity(identityLabel string) ([]C.CFTypeRef, error) {
+	foundIdentityRefs, err := FindIdentity(identityLabel)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to find Identity, error: %s", err)
+	}
+	if len(foundIdentityRefs) < 1 {
+		return nil, nil
+	}
+
+	// check validity
+	validIdentityRefs := CreateEmptyCFTypeRefSlice()
+	for _, aIdentityRef := range foundIdentityRefs {
+		cert, err := GetCertificateDataFromIdentityRef(aIdentityRef)
+		if err != nil {
+			return validIdentityRefs, fmt.Errorf("Failed to read certificate data, error: %s", err)
+		}
+
+		if err := certutil.CheckCertificateValidity(cert); err != nil {
+			log.Warning(colorstring.Yellowf("Certificate is not valid, skipping: %s", err))
+			continue
+		}
+
+		validIdentityRefs = append(validIdentityRefs, aIdentityRef)
+	}
+
+	return validIdentityRefs, nil
 }
 
 // FindIdentity ...

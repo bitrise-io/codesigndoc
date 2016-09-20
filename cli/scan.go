@@ -13,7 +13,6 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/certutil"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/utils"
@@ -117,6 +116,21 @@ func scan(c *cli.Context) {
 	}
 	fmt.Println("==========================================")
 
+	fmt.Println()
+	utils.Printlnf("=== Team IDs (%d) ===", len(codeSigningSettings.TeamIDs))
+	for idx, aTeamID := range codeSigningSettings.TeamIDs {
+		utils.Printlnf(" * (%d): %s", idx+1, aTeamID)
+	}
+	fmt.Println("==========================================")
+
+	fmt.Println()
+	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppBundleIDs))
+	for idx, anAppBundleID := range codeSigningSettings.AppBundleIDs {
+		utils.Printlnf(" * (%d): %s", idx+1, anAppBundleID)
+	}
+	fmt.Println("==========================================")
+	fmt.Println()
+
 	//
 	// --- Code Signing issue checks / report
 	//
@@ -139,7 +153,7 @@ func scan(c *cli.Context) {
 	//
 
 	if !c.Bool(AllowExportParamKey) {
-		isShouldExport, err := goinp.AskForBool("Do you want to export these files?")
+		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
 		if err != nil {
 			log.Fatalf("Failed to process your input: %s", err)
 		}
@@ -163,37 +177,18 @@ func scan(c *cli.Context) {
 	fmt.Println()
 	for _, aIdentity := range codeSigningSettings.Identities {
 		log.Infof(" * "+colorstring.Blue("Exporting Identity")+": %s", aIdentity.Title)
-		foundIdentityRefs, err := osxkeychain.FindIdentity(aIdentity.Title)
+		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title)
 		if err != nil {
-			log.Fatalf("Failed to Export Identity: %s", err)
-		}
-		log.Debugf("foundIdentityRefs: %d", len(foundIdentityRefs))
-		if len(foundIdentityRefs) < 1 {
-			log.Fatalf("No Identity found in Keychain!")
-		}
-
-		// check validity
-		validIdentityRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
-		for _, aIdentityRef := range foundIdentityRefs {
-			cert, err := osxkeychain.GetCertificateDataFromIdentityRef(aIdentityRef)
-			if err != nil {
-				log.Fatalf("Failed to read certificate data: %s", err)
-			}
-
-			if err := certutil.CheckCertificateValidity(cert); err != nil {
-				log.Warning(colorstring.Yellowf("Certificate is not valid, skipping: %s", err))
-				continue
-			}
-
-			validIdentityRefs = append(validIdentityRefs, aIdentityRef)
+			log.Fatalf("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
-			log.Fatalf("Identity found found in Keychain, but no Valid identity found!")
+			log.Fatalf("Identity not found in the keychain, or it was invalid (expired)!")
 		}
 		if len(validIdentityRefs) > 1 {
-			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, like one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
+			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
 		}
+
 		identityExportRefs = append(identityExportRefs, validIdentityRefs...)
 	}
 
