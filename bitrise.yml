@@ -16,13 +16,8 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-
-            # Install dependencies
-            go get -u github.com/tools/godep
-
             # Check for unhandled errors
             go get -u github.com/kisielk/errcheck
-
             # Go lint
             go get -u github.com/golang/lint/golint
 
@@ -83,7 +78,6 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-
             go install
 
   godeps-update:
@@ -94,8 +88,13 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-            go get -u ./...
+            go get -u github.com/tools/godep
             rm -rf ./Godeps
+            rm -rf ./vendor
+            go get -t -d ./...
+            go get golang.org/x/sys/unix
+            go get github.com/davecgh/go-spew/spew
+            go get github.com/pmezard/go-difflib/difflib
             godep save ./...
 
   ci:
