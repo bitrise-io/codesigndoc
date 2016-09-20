@@ -10,6 +10,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/maputil"
+	"github.com/bitrise-io/go-utils/progress"
 	"github.com/bitrise-io/go-utils/regexputil"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 )
@@ -141,21 +142,9 @@ func (xccmd CommandModel) ScanCodeSigningSettings() (CodeSigningSettings, string
 	xcoutput := ""
 	var err error
 
-	// run async
-	finishedChan := make(chan bool)
-	go func() {
+	progress.SimpleProgress(".", 1*time.Second, func() {
 		xcoutput, err = xccmd.RunXcodebuildCommand("clean", "archive")
-		finishedChan <- true
-	}()
-	isRunFinished := false
-	for !isRunFinished {
-		select {
-		case <-finishedChan:
-			isRunFinished = true
-		case <-time.Tick(1000 * time.Millisecond):
-			fmt.Printf(".")
-		}
-	}
+	})
 	fmt.Println()
 
 	if err != nil {
@@ -199,6 +188,7 @@ func (xccmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (
 	}
 
 	log.Infof("$ xcodebuild %s", cmdex.PrintableCommandArgs(true, xcodeCmdParamsToRun))
+	fmt.Print("Running ...")
 	xcoutput, err := cmdex.RunCommandAndReturnCombinedStdoutAndStderr("xcodebuild", xcodeCmdParamsToRun...)
 	if err != nil {
 		return "", fmt.Errorf("Failed to run 'xcodebuild -list': %s | error: %s", xcoutput, err)
