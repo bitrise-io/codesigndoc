@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	log "github.com/Sirupsen/logrus"
@@ -225,14 +224,17 @@ func scan(c *cli.Context) {
 	log.Info(colorstring.Blue("You'll most likely see popups") + " (one for each Identity) from Keychain,")
 	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
 	fmt.Println()
-	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, path.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
+	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
 		log.Fatalf("Failed to export from Keychain: %s", err)
 	}
 
 	fmt.Println()
+	log.Println(colorstring.Green("Exporting base Provisioning Profile(s)"), "...")
+	fmt.Println()
+
 	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
 		log.Infof(" * "+colorstring.Blue("Exporting Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		filePth, err := provprofile.FindProvProfileFile(aProvProfile)
+		filePth, err := provprofile.FindProvProfileFileByUUID(aProvProfile.UUID)
 		if err != nil {
 			log.Fatalf("Failed to find Provisioning Profile: %s", err)
 		}
@@ -240,6 +242,28 @@ func scan(c *cli.Context) {
 
 		if err := cmdex.RunCommand("cp", filePth, absExportOutputDirPath+"/"); err != nil {
 			log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
+		}
+	}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Exporting additinal, Distribution Provisioning Profile(s)"), "...")
+	fmt.Println()
+	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
+		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with Bundle ID")+": %s", aAppBundleID)
+		filePths, err := provprofile.FindProvProfilesFileByAppID(aAppBundleID)
+		if err != nil {
+			log.Fatalf("Failed to find Provisioning Profile: %s", err)
+		}
+		if len(filePths) < 1 {
+			log.Warn("   No Provisioning Profile found for this Bundle ID")
+			continue
+		}
+
+		for _, aFilePth := range filePths {
+			log.Info("   " + colorstring.Green("Exporting Provisioning Profile:") + " " + aFilePth)
+			if err := cmdex.RunCommand("cp", aFilePth, absExportOutputDirPath+"/"); err != nil {
+				log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
+			}
 		}
 	}
 
