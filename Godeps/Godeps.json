@@ -7,6 +7,10 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/DHowett/go-plist",
+			"Rev": "fec78c8d6756fa37981f204f6bf21d909e24fde9"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.10.0-38-g3ec0642",
 			"Rev": "3ec0642a7fb6488f65b06f9040adc67e3990296a"
@@ -64,10 +68,6 @@
 			"ImportPath": "github.com/davecgh/go-spew/spew",
 			"Comment": "v1.0.0-3-g6d21280",
 			"Rev": "6d212800a42e8ab5c146b8ace3490ee17e5225f9"
-		},
-		{
-			"ImportPath": "github.com/going/toolkit/log",
-			"Rev": "5bff591dc40da25dcc875d3fa1a3373d74d45411"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
