@@ -84,7 +84,6 @@ func scan(c *cli.Context) {
 		schemeToUse = selectedScheme
 	}
 	xcodeCmd.Scheme = schemeToUse
-	xcodeCmd.CodeSignIdentity = "iPhone Distribution"
 
 	fmt.Println()
 	fmt.Println()
