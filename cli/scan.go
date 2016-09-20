@@ -31,17 +31,28 @@ func printFinished() {
 	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
 }
 
+func failWithError(format string, args ...interface{}) {
+	log.Errorf(colorstring.Red("Error: ")+format, args...)
+	fmt.Println()
+	fmt.Println("------------------------------")
+	fmt.Println(colorstring.Red("Please create an issue") + " on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues")
+	fmt.Println("with as many details & logs as you can share!")
+	fmt.Println("------------------------------")
+	fmt.Println()
+	os.Exit(1)
+}
+
 func scan(c *cli.Context) {
 	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
 	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
 	if err != nil {
-		log.Fatalf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
+		failWithError("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
 	}
 	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
-		log.Fatalf("Failed to determin whether the export directory already exists: %s", err)
+		failWithError("Failed to determin whether the export directory already exists: %s", err)
 	} else if !exist {
 		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
-			log.Fatalf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
+			failWithError("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
 		}
 	} else {
 		log.Infof("Export output dir already exists at path: %s", absExportOutputDirPath)
@@ -57,7 +68,7 @@ func scan(c *cli.Context) {
 		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
-			log.Fatalf("Failed to read input: %s", err)
+			failWithError("Failed to read input: %s", err)
 		}
 		projectPath = projpth
 	}
@@ -71,14 +82,14 @@ func scan(c *cli.Context) {
 		log.Println("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
-			log.Fatalf("Failed to scan Schemes: %s", err)
+			failWithError("Failed to scan Schemes: %s", err)
 		}
 		log.Debugf("schemes: %v", schemes)
 
 		fmt.Println()
 		selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
 		if err != nil {
-			log.Fatalf("Failed to select Scheme: %s", err)
+			failWithError("Failed to select Scheme: %s", err)
 		}
 		log.Debugf("selected scheme: %v", selectedScheme)
 		schemeToUse = selectedScheme
@@ -98,7 +109,7 @@ func scan(c *cli.Context) {
 		}
 	}
 	if err != nil {
-		log.Fatalf("Failed to detect code signing settings: %s", err)
+		failWithError("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
@@ -137,7 +148,7 @@ func scan(c *cli.Context) {
 	//
 
 	if len(codeSigningSettings.Identities) < 1 {
-		log.Fatal("No Code Signing Identity detected!")
+		failWithError("No Code Signing Identity detected!")
 	}
 	if len(codeSigningSettings.Identities) > 1 {
 		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
@@ -146,7 +157,7 @@ func scan(c *cli.Context) {
 	}
 
 	if len(codeSigningSettings.ProvProfiles) < 1 {
-		log.Fatal("No Provisioning Profiles detected!")
+		failWithError("No Provisioning Profiles detected!")
 	}
 
 	//
@@ -156,7 +167,7 @@ func scan(c *cli.Context) {
 	if !c.Bool(AllowExportParamKey) {
 		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
 		if err != nil {
-			log.Fatalf("Failed to process your input: %s", err)
+			failWithError("Failed to process your input: %s", err)
 		}
 		if !isShouldExport {
 			printFinished()
@@ -177,11 +188,11 @@ func scan(c *cli.Context) {
 		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
 		if err != nil {
-			log.Fatalf("Failed to export, error: %s", err)
+			failWithError("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
-			log.Fatalf("Identity not found in the keychain, or it was invalid (expired)!")
+			failWithError("Identity not found in the keychain, or it was invalid (expired)!")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
@@ -198,7 +209,7 @@ func scan(c *cli.Context) {
 		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
 		if err != nil {
-			log.Fatalf("Failed to export, error: %s", err)
+			failWithError("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
@@ -227,7 +238,7 @@ func scan(c *cli.Context) {
 	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
 	fmt.Println()
 	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
-		log.Fatalf("Failed to export from Keychain: %s", err)
+		failWithError("Failed to export from Keychain: %s", err)
 	}
 
 	fmt.Println()
@@ -238,14 +249,14 @@ func scan(c *cli.Context) {
 		log.Infof(" * "+colorstring.Blue("Exporting Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
 		filePth, err := provprofile.FindProvProfileFileByUUID(aProvProfile.UUID)
 		if err != nil {
-			log.Fatalf("Failed to find Provisioning Profile: %s", err)
+			failWithError("Failed to find Provisioning Profile: %s", err)
 		}
 		log.Infof("   File found at: %s", filePth)
 
 		exportFileName := provProfileExportFileName(aProvProfile.UUID, aProvProfile.Title)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
 		if err := cmdex.RunCommand("cp", filePth, exportPth); err != nil {
-			log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
+			failWithError("Failed to copy the Provisioning Profile into the export directory: %s", err)
 		}
 	}
 
@@ -256,7 +267,7 @@ func scan(c *cli.Context) {
 		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with Bundle ID")+": %s", aAppBundleID)
 		filePths, err := provprofile.FindProvProfilesFileByAppID(aAppBundleID)
 		if err != nil {
-			log.Fatalf("Failed to find Provisioning Profile: %s", err)
+			failWithError("Failed to find Provisioning Profile: %s", err)
 		}
 		if len(filePths) < 1 {
 			log.Warn("   No Provisioning Profile found for this Bundle ID")
@@ -271,7 +282,7 @@ func scan(c *cli.Context) {
 			)
 			exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
 			if err := cmdex.RunCommand("cp", aFilePth, exportPth); err != nil {
-				log.Fatalf("Failed to copy the Provisioning Profile into the export directory: %s", err)
+				failWithError("Failed to copy the Provisioning Profile into the export directory: %s", err)
 			}
 		}
 	}
