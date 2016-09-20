@@ -50,8 +50,11 @@ func FindProvProfilesFileByAppID(appID string) ([]string, error) {
 			return nil, fmt.Errorf("Failed to retrieve information about Provisioning Profile (path: %s), error: %s",
 				aPth, err)
 		}
+
 		var provProfileData ProvisioningProfileModel
-		plist.NewDecoder(strings.NewReader(profileContent)).Decode(&provProfileData)
+		if err := plist.NewDecoder(strings.NewReader(profileContent)).Decode(&provProfileData); err != nil {
+			return nil, fmt.Errorf("Failed to parse Provisioning Profile (path: %s), error: %s", aPth, err)
+		}
 		if provProfileData.Entitlements.AppID == appID {
 			provProfilePathsToReturn = append(provProfilePathsToReturn, aPth)
 		}
