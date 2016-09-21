@@ -34,7 +34,7 @@ func Run() {
 	app := cli.NewApp()
 	app.Name = filepath.Base(os.Args[0])
 	app.Usage = "codesigndoc"
-	app.Version = "0.9.9"
+	app.Version = "0.9.10"
 
 	app.Author = ""
 	app.Email = ""
