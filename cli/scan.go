@@ -245,49 +245,50 @@ func scan(c *cli.Context) {
 	}
 
 	fmt.Println()
-	log.Println(colorstring.Green("Exporting base Provisioning Profile(s)"), "...")
+	log.Println(colorstring.Green("Searching for required Provisioning Profiles"), "...")
 	fmt.Println()
 
+	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
 	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
-		log.Infof(" * "+colorstring.Blue("Exporting Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		filePth, err := provprofile.FindProvProfileFileByUUID(aProvProfile.UUID)
+		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
+		provProfileFileInfo, err := provprofile.FindProvProfileFileByUUID(aProvProfile.UUID)
 		if err != nil {
 			failWithError("Failed to find Provisioning Profile: %s", err)
 		}
-		log.Infof("   File found at: %s", filePth)
+		log.Infof("   File found at: %s", provProfileFileInfo.Path)
 
-		exportFileName := provProfileExportFileName(aProvProfile.UUID, aProvProfile.Title)
-		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
-		if err := cmdex.RunCommand("cp", filePth, exportPth); err != nil {
-			failWithError("Failed to copy the Provisioning Profile into the export directory: %s", err)
+		provProfileUUIDLookupMap[provProfileFileInfo.ProvisioningProfileInfo.UUID] = provProfileFileInfo
+	}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
+	fmt.Println()
+	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
+		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
+		provProfileFileInfos, err := provprofile.FindProvProfilesFileByAppID(aAppBundleID)
+		if err != nil {
+			failWithError("Error during Provisioning Profile search: %s", err)
+		}
+		if len(provProfileFileInfos) < 1 {
+			log.Warn("   No Provisioning Profile found for this Bundle ID")
+			continue
+		}
+		log.Infof("   Found matching Provisioning Profile count: %d", len(provProfileFileInfos))
+
+		for _, aProvProfileFileInfo := range provProfileFileInfos {
+			provProfileUUIDLookupMap[aProvProfileFileInfo.ProvisioningProfileInfo.UUID] = aProvProfileFileInfo
 		}
 	}
 
 	fmt.Println()
-	log.Println(colorstring.Green("Exporting additinal, Distribution Provisioning Profile(s)"), "...")
+	log.Println(colorstring.Green("Exporting Provisioning Profiles"), "...")
 	fmt.Println()
-	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
-		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with Bundle ID")+": %s", aAppBundleID)
-		filePths, err := provprofile.FindProvProfilesFileByAppID(aAppBundleID)
-		if err != nil {
-			failWithError("Failed to find Provisioning Profile: %s", err)
-		}
-		if len(filePths) < 1 {
-			log.Warn("   No Provisioning Profile found for this Bundle ID")
-			continue
-		}
-
-		for _, aFilePth := range filePths {
-			log.Info("   " + colorstring.Green("Exporting Provisioning Profile:") + " " + aFilePth)
-			exportFileName := provProfileExportFileName(
-				strings.TrimSuffix(filepath.Base(aFilePth), ".mobileprovision"),
-				aAppBundleID,
-			)
-			exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
-			if err := cmdex.RunCommand("cp", aFilePth, exportPth); err != nil {
-				failWithError("Failed to copy the Provisioning Profile into the export directory: %s", err)
-			}
-		}
+	provProfileFileInfos := []provprofile.ProvisioningProfileFileInfoModel{}
+	for _, aProvProfFileInfo := range provProfileUUIDLookupMap {
+		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
+	}
+	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
+		failWithError("Failed to export the Provisioning Profile into the export directory: %s", err)
 	}
 
 	fmt.Println()
@@ -301,13 +302,33 @@ func scan(c *cli.Context) {
 	printFinished()
 }
 
-func provProfileExportFileName(provProfileUUID, title string) string {
+func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
+	exportTargetDirPath string) error {
+
+	for _, aProvProfileFileInfo := range provProfileFileInfos {
+		log.Infoln("   " + colorstring.Green("Exporting Provisioning Profile:") + " " + aProvProfileFileInfo.ProvisioningProfileInfo.Name)
+		log.Infoln("                             UUID: " + aProvProfileFileInfo.ProvisioningProfileInfo.UUID)
+		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
+		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
+		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
+			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
+				aProvProfileFileInfo.Path, exportPth, err)
+		}
+	}
+	return nil
+}
+
+func provProfileExportFileName(provProfileFileInfo provprofile.ProvisioningProfileFileInfoModel) string {
 	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
 	if err != nil {
 		log.Warn("Invalid regex, error: %s", err)
 		return ""
 	}
-	safeTitle := replaceRexp.ReplaceAllString(title, "")
+	safeTitle := replaceRexp.ReplaceAllString(provProfileFileInfo.ProvisioningProfileInfo.Name, "")
+	extension := ".mobileprovision"
+	if strings.HasSuffix(provProfileFileInfo.Path, ".provisionprofile") {
+		extension = ".provisionprofile"
+	}
 
-	return provProfileUUID + "_" + safeTitle + ".mobileprovision"
+	return provProfileFileInfo.ProvisioningProfileInfo.UUID + "." + safeTitle + extension
 }
