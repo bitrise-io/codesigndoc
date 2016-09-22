@@ -232,15 +232,22 @@ func scan(c *cli.Context) {
 		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
 	}
 
+	isAskForPassword := c.Bool(AskPassParamKey)
 	fmt.Println()
-	log.Infoln(colorstring.Blue("Exporting from Keychain") + ", " + colorstring.Yellow("using empty Passphrase") + " ...")
-	log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
-	log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
+	if isAskForPassword {
+		log.Infoln(colorstring.Blue("Exporting from Keychain"))
+		log.Infoln(colorstring.Yellow(" You'll be asked to provide a Passphrase for the .p12 file!"))
+	} else {
+		log.Infoln(colorstring.Blue("Exporting from Keychain") + ", " + colorstring.Yellow("using empty Passphrase") + " ...")
+		log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
+		log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
+	}
 	fmt.Println()
 	log.Info(colorstring.Blue("You'll most likely see popups") + " (one for each Identity) from Keychain,")
 	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
 	fmt.Println()
-	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12")); err != nil {
+
+	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
 		failWithError("Failed to export from Keychain: %s", err)
 	}
 

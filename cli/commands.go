@@ -24,6 +24,9 @@ const (
 
 	// AllowExportParamKey ...
 	AllowExportParamKey = "allow-export"
+
+	// AskPassParamKey ...
+	AskPassParamKey = "ask-pass"
 )
 
 var (
@@ -46,6 +49,10 @@ var (
 				cli.BoolFlag{
 					Name:  AllowExportParamKey,
 					Usage: "Automatically allow export of discovered files",
+				},
+				cli.BoolFlag{
+					Name:  AskPassParamKey,
+					Usage: "Ask for .p12 password, instead of using an empty password",
 				},
 			},
 		},
