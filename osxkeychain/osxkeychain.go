@@ -23,19 +23,29 @@ import (
 import "C"
 
 // ExportFromKeychain ...
-func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string) error {
+func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, isAskForPassword bool) error {
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
 
 	var exportedData C.CFDataRef
 	var exportParams C.SecItemImportExportKeyParameters
-	exportParams.passphrase = (C.CFTypeRef)(convertCStringToCFString(passphraseCString))
 	exportParams.keyUsage = nil
 	exportParams.keyAttributes = nil
 	exportParams.version = C.SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION
-	exportParams.flags = 0
-	exportParams.alertTitle = nil
-	exportParams.alertPrompt = nil
+	if isAskForPassword {
+		exportParams.flags = C.kSecKeySecurePassphrase
+		exportParams.passphrase = nil
+		exportParams.alertTitle = nil
+
+		promptText := C.CString("Enter a password which will be used to protect the exported items")
+		defer C.free(unsafe.Pointer(promptText))
+		exportParams.alertPrompt = convertCStringToCFString(promptText)
+	} else {
+		exportParams.flags = 0
+		exportParams.passphrase = (C.CFTypeRef)(convertCStringToCFString(passphraseCString))
+		exportParams.alertTitle = nil
+		exportParams.alertPrompt = nil
+	}
 
 	// create a C array from the input
 	ptr := (*unsafe.Pointer)(&itemRefsToExport[0])
