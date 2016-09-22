@@ -49,6 +49,6 @@ func Execute() {
 func init() {
 	RootCmd.PersistentFlags().StringVarP(&paramLogLevel,
 		"loglevel", "l",
-		"",
+		"info",
 		"Log level (options: debug, info, warn, error, fatal, panic).")
 }
