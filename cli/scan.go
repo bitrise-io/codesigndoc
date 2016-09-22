@@ -18,7 +18,7 @@ import (
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/utils"
 	"github.com/bitrise-tools/codesigndoc/xcode"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 )
 
 const (
