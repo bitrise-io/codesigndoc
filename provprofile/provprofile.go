@@ -62,8 +62,8 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 	return provProfileData, nil
 }
 
-// FindProvProfilesFileByAppID ...
-func FindProvProfilesFileByAppID(appID string) ([]ProvisioningProfileFileInfoModel, error) {
+// FindProvProfilesByAppID ...
+func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, error) {
 	absProvProfileDirPath, err := pathutil.AbsPath(provProfileSystemDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get Absolute path of Provisioning Profiles dir: %s", err)
@@ -93,8 +93,8 @@ func FindProvProfilesFileByAppID(appID string) ([]ProvisioningProfileFileInfoMod
 	return provProfilePathsToReturn, nil
 }
 
-// FindProvProfileFileByUUID ...
-func FindProvProfileFileByUUID(provProfileUUID string) (ProvisioningProfileFileInfoModel, error) {
+// FindProvProfileByUUID ...
+func FindProvProfileByUUID(provProfileUUID string) (ProvisioningProfileFileInfoModel, error) {
 	absProvProfileDirPath, err := pathutil.AbsPath(provProfileSystemDirPath)
 	if err != nil {
 		return ProvisioningProfileFileInfoModel{}, fmt.Errorf("Failed to get Absolute path of Provisioning Profiles dir: %s", err)

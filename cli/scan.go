@@ -251,7 +251,7 @@ func scan(c *cli.Context) {
 	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
 	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
 		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		provProfileFileInfo, err := provprofile.FindProvProfileFileByUUID(aProvProfile.UUID)
+		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
 		if err != nil {
 			failWithError("Failed to find Provisioning Profile: %s", err)
 		}
@@ -265,7 +265,7 @@ func scan(c *cli.Context) {
 	fmt.Println()
 	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
 		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
-		provProfileFileInfos, err := provprofile.FindProvProfilesFileByAppID(aAppBundleID)
+		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
 		if err != nil {
 			failWithError("Error during Provisioning Profile search: %s", err)
 		}
