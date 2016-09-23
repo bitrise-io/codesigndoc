@@ -129,12 +129,18 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
 	codeSigningSettings, xcodebuildOutput, err := xcodeCmd.ScanCodeSigningSettings()
 	// save the xcodebuild output into a debug log file
+	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 	{
-		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-		log.Infof("  💡  Saving xcodebuild output into file: %s", xcodebuildOutputFilePath)
+		log.Infof("  💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
 		}
+		log.Infoln(colorstring.Yellow("Please check the logfile (" + xcodebuildOutputFilePath + ") to see what caused the error"))
+		log.Infoln(colorstring.Red("and make sure that you can Archive this project from Xcode!"))
+		fmt.Println()
+		log.Infoln("Open the project: ", xcodeCmd.ProjectFilePath)
+		log.Infoln("And Archive, using the Scheme: ", xcodeCmd.Scheme)
+		fmt.Println()
 	}
 	if err != nil {
 		failWithError("Failed to detect code signing settings: %s", err)
