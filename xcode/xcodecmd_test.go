@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/bitrise-io/go-utils/testutil"
+	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/stretchr/testify/require"
 )
@@ -49,7 +50,7 @@ Entitlements:
     builtin-productPackagingUtility -entitlements -format xml -o /Users/USER/Library/Developer/Xcode/DerivedData/watch-test-bltvxiituqolzyajfqjtxedhckqq/Build/Intermediates/ArchiveIntermediates/watch-test/IntermediateBuildFilesPath/watch-test.build/Release-iphoneos/watch-test.build/watch-test.app.xcent`
 
 		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
-		require.Equal(t, []CodeSigningIdentityInfo{}, parsedCodeSigningSettings.Identities)
+		require.Equal(t, []common.CodeSigningIdentityInfo{}, parsedCodeSigningSettings.Identities)
 		require.Equal(t, []provprofile.ProvisioningProfileInfo{}, parsedCodeSigningSettings.ProvProfiles)
 		require.Equal(t, []string{"01SA2B3CDL"},
 			parsedCodeSigningSettings.TeamIDs)
@@ -71,8 +72,8 @@ Provisioning Profile: "Prov Profile 42"
     /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
 
 		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
-		require.Equal(t, []CodeSigningIdentityInfo{
-			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+		require.Equal(t, []common.CodeSigningIdentityInfo{
+			common.CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
 		require.Equal(t, []provprofile.ProvisioningProfileInfo{
 			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
@@ -97,8 +98,8 @@ Provisioning Profile: "com.domain.app AdHoc"
     /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
 
 		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
-		require.Equal(t, []CodeSigningIdentityInfo{
-			CodeSigningIdentityInfo{Title: "iPhone Distribution: First Last Company (F72Z82XD37)"},
+		require.Equal(t, []common.CodeSigningIdentityInfo{
+			common.CodeSigningIdentityInfo{Title: "iPhone Distribution: First Last Company (F72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
 		require.Equal(t, []provprofile.ProvisioningProfileInfo{
 			provprofile.ProvisioningProfileInfo{Title: "com.domain.app AdHoc", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
@@ -118,8 +119,8 @@ Provisioning Profile: "iOS Team Provisioning Profile: *"
     /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
 
 		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
-		require.Equal(t, []CodeSigningIdentityInfo{
-			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+		require.Equal(t, []common.CodeSigningIdentityInfo{
+			common.CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
 		require.Equal(t, []provprofile.ProvisioningProfileInfo{
 			provprofile.ProvisioningProfileInfo{Title: "iOS Team Provisioning Profile: *", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
@@ -176,9 +177,9 @@ Provisioning Profile: "Prov Profile 43"
     /usr/bin/codesign --force --sign E7D5FA3770F4ECC529CFCF683CBCDF874F7870FB --entitlements /Users/...`
 
 		parsedCodeSigningSettings := parseCodeSigningSettingsFromXcodeOutput(xcout)
-		testutil.EqualSlicesWithoutOrder(t, []CodeSigningIdentityInfo{
-			CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
-			CodeSigningIdentityInfo{Title: "iPhone Distribution: BFirst BLast (B72Z82XD37)"},
+		testutil.EqualSlicesWithoutOrder(t, []common.CodeSigningIdentityInfo{
+			common.CodeSigningIdentityInfo{Title: "iPhone Developer: First Last (F72Z82XD37)"},
+			common.CodeSigningIdentityInfo{Title: "iPhone Distribution: BFirst BLast (B72Z82XD37)"},
 		}, parsedCodeSigningSettings.Identities)
 		testutil.EqualSlicesWithoutOrder(t, []provprofile.ProvisioningProfileInfo{
 			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
