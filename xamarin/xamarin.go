@@ -74,7 +74,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) common.CodeSigningSett
 		line := scanner.Text()
 
 		// App ID
-		if rexp := regexp.MustCompile(`^\s*App Id: (?P<appid>.+)$`); rexp.MatchString(line) {
+		if rexp := regexp.MustCompile(`^[[:space:]]*App Id: (?P<appid>.+)$`); rexp.MatchString(line) {
 			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
 			if err != nil {
 				log.Errorf("Failed to scan App Bundle ID: %s", err)
@@ -96,7 +96,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) common.CodeSigningSett
 		}
 
 		// Signing Identity
-		if rexp := regexp.MustCompile(`^\s*Code Signing Key: "(?P<title>.+)" \((?P<identityid>[a-zA-Z0-9]+)\)$`); rexp.MatchString(line) {
+		if rexp := regexp.MustCompile(`^[[:space:]]*Code Signing Key: "(?P<title>.+)" \((?P<identityid>[a-zA-Z0-9]+)\)$`); rexp.MatchString(line) {
 			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
 			if err != nil {
 				log.Errorf("Failed to scan Signing Identity title: %s", err)
@@ -106,7 +106,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) common.CodeSigningSett
 			identitiesMap[codeSigningID.Title] = codeSigningID
 		}
 		// Prov. Profile - title line
-		if rexp := regexp.MustCompile(`^\s*Provisioning Profile: "(?P<title>.+)" \((?P<uuid>[a-zA-Z0-9-]+)\)$`); rexp.MatchString(line) {
+		if rexp := regexp.MustCompile(`^[[:space:]]*Provisioning Profile: "(?P<title>.+)" \((?P<uuid>[a-zA-Z0-9-]+)\)$`); rexp.MatchString(line) {
 			results, err := regexputil.NamedFindStringSubmatch(rexp, line)
 			if err != nil {
 				log.Errorf("Failed to scan Provisioning Profile: %s", err)
