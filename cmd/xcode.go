@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
@@ -27,7 +25,7 @@ var xcodeCmd = &cobra.Command{
 	Short: "Xcode project scanner",
 	Long:  `Scan an Xcode project`,
 
-	Run: scanXcodeProject,
+	RunE: scanXcodeProject,
 }
 
 var (
@@ -40,50 +38,20 @@ func init() {
 
 	xcodeCmd.Flags().StringVar(&xcodeProjectFilePath,
 		"file", "",
-		"Xcode Project/Workspace file")
+		"Xcode Project/Workspace file path")
 	xcodeCmd.Flags().StringVar(&xcodeScheme,
 		"scheme", "",
 		"Xcode Scheme")
 }
 
-const (
-	confExportOutputDirPath = "./codesigndoc_exports"
-)
-
-func printFinished() {
-	fmt.Println()
-	fmt.Println(colorstring.Green("That's all."))
-	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
+func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
+	return printFinishedWithError("Xcode", format, args...)
 }
 
-func failWithError(format string, args ...interface{}) {
-	log.Errorf(colorstring.Red("Error: ")+format, args...)
-	fmt.Println()
-	fmt.Println("------------------------------")
-	fmt.Println("First of all " + colorstring.Red("please make sure that you can Archive your app from Xcode."))
-	fmt.Println("codesigndoc only works if you can archive your app from Xcode.")
-	fmt.Println("If you can, and you get a valid IPA file if you export from Xcode,")
-	fmt.Println(colorstring.Red("please create an issue") + " on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues")
-	fmt.Println("with as many details & logs as you can share!")
-	fmt.Println("------------------------------")
-	fmt.Println()
-	os.Exit(1)
-}
-
-func scanXcodeProject(cmd *cobra.Command, args []string) {
-	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
-	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
+func scanXcodeProject(cmd *cobra.Command, args []string) error {
+	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
-		failWithError("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
-	}
-	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
-		failWithError("Failed to determin whether the export directory already exists: %s", err)
-	} else if !exist {
-		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
-			failWithError("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
-		}
-	} else {
-		log.Infof("Export output dir already exists at path: %s", absExportOutputDirPath)
+		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
 
 	projectPath := xcodeProjectFilePath
@@ -96,7 +64,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
-			failWithError("Failed to read input: %s", err)
+			return printXcodeScanFinishedWithError("Failed to read input: %s", err)
 		}
 		projectPath = projpth
 	}
@@ -110,14 +78,14 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		log.Println("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
-			failWithError("Failed to scan Schemes: %s", err)
+			return printXcodeScanFinishedWithError("Failed to scan Schemes: %s", err)
 		}
 		log.Debugf("schemes: %v", schemes)
 
 		fmt.Println()
 		selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
 		if err != nil {
-			failWithError("Failed to select Scheme: %s", err)
+			return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
 		}
 		log.Debugf("selected scheme: %v", selectedScheme)
 		schemeToUse = selectedScheme
@@ -143,7 +111,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		fmt.Println()
 	}
 	if err != nil {
-		failWithError("Failed to detect code signing settings: %s", err)
+		return printXcodeScanFinishedWithError("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
@@ -182,7 +150,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	//
 
 	if len(codeSigningSettings.Identities) < 1 {
-		failWithError("No Code Signing Identity detected!")
+		return printXcodeScanFinishedWithError("No Code Signing Identity detected!")
 	}
 	if len(codeSigningSettings.Identities) > 1 {
 		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
@@ -191,7 +159,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	}
 
 	if len(codeSigningSettings.ProvProfiles) < 1 {
-		failWithError("No Provisioning Profiles detected!")
+		return printXcodeScanFinishedWithError("No Provisioning Profiles detected!")
 	}
 
 	//
@@ -201,11 +169,11 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	if !isAllowExport {
 		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
 		if err != nil {
-			failWithError("Failed to process your input: %s", err)
+			return printXcodeScanFinishedWithError("Failed to process your input: %s", err)
 		}
 		if !isShouldExport {
 			printFinished()
-			return
+			return nil
 		}
 	} else {
 		log.Debug("Allow Export flag was set - doing export without asking")
@@ -222,11 +190,11 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
 		if err != nil {
-			failWithError("Failed to export, error: %s", err)
+			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
-			failWithError("Identity not found in the keychain, or it was invalid (expired)!")
+			return printXcodeScanFinishedWithError("Identity not found in the keychain, or it was invalid (expired)!")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
@@ -243,7 +211,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
 		if err != nil {
-			failWithError("Failed to export, error: %s", err)
+			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
@@ -278,7 +246,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
-		failWithError("Failed to export from Keychain: %s", err)
+		return printXcodeScanFinishedWithError("Failed to export from Keychain: %s", err)
 	}
 
 	fmt.Println()
@@ -290,7 +258,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
 		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
 		if err != nil {
-			failWithError("Failed to find Provisioning Profile: %s", err)
+			return printXcodeScanFinishedWithError("Failed to find Provisioning Profile: %s", err)
 		}
 		log.Infof("   File found at: %s", provProfileFileInfo.Path)
 
@@ -304,7 +272,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
 		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
 		if err != nil {
-			failWithError("Error during Provisioning Profile search: %s", err)
+			return printXcodeScanFinishedWithError("Error during Provisioning Profile search: %s", err)
 		}
 		if len(provProfileFileInfos) < 1 {
 			log.Warn("   No Provisioning Profile found for this Bundle ID")
@@ -325,7 +293,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
 	}
 	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
-		failWithError("Failed to export the Provisioning Profile into the export directory: %s", err)
+		return printXcodeScanFinishedWithError("Failed to export the Provisioning Profile into the export directory: %s", err)
 	}
 
 	fmt.Println()
@@ -337,6 +305,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) {
 	fmt.Println()
 
 	printFinished()
+	return nil
 }
 
 func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
