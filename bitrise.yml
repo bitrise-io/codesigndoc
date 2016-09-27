@@ -95,6 +95,7 @@ workflows:
             go get golang.org/x/sys/unix
             go get github.com/davecgh/go-spew/spew
             go get github.com/pmezard/go-difflib/difflib
+            go get github.com/inconshreveable/mousetrap
             godep save ./...
 
   ci:
