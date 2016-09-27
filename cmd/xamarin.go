@@ -9,6 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
+	"github.com/bitrise-tools/go-xamarin/solution"
 	"github.com/spf13/cobra"
 )
 
@@ -71,6 +72,12 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		xamarinCmd.SolutionFilePath = projpth
 	}
 	log.Debugf("xamSolutionPth: %s", xamarinCmd.SolutionFilePath)
+
+	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, false)
+	if err != nil {
+		return printXamarinScanFinishedWithError("Failed to analyze Xamarin solution: %s", err)
+	}
+	log.Infof("xamSln: %#v", xamSln)
 
 	// Xamarin Project Name
 	xamarinCmd.ProjectName = xamarinProjectName
