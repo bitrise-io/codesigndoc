@@ -102,7 +102,6 @@ func ParseProjectType(projectType string) (ProjectType, error) {
 
 // ParseProjectTypeGUID ...
 func ParseProjectTypeGUID(guid string) (ProjectType, error) {
-	fmt.Printf("guid: %s\n", guid)
 	switch guid {
 	case "E613F3A2-FE9C-494F-B74E-F63BCB86FEA6", // XamarinIos
 		"6BC8ED88-2882-458C-8E55-DFD12B67127B",
@@ -119,6 +118,6 @@ func ParseProjectTypeGUID(guid string) (ProjectType, error) {
 	case "06FA79CB-D6CD-4721-BB4B-1BD202089C55": // XamarinProjectTypeTVOS
 		return ProjectTypeTVOs, nil
 	default:
-		return ProjectTypeUnknown, fmt.Errorf("Can not idetify guid: %s", guid)
+		return ProjectTypeUnknown, fmt.Errorf("Can not identify guid: %s", guid)
 	}
 }

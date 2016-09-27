@@ -9,6 +9,8 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
+	"github.com/bitrise-tools/go-xamarin/constants"
+	"github.com/bitrise-tools/go-xamarin/project"
 	"github.com/bitrise-tools/go-xamarin/solution"
 	"github.com/spf13/cobra"
 )
@@ -53,7 +55,6 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return printXamarinScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
-	log.Info("absExportOutputDirPath: ", absExportOutputDirPath)
 
 	// --- Inputs ---
 
@@ -73,28 +74,81 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	}
 	log.Debugf("xamSolutionPth: %s", xamarinCmd.SolutionFilePath)
 
-	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, false)
+	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, true)
 	if err != nil {
 		return printXamarinScanFinishedWithError("Failed to analyze Xamarin solution: %s", err)
 	}
-	log.Infof("xamSln: %#v", xamSln)
-
-	// Xamarin Project Name
-	xamarinCmd.ProjectName = xamarinProjectName
-	if xamarinCmd.ProjectName == "" {
-		fmt.Println()
-		answerValue, err := goinp.AskForString(
-			`What's the name of the Project you use for "Archive for Publishing" (e.g.: MyProject.iOS)?`,
-		)
-		if err != nil {
-			return printXamarinScanFinishedWithError("Failed to read input: %s", err)
+	log.Debugf("xamSln: %#v", xamSln)
+	// filter only the iOS "app"" projects
+	xamarinProjectsToChooseFrom := []project.Model{}
+	for _, aXamarinProject := range xamSln.ProjectMap {
+		switch aXamarinProject.ProjectType {
+		case constants.ProjectTypeIos, constants.ProjectTypeTVOs, constants.ProjectTypeMac:
+			if aXamarinProject.OutputType == "exe" {
+				// possible project
+				xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)
+			}
+		default:
+			continue
 		}
-		xamarinCmd.ProjectName = answerValue
 	}
+	log.Debugf("len(xamarinProjectsToChooseFrom): %#v", len(xamarinProjectsToChooseFrom))
+	log.Debugf("xamarinProjectsToChooseFrom: %#v", xamarinProjectsToChooseFrom)
+
+	// Xamarin Project
+	selectedXamarinProject := project.Model{}
+	{
+		if xamarinProjectName != "" {
+			// project specified via flag/param
+			for _, aProj := range xamarinProjectsToChooseFrom {
+				if xamarinProjectName == aProj.Name {
+					selectedXamarinProject = aProj
+					break
+				}
+			}
+			if selectedXamarinProject.Name == "" {
+				return printXamarinScanFinishedWithError(
+					"Invalid Project specified (%s), either not found in the provided Solution or it can't be used for iOS Archive.",
+					xamarinProjectName)
+			}
+		} else {
+			// no project specified
+			if len(xamarinProjectsToChooseFrom) == 1 {
+				selectedXamarinProject = xamarinProjectsToChooseFrom[0]
+			} else {
+				projectNames := []string{}
+				for _, aProj := range xamarinProjectsToChooseFrom {
+					projectNames = append(projectNames, aProj.Name)
+				}
+				fmt.Println()
+				answerValue, err := goinp.SelectFromStrings(
+					`Select the Project Name you use for "Archive for Publishing" (usually ends with ".iOS", e.g.: MyProject.iOS)?`,
+					projectNames,
+				)
+				if err != nil {
+					return printXamarinScanFinishedWithError("Failed to select Project: %s", err)
+				}
+				log.Debugf("selected project: %v", answerValue)
+				for _, aProj := range xamarinProjectsToChooseFrom {
+					if answerValue == aProj.Name {
+						selectedXamarinProject = aProj
+						break
+					}
+				}
+			}
+		}
+	}
+	xamarinCmd.ProjectName = selectedXamarinProject.Name
+	log.Debugf("xamarinCmd.ProjectName: %s", xamarinCmd.ProjectName)
 
 	// Xamarin Configuration Name
 	xamarinCmd.ConfigurationName = xamarinConfigurationName
 	if xamarinCmd.ConfigurationName == "" {
+		if selectedXamarinProject.Name == xamarinCmd.ProjectName {
+			// print only the Project's Configs
+		} else {
+			// print all configs from the Solution, as the project was manually specified
+		}
 		fmt.Println()
 		answerValue, err := goinp.AskForStringWithDefault(
 			`What's the name of the Configuration you use for "Archive for Publishing"?

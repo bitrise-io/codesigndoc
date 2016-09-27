@@ -61,19 +61,19 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/constants",
-			"Rev": "c5ed5ba4ed5d6e6e1e5148f68c10460b59fb0d84"
+			"Rev": "c9c8e2ffa083634b5e3b45d2e0aa70c7e38e7715"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/project",
-			"Rev": "c5ed5ba4ed5d6e6e1e5148f68c10460b59fb0d84"
+			"Rev": "c9c8e2ffa083634b5e3b45d2e0aa70c7e38e7715"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/solution",
-			"Rev": "c5ed5ba4ed5d6e6e1e5148f68c10460b59fb0d84"
+			"Rev": "c9c8e2ffa083634b5e3b45d2e0aa70c7e38e7715"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/utility",
-			"Rev": "c5ed5ba4ed5d6e6e1e5148f68c10460b59fb0d84"
+			"Rev": "c9c8e2ffa083634b5e3b45d2e0aa70c7e38e7715"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
