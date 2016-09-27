@@ -47,7 +47,7 @@ func init() {
 }
 
 func printXamarinScanFinishedWithError(format string, args ...interface{}) error {
-	return printFinishedWithError("Xamarin", format, args...)
+	return printFinishedWithError("Xamarin Studio", format, args...)
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
@@ -154,8 +154,16 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	{
 		acceptableConfigs := []string{}
 		for configName, aConfig := range selectedXamarinProject.Configs {
-			if aConfig.Platform == "iPhone" && aConfig.Configuration == "Release" {
-				acceptableConfigs = append(acceptableConfigs, configName)
+			if aConfig.Platform == "iPhone" {
+				if aConfig.Configuration == "Release" {
+					// ios & tvOS app
+					acceptableConfigs = append(acceptableConfigs, configName)
+				}
+			} else if aConfig.Platform == "x86" {
+				if aConfig.Configuration == "Release" || aConfig.Configuration == "Debug" {
+					// MacOS app
+					acceptableConfigs = append(acceptableConfigs, configName)
+				}
 			}
 		}
 		if len(acceptableConfigs) < 1 {
@@ -226,5 +234,5 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
+	return exportCodeSigningFiles("Xamarin Studio", absExportOutputDirPath, codeSigningSettings)
 }

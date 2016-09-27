@@ -118,7 +118,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
+	return exportCodeSigningFiles("Xcode", absExportOutputDirPath, codeSigningSettings)
 }
 
 func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
