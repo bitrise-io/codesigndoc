@@ -135,7 +135,7 @@ workflows:
               rm _bin/tmpbin
             fi
             go build -o _bin/tmpbin
-            binversion="$(_bin/tmpbin -version)"
+            binversion="$(_bin/tmpbin version)"
             echo "binversion: ${binversion}"
             mkdir -p _bin/${binversion}
             finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
