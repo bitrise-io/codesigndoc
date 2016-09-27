@@ -149,10 +149,24 @@ workflows:
         - content: |-
             template_path = "./_scripts/install_wrap.sh.template"
             puts " * template_path: #{template_path}"
-            target_path = "./_scripts/install_wrap.sh"
-            puts " * target_path: #{target_path}"
             template_content = File.read(template_path)
+            # -- xcode --
+            target_path = "./_scripts/install_wrap-xcode.sh"
+            puts " * target_path: #{target_path}"
             final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
+            final_content = final_content.gsub("{{scan_cmd}}", 'xcode')
+            File.open(target_path, "w") do |f|
+              f.write(final_content)
+            end
+            # for compatibility
+            File.open("./_scripts/install_wrap.sh", "w") do |f|
+              f.write(final_content)
+            end
+            # -- xamarin --
+            target_path = "./_scripts/install_wrap-xamarin.sh"
+            puts " * target_path: #{target_path}"
+            final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
+            final_content = final_content.gsub("{{scan_cmd}}", 'xamarin')
             File.open(target_path, "w") do |f|
               f.write(final_content)
             end

@@ -9,6 +9,9 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
+	"github.com/bitrise-tools/go-xamarin/constants"
+	"github.com/bitrise-tools/go-xamarin/project"
+	"github.com/bitrise-tools/go-xamarin/solution"
 	"github.com/spf13/cobra"
 )
 
@@ -24,27 +27,27 @@ var xamarinCmd = &cobra.Command{
 }
 
 var (
-	xamarinSolutionFilePath  = ""
-	xamarinProjectName       = ""
-	xamarinConfigurationName = ""
+	paramXamarinSolutionFilePath  = ""
+	paramXamarinProjectName       = ""
+	paramXamarinConfigurationName = ""
 )
 
 func init() {
 	scanCmd.AddCommand(xamarinCmd)
 
-	xamarinCmd.Flags().StringVar(&xamarinSolutionFilePath,
+	xamarinCmd.Flags().StringVar(&paramXamarinSolutionFilePath,
 		"file", "",
 		`Xamarin Solution file path`)
-	xamarinCmd.Flags().StringVar(&xamarinProjectName,
+	xamarinCmd.Flags().StringVar(&paramXamarinProjectName,
 		"project", "",
 		`Xamarin iOS Project Name (e.g.: "MyProject.iOS")`)
-	xamarinCmd.Flags().StringVar(&xamarinConfigurationName,
+	xamarinCmd.Flags().StringVar(&paramXamarinConfigurationName,
 		"config", "",
 		`Xamarin Configuration Name (e.g.: "Release|iPhone")`)
 }
 
 func printXamarinScanFinishedWithError(format string, args ...interface{}) error {
-	return printFinishedWithError("Xamarin", format, args...)
+	return printFinishedWithError("Xamarin Studio", format, args...)
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
@@ -52,14 +55,13 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return printXamarinScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
-	log.Info("absExportOutputDirPath: ", absExportOutputDirPath)
 
 	// --- Inputs ---
 
 	xamarinCmd := xamarin.CommandModel{}
 
 	// Xamarin Solution Path
-	xamarinCmd.SolutionFilePath = xamarinSolutionFilePath
+	xamarinCmd.SolutionFilePath = paramXamarinSolutionFilePath
 	if xamarinCmd.SolutionFilePath == "" {
 		askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `)
    file here, and then hit Enter`
@@ -72,33 +74,141 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	}
 	log.Debugf("xamSolutionPth: %s", xamarinCmd.SolutionFilePath)
 
-	// Xamarin Project Name
-	xamarinCmd.ProjectName = xamarinProjectName
-	if xamarinCmd.ProjectName == "" {
-		fmt.Println()
-		answerValue, err := goinp.AskForString(
-			`What's the name of the Project you use for "Archive for Publishing" (e.g.: MyProject.iOS)?`,
-		)
-		if err != nil {
-			return printXamarinScanFinishedWithError("Failed to read input: %s", err)
-		}
-		xamarinCmd.ProjectName = answerValue
+	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, true)
+	if err != nil {
+		return printXamarinScanFinishedWithError("Failed to analyze Xamarin solution: %s", err)
 	}
+	log.Debugf("xamSln: %#v", xamSln)
+	// filter only the iOS "app"" projects
+	xamarinProjectsToChooseFrom := []project.Model{}
+	for _, aXamarinProject := range xamSln.ProjectMap {
+		switch aXamarinProject.ProjectType {
+		case constants.ProjectTypeIos, constants.ProjectTypeTVOs, constants.ProjectTypeMac:
+			if aXamarinProject.OutputType == "exe" {
+				// possible project
+				xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)
+			}
+		default:
+			continue
+		}
+	}
+	log.Debugf("len(xamarinProjectsToChooseFrom): %#v", len(xamarinProjectsToChooseFrom))
+	log.Debugf("xamarinProjectsToChooseFrom: %#v", xamarinProjectsToChooseFrom)
+
+	// Xamarin Project
+	selectedXamarinProject := project.Model{}
+	{
+		if len(xamarinProjectsToChooseFrom) < 1 {
+			return printXamarinScanFinishedWithError(
+				"No acceptable Project found in the provided Solution, or none can be used for iOS Archive.",
+			)
+		}
+
+		if paramXamarinProjectName != "" {
+			// project specified via flag/param
+			for _, aProj := range xamarinProjectsToChooseFrom {
+				if paramXamarinProjectName == aProj.Name {
+					selectedXamarinProject = aProj
+					break
+				}
+			}
+			if selectedXamarinProject.Name == "" {
+				return printXamarinScanFinishedWithError(
+					`Invalid Project specified (%s), either not found in the provided Solution or it can't be used for iOS "Archive for Publishing".`,
+					paramXamarinProjectName)
+			}
+		} else {
+			// no project CLI param specified
+			if len(xamarinProjectsToChooseFrom) == 1 {
+				selectedXamarinProject = xamarinProjectsToChooseFrom[0]
+			} else {
+				projectNames := []string{}
+				for _, aProj := range xamarinProjectsToChooseFrom {
+					projectNames = append(projectNames, aProj.Name)
+				}
+				fmt.Println()
+				answerValue, err := goinp.SelectFromStrings(
+					`Select the Project Name you use for "Archive for Publishing" (usually ends with ".iOS", e.g.: MyProject.iOS)?`,
+					projectNames,
+				)
+				if err != nil {
+					return printXamarinScanFinishedWithError("Failed to select Project: %s", err)
+				}
+				log.Debugf("selected project: %v", answerValue)
+				for _, aProj := range xamarinProjectsToChooseFrom {
+					if answerValue == aProj.Name {
+						selectedXamarinProject = aProj
+						break
+					}
+				}
+			}
+		}
+	}
+	xamarinCmd.ProjectName = selectedXamarinProject.Name
+	log.Debugf("xamarinCmd.ProjectName: %s", xamarinCmd.ProjectName)
+
+	log.Debugf("selectedXamarinProject.Configs: %#v", selectedXamarinProject.Configs)
 
 	// Xamarin Configuration Name
-	xamarinCmd.ConfigurationName = xamarinConfigurationName
-	if xamarinCmd.ConfigurationName == "" {
-		fmt.Println()
-		answerValue, err := goinp.AskForStringWithDefault(
-			`What's the name of the Configuration you use for "Archive for Publishing"?
-Specify it if it's not "Release|iPhone", or hit Enter if it is`,
-			"Release|iPhone",
-		)
-		if err != nil {
-			return printXamarinScanFinishedWithError("Failed to read input: %s", err)
+	selectedXamarinConfigurationName := ""
+	{
+		acceptableConfigs := []string{}
+		for configName, aConfig := range selectedXamarinProject.Configs {
+			if aConfig.Platform == "iPhone" {
+				if aConfig.Configuration == "Release" {
+					// ios & tvOS app
+					acceptableConfigs = append(acceptableConfigs, configName)
+				}
+			} else if aConfig.Platform == "x86" {
+				if aConfig.Configuration == "Release" || aConfig.Configuration == "Debug" {
+					// MacOS app
+					acceptableConfigs = append(acceptableConfigs, configName)
+				}
+			}
 		}
-		xamarinCmd.ConfigurationName = answerValue
+		if len(acceptableConfigs) < 1 {
+			return printXamarinScanFinishedWithError(
+				`No acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
+			)
+		}
+
+		if paramXamarinConfigurationName != "" {
+			// configuration specified via flag/param
+			for _, aConfigName := range acceptableConfigs {
+				if paramXamarinConfigurationName == aConfigName {
+					selectedXamarinConfigurationName = aConfigName
+					break
+				}
+			}
+			if selectedXamarinConfigurationName == "" {
+				return printXamarinScanFinishedWithError(
+					"Invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.",
+					paramXamarinConfigurationName)
+			}
+		} else {
+			// no configuration CLI param specified
+			if len(acceptableConfigs) == 1 {
+				selectedXamarinConfigurationName = acceptableConfigs[0]
+			} else {
+				fmt.Println()
+				answerValue, err := goinp.SelectFromStrings(
+					`Select the Configuration Name you use for "Archive for Publishing" (usually Release|iPhone)?`,
+					acceptableConfigs,
+				)
+				if err != nil {
+					return printXamarinScanFinishedWithError("Failed to select Configuration: %s", err)
+				}
+				log.Debugf("selected configuration: %v", answerValue)
+				selectedXamarinConfigurationName = answerValue
+			}
+		}
 	}
+	if selectedXamarinConfigurationName == "" {
+		return printXamarinScanFinishedWithError(
+			`No acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
+		)
+	}
+	xamarinCmd.ConfigurationName = selectedXamarinConfigurationName
 
 	fmt.Println()
 	fmt.Println()
@@ -124,5 +234,5 @@ Specify it if it's not "Release|iPhone", or hit Enter if it is`,
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
+	return exportCodeSigningFiles("Xamarin Studio", absExportOutputDirPath, codeSigningSettings)
 }

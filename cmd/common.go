@@ -58,7 +58,7 @@ func initExportOutputDir() (string, error) {
 	return absExportOutputDirPath, nil
 }
 
-func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings common.CodeSigningSettings) error {
+func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigningSettings common.CodeSigningSettings) error {
 	fmt.Println()
 	fmt.Println()
 	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
@@ -94,7 +94,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 	//
 
 	if len(codeSigningSettings.Identities) < 1 {
-		return printXcodeScanFinishedWithError("No Code Signing Identity detected!")
+		return printFinishedWithError(toolName, "No Code Signing Identity detected!")
 	}
 	if len(codeSigningSettings.Identities) > 1 {
 		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
@@ -103,7 +103,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 	}
 
 	if len(codeSigningSettings.ProvProfiles) < 1 {
-		return printXcodeScanFinishedWithError("No Provisioning Profiles detected!")
+		return printFinishedWithError(toolName, "No Provisioning Profiles detected!")
 	}
 
 	//
@@ -113,7 +113,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 	if !isAllowExport {
 		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to process your input: %s", err)
+			return printFinishedWithError(toolName, "Failed to process your input: %s", err)
 		}
 		if !isShouldExport {
 			printFinished()
@@ -134,11 +134,11 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
+			return printFinishedWithError(toolName, "Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
-			return printXcodeScanFinishedWithError("Identity not found in the keychain, or it was invalid (expired)!")
+			return printFinishedWithError(toolName, "Identity not found in the keychain, or it was invalid (expired)!")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
@@ -155,7 +155,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
+			return printFinishedWithError(toolName, "Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
@@ -190,7 +190,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 	fmt.Println()
 
 	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export from Keychain: %s", err)
+		return printFinishedWithError(toolName, "Failed to export from Keychain: %s", err)
 	}
 
 	fmt.Println()
@@ -202,7 +202,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
 		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to find Provisioning Profile: %s", err)
+			return printFinishedWithError(toolName, "Failed to find Provisioning Profile: %s", err)
 		}
 		log.Infof("   File found at: %s", provProfileFileInfo.Path)
 
@@ -216,7 +216,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
 		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Error during Provisioning Profile search: %s", err)
+			return printFinishedWithError(toolName, "Error during Provisioning Profile search: %s", err)
 		}
 		if len(provProfileFileInfos) < 1 {
 			log.Warn("   No Provisioning Profile found for this Bundle ID")
@@ -237,7 +237,7 @@ func exportCodeSigningFiles(absExportOutputDirPath string, codeSigningSettings c
 		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
 	}
 	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export the Provisioning Profile into the export directory: %s", err)
+		return printFinishedWithError(toolName, "Failed to export the Provisioning Profile into the export directory: %s", err)
 	}
 
 	fmt.Println()

@@ -54,13 +54,13 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("Failed to create Xamarin command, error: %s", err)
 	}
-	xcoutput, err := cmd.RunAndReturnTrimmedCombinedOutput()
+	xamarinBuildOutput, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
-		return xcoutput, fmt.Errorf("Failed to run Xamarin command, error: %s", err)
+		return xamarinBuildOutput, fmt.Errorf("Failed to run Xamarin command, error: %s", err)
 	}
 
-	log.Debugf("xcoutput: %s", xcoutput)
-	return xcoutput, nil
+	log.Debugf("xamarinBuildOutput: %s", xamarinBuildOutput)
+	return xamarinBuildOutput, nil
 }
 
 func parseCodeSigningSettingsFromOutput(logOutput string) common.CodeSigningSettings {

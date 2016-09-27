@@ -29,17 +29,17 @@ var xcodeCmd = &cobra.Command{
 }
 
 var (
-	xcodeProjectFilePath = ""
-	xcodeScheme          = ""
+	paramXcodeProjectFilePath = ""
+	paramXcodeScheme          = ""
 )
 
 func init() {
 	scanCmd.AddCommand(xcodeCmd)
 
-	xcodeCmd.Flags().StringVar(&xcodeProjectFilePath,
+	xcodeCmd.Flags().StringVar(&paramXcodeProjectFilePath,
 		"file", "",
 		"Xcode Project/Workspace file path")
-	xcodeCmd.Flags().StringVar(&xcodeScheme,
+	xcodeCmd.Flags().StringVar(&paramXcodeScheme,
 		"scheme", "",
 		"Xcode Scheme")
 }
@@ -54,7 +54,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
 
-	projectPath := xcodeProjectFilePath
+	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
 		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
    or Workspace (` + colorstring.Green(".xcworkspace") + `) file, the one you usually open in Xcode,
@@ -73,7 +73,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		ProjectFilePath: projectPath,
 	}
 
-	schemeToUse := xcodeScheme
+	schemeToUse := paramXcodeScheme
 	if schemeToUse == "" {
 		fmt.Println()
 		fmt.Println()
@@ -118,7 +118,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
+	return exportCodeSigningFiles("Xcode", absExportOutputDirPath, codeSigningSettings)
 }
 
 func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
