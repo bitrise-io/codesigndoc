@@ -17,7 +17,10 @@ var xamarinCmd = &cobra.Command{
 	Use:   "xamarin",
 	Short: "Xamarin project scanner",
 	Long:  `Scan a Xamarin project`,
-	RunE:  scanXamarinProject,
+
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	RunE:          scanXamarinProject,
 }
 
 var (
@@ -56,7 +59,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	xamarinCmd := xamarin.CommandModel{}
 
 	// Xamarin Solution Path
-	xamarinCmd.SolutionFilePath = xcodeProjectFilePath
+	xamarinCmd.SolutionFilePath = xamarinSolutionFilePath
 	if xamarinCmd.SolutionFilePath == "" {
 		askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `)
    file here, and then hit Enter`
@@ -97,30 +100,29 @@ Specify it if it's not "Release|iPhone", or hit Enter if it is`,
 		xamarinCmd.ConfigurationName = answerValue
 	}
 
-	log.Infof("xamarinCmd: %#v", xamarinCmd)
-
 	fmt.Println()
 	fmt.Println()
-	log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
+	log.Println(`🔦  Running a Build, to get all the required code signing settings...`)
 	codeSigningSettings, logOutput, err := xamarinCmd.ScanCodeSigningSettings()
 	// save the xamarin output into a debug log file
 	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
 	{
 		log.Infof("  💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
-		if err := fileutil.WriteStringToFile(logOutputFilePath, logOutput); err != nil {
-			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, err)
+		if logWriteErr := fileutil.WriteStringToFile(logOutputFilePath, logOutput); logWriteErr != nil {
+			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, logWriteErr)
+		} else if err != nil {
+			log.Infoln(colorstring.Yellow("Please check the logfile (" + logOutputFilePath + ") to see what caused the error"))
+			log.Infoln(colorstring.Red(`and make sure that you can "Archive for Publishing" this project from Xamarin!`))
+			fmt.Println()
+			log.Infoln("Open the project: ", xamarinCmd.SolutionFilePath)
+			log.Infoln(`And do "Archive for Publishing", after selecting the Configuration: `, xamarinCmd.ConfigurationName)
+			fmt.Println()
 		}
-		log.Infoln(colorstring.Yellow("Please check the logfile (" + logOutputFilePath + ") to see what caused the error"))
-		log.Infoln(colorstring.Red(`and make sure that you can "Archive for Publishing" this project from Xamarin!`))
-		fmt.Println()
-		log.Infoln("Open the project: ", xamarinCmd.SolutionFilePath)
-		log.Infoln(`And do "Archive for Publishing", after selecting the Configuration: `, xamarinCmd.ConfigurationName)
-		fmt.Println()
 	}
 	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to detect code signing settings: %s", err)
+		return printXamarinScanFinishedWithError("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	return nil
+	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
 }

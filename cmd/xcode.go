@@ -12,9 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
-	"github.com/bitrise-tools/codesigndoc/utils"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +23,9 @@ var xcodeCmd = &cobra.Command{
 	Short: "Xcode project scanner",
 	Long:  `Scan an Xcode project`,
 
-	RunE: scanXcodeProject,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	RunE:          scanXcodeProject,
 }
 
 var (
@@ -75,6 +75,8 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	schemeToUse := xcodeScheme
 	if schemeToUse == "" {
+		fmt.Println()
+		fmt.Println()
 		log.Println("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
@@ -100,212 +102,23 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 	{
 		log.Infof("  💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
+		} else if err != nil {
+			log.Infoln(colorstring.Yellow("Please check the logfile (" + xcodebuildOutputFilePath + ") to see what caused the error"))
+			log.Infoln(colorstring.Red("and make sure that you can Archive this project from Xcode!"))
+			fmt.Println()
+			log.Infoln("Open the project:", xcodeCmd.ProjectFilePath)
+			log.Infoln("and Archive, using the Scheme:", xcodeCmd.Scheme)
+			fmt.Println()
 		}
-		log.Infoln(colorstring.Yellow("Please check the logfile (" + xcodebuildOutputFilePath + ") to see what caused the error"))
-		log.Infoln(colorstring.Red("and make sure that you can Archive this project from Xcode!"))
-		fmt.Println()
-		log.Infoln("Open the project: ", xcodeCmd.ProjectFilePath)
-		log.Infoln("And Archive, using the Scheme: ", xcodeCmd.Scheme)
-		fmt.Println()
 	}
 	if err != nil {
 		return printXcodeScanFinishedWithError("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
-	fmt.Println()
-	fmt.Println()
-	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
-	for idx, anIdentity := range codeSigningSettings.Identities {
-		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
-	}
-	fmt.Println("============================================")
-
-	fmt.Println()
-	utils.Printlnf("=== Required Provisioning Profiles (%d) ===", len(codeSigningSettings.ProvProfiles))
-	for idx, aProvProfile := range codeSigningSettings.ProvProfiles {
-		utils.Printlnf(" * (%d): %s (UUID: %s)", idx+1, aProvProfile.Title, aProvProfile.UUID)
-	}
-	fmt.Println("==========================================")
-
-	fmt.Println()
-	utils.Printlnf("=== Team IDs (%d) ===", len(codeSigningSettings.TeamIDs))
-	for idx, aTeamID := range codeSigningSettings.TeamIDs {
-		utils.Printlnf(" * (%d): %s", idx+1, aTeamID)
-	}
-	fmt.Println("==========================================")
-
-	fmt.Println()
-	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppBundleIDs))
-	for idx, anAppBundleID := range codeSigningSettings.AppBundleIDs {
-		utils.Printlnf(" * (%d): %s", idx+1, anAppBundleID)
-	}
-	fmt.Println("==========================================")
-	fmt.Println()
-
-	//
-	// --- Code Signing issue checks / report
-	//
-
-	if len(codeSigningSettings.Identities) < 1 {
-		return printXcodeScanFinishedWithError("No Code Signing Identity detected!")
-	}
-	if len(codeSigningSettings.Identities) > 1 {
-		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
-		log.Warning("You should check your settings and make sure a single Identity/Certificate can be used")
-		log.Warning(" for Archiving your app!")
-	}
-
-	if len(codeSigningSettings.ProvProfiles) < 1 {
-		return printXcodeScanFinishedWithError("No Provisioning Profiles detected!")
-	}
-
-	//
-	// --- Export
-	//
-
-	if !isAllowExport {
-		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to process your input: %s", err)
-		}
-		if !isShouldExport {
-			printFinished()
-			return nil
-		}
-	} else {
-		log.Debug("Allow Export flag was set - doing export without asking")
-	}
-
-	fmt.Println()
-	log.Println("Collecting the required Identities (Certificates) for a base Xcode Archive ...")
-	fmt.Println()
-
-	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
-	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
-
-	for _, aIdentity := range codeSigningSettings.Identities {
-		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
-		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
-		}
-
-		if len(validIdentityRefs) < 1 {
-			return printXcodeScanFinishedWithError("Identity not found in the keychain, or it was invalid (expired)!")
-		}
-		if len(validIdentityRefs) > 1 {
-			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
-		}
-
-		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
-	}
-
-	fmt.Println()
-	log.Println("Collecting additional identities, for Distribution builds ...")
-	fmt.Println()
-
-	for _, aTeamID := range codeSigningSettings.TeamIDs {
-		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
-		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to export, error: %s", err)
-		}
-
-		if len(validIdentityRefs) < 1 {
-			log.Infoln("No valid identity found for this Team ID")
-		}
-
-		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Exporting the Identities") + " (Certificates):")
-	fmt.Println()
-
-	identityKechainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
-	for _, aIdentityWithRefItm := range identitiesWithKeychainRefs {
-		fmt.Println(" * "+colorstring.Blue("Identity")+":", aIdentityWithRefItm.Label)
-		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
-	}
-
-	fmt.Println()
-	if isAskForPassword {
-		log.Infoln(colorstring.Blue("Exporting from Keychain"))
-		log.Infoln(colorstring.Yellow(" You'll be asked to provide a Passphrase for the .p12 file!"))
-	} else {
-		log.Infoln(colorstring.Blue("Exporting from Keychain") + ", " + colorstring.Yellow("using empty Passphrase") + " ...")
-		log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
-		log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
-	}
-	fmt.Println()
-	log.Info(colorstring.Blue("You'll most likely see popups") + " (one for each Identity) from Keychain,")
-	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
-	fmt.Println()
-
-	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export from Keychain: %s", err)
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Searching for required Provisioning Profiles"), "...")
-	fmt.Println()
-
-	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
-	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
-		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to find Provisioning Profile: %s", err)
-		}
-		log.Infof("   File found at: %s", provProfileFileInfo.Path)
-
-		provProfileUUIDLookupMap[provProfileFileInfo.ProvisioningProfileInfo.UUID] = provProfileFileInfo
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
-	fmt.Println()
-	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
-		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
-		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Error during Provisioning Profile search: %s", err)
-		}
-		if len(provProfileFileInfos) < 1 {
-			log.Warn("   No Provisioning Profile found for this Bundle ID")
-			continue
-		}
-		log.Infof("   Found matching Provisioning Profile count: %d", len(provProfileFileInfos))
-
-		for _, aProvProfileFileInfo := range provProfileFileInfos {
-			provProfileUUIDLookupMap[aProvProfileFileInfo.ProvisioningProfileInfo.UUID] = aProvProfileFileInfo
-		}
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Exporting Provisioning Profiles"), "...")
-	fmt.Println()
-	provProfileFileInfos := []provprofile.ProvisioningProfileFileInfoModel{}
-	for _, aProvProfFileInfo := range provProfileUUIDLookupMap {
-		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
-	}
-	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export the Provisioning Profile into the export directory: %s", err)
-	}
-
-	fmt.Println()
-	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
-	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
-	}
-	fmt.Println("Opened the directory in Finder.")
-	fmt.Println()
-
-	printFinished()
-	return nil
+	return exportCodeSigningFiles(absExportOutputDirPath, codeSigningSettings)
 }
 
 func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
