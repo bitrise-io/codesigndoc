@@ -28,28 +28,26 @@ What this tool does:
 Just open up your `Terminal.app` on OS X, copy-paste this into it and
 hit Enter to run:
 
+For `Xcode` project (project or workspace):
+
 ```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap.sh)"
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
+```
+
+For `Xamarin` project (solution):
+
+```
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xamarin.sh)"
 ```
 
 
 ### Manual install & run
 
-You can follow the steps in the [https://github.com/bitrise-tools/codesigndoc/blob/master/_scripts/install_wrap.sh](https://github.com/bitrise-tools/codesigndoc/blob/master/_scripts/install_wrap.sh)
-install script file.
-
-In short:
-
 1. download the current release - it's a single, stand-alone binary
-  * example: `curl -sfL https://github.com/bitrise-tools/codesigndoc/releases/download/0.9.2/codesigndoc-Darwin-x86_64 > ./codesigndoc`
-  * make sure that you get the URL of the latest release - just replace version number (`0.9.2` in this example) in the URL with the latest release's version number
+    * example (__don't forget to replace the `VERSIONNUMBER` in the URL!__): `curl -sfL https://github.com/bitrise-tools/codesigndoc/releases/download/VERSIONNUMBER/codesigndoc-Darwin-x86_64 > ./codesigndoc`
 2. `chmod +x` it, so you can run it
-  * if you followed the previous example: `chmod +x ./codesigndoc`
+    * if you followed the previous example: `chmod +x ./codesigndoc`
 3. run the `scan` command of the tool
-  * if you followed the previous examples: `./codesigndoc scan`
-
-
-## TODO
-
-- List files by project, which project used what
-- Check if Certificate is revoked
+    * if you followed the previous examples:
+        * Xcode project scanner: `./codesigndoc scan xcode`
+        * Xamarin project scanner: `./codesigndoc scan xamarin`
