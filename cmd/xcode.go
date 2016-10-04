@@ -45,7 +45,7 @@ func init() {
 		"Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildOutputLogFilePath,
 		"xcodebuild-log", "",
-		"xcodebuild output log (file path), instead of running xcodebuild")
+		"xcodebuild output log (file path). If specified it will be used instead of running xcodebuild")
 }
 
 func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
