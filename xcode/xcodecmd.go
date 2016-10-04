@@ -95,7 +95,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 				tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
 
 				// read next line
-				line, readErr = ReadLongLine(logReader)
+				line, readErr = readerutil.ReadLongLine(logReader)
 				if readErr != nil {
 					continue
 				}
