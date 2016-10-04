@@ -65,7 +65,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	if paramXamarinOutputLogFilePath != "" {
 		xamLog, err := fileutil.ReadStringFromFile(paramXamarinOutputLogFilePath)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to read log from the specified log file, error: %s", err)
+			return printXamarinScanFinishedWithError("Failed to read log from the specified log file, error: %s", err)
 		}
 		logOutput = xamLog
 	} else {
@@ -248,7 +248,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 
 	codeSigningSettings, err := xamarinCmd.ScanCodeSigningSettings(logOutput)
 	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to detect code signing settings: %s", err)
+		return printXamarinScanFinishedWithError("Failed to detect code signing settings: %s", err)
 	}
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
