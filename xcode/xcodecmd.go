@@ -12,6 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/progress"
+	"github.com/bitrise-io/go-utils/readerutil"
 	"github.com/bitrise-io/go-utils/regexputil"
 	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
@@ -42,20 +43,6 @@ func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
 	return foundSchemes
 }
 
-// ReadLongLine ...
-func ReadLongLine(r *bufio.Reader) (string, error) {
-	isPrefix := true
-	var err error
-	var line, ln []byte
-
-	for isPrefix && err == nil {
-		line, isPrefix, err = r.ReadLine()
-		ln = append(ln, line...)
-	}
-
-	return string(ln), err
-}
-
 func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSigningSettings, error) {
 	logReader := bufio.NewReader(strings.NewReader(xcodeOutput))
 
@@ -66,8 +53,8 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 
 	// scan log line by line
 	{
-		line, readErr := ReadLongLine(logReader)
-		for ; readErr == nil; line, readErr = ReadLongLine(logReader) {
+		line, readErr := readerutil.ReadLongLine(logReader)
+		for ; readErr == nil; line, readErr = readerutil.ReadLongLine(logReader) {
 			// Team ID
 			if rexp := regexp.MustCompile(`^[[:space:]]*"com.apple.developer.team-identifier" = (?P<teamid>[a-zA-Z0-9]+);$`); rexp.MatchString(line) {
 				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
@@ -108,7 +95,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 				tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
 
 				// read next line
-				line, readErr = ReadLongLine(logReader)
+				line, readErr = readerutil.ReadLongLine(logReader)
 				if readErr != nil {
 					continue
 				}
