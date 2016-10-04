@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-tools/go-xamarin/constants"
 	"github.com/bitrise-tools/go-xamarin/project"
 	"github.com/bitrise-tools/go-xamarin/utility"
 )
@@ -91,17 +92,22 @@ func analyzeSolution(pth string, analyzeProjects bool) (Model, error) {
 			projectRelativePth := utility.FixWindowsPath(matches[3])
 			projectPth := filepath.Join(solutionDir, projectRelativePth)
 
-			solution.ID = ID
+			if strings.HasSuffix(projectPth, constants.CSProjExt) ||
+				strings.HasSuffix(projectPth, constants.SHProjExt) ||
+				strings.HasSuffix(projectPth, constants.FSProjExt) {
 
-			project := project.Model{
-				ID:   projectID,
-				Name: projectName,
-				Pth:  projectPth,
+				project := project.Model{
+					ID:   projectID,
+					Name: projectName,
+					Pth:  projectPth,
 
-				ConfigMap: map[string]string{},
-				Configs:   map[string]project.ConfigurationPlatformModel{},
+					ConfigMap: map[string]string{},
+					Configs:   map[string]project.ConfigurationPlatformModel{},
+				}
+				solution.ProjectMap[projectID] = project
 			}
-			solution.ProjectMap[projectID] = project
+
+			solution.ID = ID
 
 			continue
 		}
