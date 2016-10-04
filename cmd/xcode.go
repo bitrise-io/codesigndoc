@@ -29,8 +29,9 @@ var xcodeCmd = &cobra.Command{
 }
 
 var (
-	paramXcodeProjectFilePath = ""
-	paramXcodeScheme          = ""
+	paramXcodeProjectFilePath        = ""
+	paramXcodeScheme                 = ""
+	paramXcodebuildOutputLogFilePath = ""
 )
 
 func init() {
@@ -42,6 +43,9 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme,
 		"scheme", "",
 		"Xcode Scheme")
+	xcodeCmd.Flags().StringVar(&paramXcodebuildOutputLogFilePath,
+		"xcodebuild-log", "",
+		"xcodebuild output log (file path), instead of running xcodebuild")
 }
 
 func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
@@ -54,65 +58,79 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
 
-	projectPath := paramXcodeProjectFilePath
-	if projectPath == "" {
-		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
+	xcodebuildOutput := ""
+	xcodeCmd := xcode.CommandModel{}
+	if paramXcodebuildOutputLogFilePath != "" {
+		xcLog, err := fileutil.ReadStringFromFile(paramXcodebuildOutputLogFilePath)
+		if err != nil {
+			return printXcodeScanFinishedWithError("Failed to read log from the specified log file, error: %s", err)
+		}
+		xcodebuildOutput = xcLog
+	} else {
+		projectPath := paramXcodeProjectFilePath
+		if projectPath == "" {
+			askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `)
    or Workspace (` + colorstring.Green(".xcworkspace") + `) file, the one you usually open in Xcode,
    then hit Enter.
 
   (Note: if you have a Workspace file you should most likely use that)`
-		fmt.Println()
-		projpth, err := goinp.AskForPath(askText)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to read input: %s", err)
-		}
-		projectPath = projpth
-	}
-	log.Debugf("projectPath: %s", projectPath)
-	xcodeCmd := xcode.CommandModel{
-		ProjectFilePath: projectPath,
-	}
-
-	schemeToUse := paramXcodeScheme
-	if schemeToUse == "" {
-		fmt.Println()
-		fmt.Println()
-		log.Println("🔦  Scanning Schemes ...")
-		schemes, err := xcodeCmd.ScanSchemes()
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to scan Schemes: %s", err)
-		}
-		log.Debugf("schemes: %v", schemes)
-
-		fmt.Println()
-		selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
-		}
-		log.Debugf("selected scheme: %v", selectedScheme)
-		schemeToUse = selectedScheme
-	}
-	xcodeCmd.Scheme = schemeToUse
-
-	fmt.Println()
-	fmt.Println()
-	log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
-	codeSigningSettings, xcodebuildOutput, err := xcodeCmd.ScanCodeSigningSettings()
-	// save the xcodebuild output into a debug log file
-	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-	{
-		log.Infof("  💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
-		} else if err != nil {
-			log.Infoln(colorstring.Yellow("Please check the logfile (" + xcodebuildOutputFilePath + ") to see what caused the error"))
-			log.Infoln(colorstring.Red("and make sure that you can Archive this project from Xcode!"))
 			fmt.Println()
-			log.Infoln("Open the project:", xcodeCmd.ProjectFilePath)
-			log.Infoln("and Archive, using the Scheme:", xcodeCmd.Scheme)
+			projpth, err := goinp.AskForPath(askText)
+			if err != nil {
+				return printXcodeScanFinishedWithError("Failed to read input: %s", err)
+			}
+			projectPath = projpth
+		}
+		log.Debugf("projectPath: %s", projectPath)
+		xcodeCmd.ProjectFilePath = projectPath
+
+		schemeToUse := paramXcodeScheme
+		if schemeToUse == "" {
 			fmt.Println()
+			fmt.Println()
+			log.Println("🔦  Scanning Schemes ...")
+			schemes, err := xcodeCmd.ScanSchemes()
+			if err != nil {
+				return printXcodeScanFinishedWithError("Failed to scan Schemes: %s", err)
+			}
+			log.Debugf("schemes: %v", schemes)
+
+			fmt.Println()
+			selectedScheme, err := goinp.SelectFromStrings("Select the Scheme you usually use in Xcode", schemes)
+			if err != nil {
+				return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
+			}
+			log.Debugf("selected scheme: %v", selectedScheme)
+			schemeToUse = selectedScheme
+		}
+		xcodeCmd.Scheme = schemeToUse
+
+		fmt.Println()
+		fmt.Println()
+		log.Println("🔦  Running an Xcode Archive, to get all the required code signing settings...")
+		xcLog, err := xcodeCmd.GenerateLog()
+		xcodebuildOutput = xcLog
+		// save the xcodebuild output into a debug log file
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+		{
+			log.Infof("  💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+			if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
+				log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
+			} else if err != nil {
+				log.Infoln(colorstring.Yellow("Please check the logfile (" + xcodebuildOutputFilePath + ") to see what caused the error"))
+				log.Infoln(colorstring.Red("and make sure that you can Archive this project from Xcode!"))
+				fmt.Println()
+				log.Infoln("Open the project:", xcodeCmd.ProjectFilePath)
+				log.Infoln("and Archive, using the Scheme:", xcodeCmd.Scheme)
+				fmt.Println()
+			}
+		}
+		if err != nil {
+			return printXcodeScanFinishedWithError("Failed to run Xcode Archive: %s", err)
 		}
 	}
+
+	codeSigningSettings, err := xcodeCmd.ScanCodeSigningSettings(xcodebuildOutput)
 	if err != nil {
 		return printXcodeScanFinishedWithError("Failed to detect code signing settings: %s", err)
 	}
