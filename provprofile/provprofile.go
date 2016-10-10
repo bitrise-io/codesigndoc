@@ -11,6 +11,7 @@ import (
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/ryanuber/go-glob"
 )
 
 const (
@@ -81,6 +82,8 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 }
 
 // FindProvProfilesByAppID ...
+// `appID`` supports "glob", e.g.: *.bundle.id will match any Prov Profile with ".bundle.id"
+//   app ID suffix
 func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, error) {
 	absProvProfileDirPath, err := pathutil.AbsPath(provProfileSystemDirPath)
 	if err != nil {
@@ -100,7 +103,7 @@ func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, 
 				aPth, err)
 		}
 
-		if provProfileData.Entitlements.AppID == appID {
+		if glob.Glob(appID, provProfileData.Entitlements.AppID) {
 			provProfilePathsToReturn = append(provProfilePathsToReturn, ProvisioningProfileFileInfoModel{
 				Path: aPth,
 				ProvisioningProfileInfo: provProfileData,
