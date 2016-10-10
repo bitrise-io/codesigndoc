@@ -66,8 +66,6 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 				err)
 	}
 
-	log.Printf("profileContent: %s", profileContent)
-
 	var provProfileData ProvisioningProfileModel
 	if err := plist.NewDecoder(strings.NewReader(profileContent)).Decode(&provProfileData); err != nil {
 		return provProfileData,
