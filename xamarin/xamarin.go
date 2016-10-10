@@ -76,7 +76,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 	identitiesMap := map[string]common.CodeSigningIdentityInfo{}
 	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
 	teamIDsMap := map[string]interface{}{}
-	appBundleIDsMap := map[string]interface{}{}
+	appIDsMap := map[string]interface{}{}
 
 	// scan log line by line
 	{
@@ -102,7 +102,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 					continue
 				}
 				teamIDsMap[teamID] = 1
-				appBundleIDsMap[appID] = 1
+				appIDsMap[appID] = 1
 			}
 
 			// Signing Identity
@@ -141,12 +141,12 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 		provProfiles = append(provProfiles, v)
 	}
 	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
-	appBundleIDs := maputil.KeysOfStringInterfaceMap(appBundleIDsMap)
+	appIDs := maputil.KeysOfStringInterfaceMap(appIDsMap)
 
 	return common.CodeSigningSettings{
 		Identities:   identities,
 		ProvProfiles: provProfiles,
 		TeamIDs:      teamIDs,
-		AppBundleIDs: appBundleIDs,
+		AppIDs:       appIDs,
 	}, nil
 }

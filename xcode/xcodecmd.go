@@ -49,7 +49,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 	identitiesMap := map[string]common.CodeSigningIdentityInfo{}
 	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
 	teamIDsMap := map[string]interface{}{}
-	appBundleIDsMap := map[string]interface{}{}
+	appIDsMap := map[string]interface{}{}
 
 	// scan log line by line
 	{
@@ -72,7 +72,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 					log.Errorf("Failed to scan App Bundle ID: %s", err)
 					continue
 				}
-				appBundleIDsMap[results["appbundleid"]] = 1
+				appIDsMap[results["appbundleid"]] = 1
 			}
 
 			// Signing Identity
@@ -129,13 +129,13 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 		provProfiles = append(provProfiles, v)
 	}
 	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
-	appBundleIDs := maputil.KeysOfStringInterfaceMap(appBundleIDsMap)
+	appIDs := maputil.KeysOfStringInterfaceMap(appIDsMap)
 
 	return common.CodeSigningSettings{
 		Identities:   identities,
 		ProvProfiles: provProfiles,
 		TeamIDs:      teamIDs,
-		AppBundleIDs: appBundleIDs,
+		AppIDs:       appIDs,
 	}, nil
 }
 

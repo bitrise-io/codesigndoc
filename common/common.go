@@ -12,5 +12,6 @@ type CodeSigningSettings struct {
 	Identities   []CodeSigningIdentityInfo
 	ProvProfiles []provprofile.ProvisioningProfileInfo
 	TeamIDs      []string
-	AppBundleIDs []string
+	// Full AppIDs, in the form: TEAMID.BUNDLEID
+	AppIDs []string
 }

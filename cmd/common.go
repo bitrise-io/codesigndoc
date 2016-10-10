@@ -82,8 +82,8 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println("==========================================")
 
 	fmt.Println()
-	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppBundleIDs))
-	for idx, anAppBundleID := range codeSigningSettings.AppBundleIDs {
+	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppIDs))
+	for idx, anAppBundleID := range codeSigningSettings.AppIDs {
 		utils.Printlnf(" * (%d): %s", idx+1, anAppBundleID)
 	}
 	fmt.Println("==========================================")
@@ -212,7 +212,7 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println()
 	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
 	fmt.Println()
-	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
+	for _, aAppBundleID := range codeSigningSettings.AppIDs {
 		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
 		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
 		if err != nil {

@@ -58,7 +58,7 @@ Entitlements:
 		require.Equal(t, []string{"01SA2B3CDL"},
 			parsedCodeSigningSettings.TeamIDs)
 		require.Equal(t, []string{"01SA2B3CDL.bitrise.watch-test"},
-			parsedCodeSigningSettings.AppBundleIDs)
+			parsedCodeSigningSettings.AppIDs)
 	}
 
 	t.Log("A single Identity & Prov Profile")
@@ -83,7 +83,7 @@ Provisioning Profile: "Prov Profile 42"
 			provprofile.ProvisioningProfileInfo{Title: "Prov Profile 42", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
 		}, parsedCodeSigningSettings.ProvProfiles)
 		require.Equal(t, []string{}, parsedCodeSigningSettings.TeamIDs)
-		require.Equal(t, []string{}, parsedCodeSigningSettings.AppBundleIDs)
+		require.Equal(t, []string{}, parsedCodeSigningSettings.AppIDs)
 	}
 
 	t.Log("A single Identity & Prov Profile - different style, and not after each other")
@@ -110,7 +110,7 @@ Provisioning Profile: "com.domain.app AdHoc"
 			provprofile.ProvisioningProfileInfo{Title: "com.domain.app AdHoc", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
 		}, parsedCodeSigningSettings.ProvProfiles)
 		require.Equal(t, []string{}, parsedCodeSigningSettings.TeamIDs)
-		require.Equal(t, []string{}, parsedCodeSigningSettings.AppBundleIDs)
+		require.Equal(t, []string{}, parsedCodeSigningSettings.AppIDs)
 	}
 
 	t.Log("A single Identity & Prov Profile - wildcard Prov Profile")
@@ -132,7 +132,7 @@ Provisioning Profile: "iOS Team Provisioning Profile: *"
 			provprofile.ProvisioningProfileInfo{Title: "iOS Team Provisioning Profile: *", UUID: "87af6d83-cb65-4dbe-aee7-f97a87d6fec1"},
 		}, parsedCodeSigningSettings.ProvProfiles)
 		require.Equal(t, []string{}, parsedCodeSigningSettings.TeamIDs)
-		require.Equal(t, []string{}, parsedCodeSigningSettings.AppBundleIDs)
+		require.Equal(t, []string{}, parsedCodeSigningSettings.AppIDs)
 	}
 
 	t.Log("Multiple Identity & Prov Profiles, as well as Entitlements sections")
@@ -228,6 +228,6 @@ Validate /Users/bitrise/Library/Developer/Xcode/DerivedData/MyProj-duvumlcdhycqq
 			"01SA2B3CDL.bitrise.watch-test.watchkitapp.watchkitextension",
 			"01SA2B3CDL.bitrise.watch-test",
 		},
-			parsedCodeSigningSettings.AppBundleIDs)
+			parsedCodeSigningSettings.AppIDs)
 	}
 }

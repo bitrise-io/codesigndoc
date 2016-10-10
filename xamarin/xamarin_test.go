@@ -113,6 +113,6 @@ func Test_parseCodeSigningSettingsFromOutput(t *testing.T) {
 			"01SA2B3CDL.io.bitrise.xamtest",
 			"01SA2B3CDL.io.bitrise.xamtest.ios.todayext",
 		},
-			parsedCodeSigningSettings.AppBundleIDs)
+			parsedCodeSigningSettings.AppIDs)
 	}
 }
