@@ -283,12 +283,13 @@ func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningP
 	exportTargetDirPath string) error {
 
 	for _, aProvProfileFileInfo := range provProfileFileInfos {
-		log.Infoln("   "+colorstring.Green("Exporting Provisioning Profile:"), aProvProfileFileInfo.ProvisioningProfileInfo.Name)
-		log.Infoln("                      App ID Name:", aProvProfileFileInfo.ProvisioningProfileInfo.AppIDName)
-		log.Infoln("                  Expiration Date:", aProvProfileFileInfo.ProvisioningProfileInfo.ExpirationDate)
-		log.Infoln("                             UUID:", aProvProfileFileInfo.ProvisioningProfileInfo.UUID)
-		log.Infoln("                         TeamName:", aProvProfileFileInfo.ProvisioningProfileInfo.TeamName)
-		log.Infoln("                           TeamID:", aProvProfileFileInfo.ProvisioningProfileInfo.Entitlements.TeamID)
+		provProfileInfo := aProvProfileFileInfo.ProvisioningProfileInfo
+		log.Infoln("   "+colorstring.Green("Exporting Provisioning Profile:"), provProfileInfo.Name)
+		log.Infoln("                      App ID Name:", provProfileInfo.AppIDName)
+		log.Infoln("                  Expiration Date:", provProfileInfo.ExpirationDate)
+		log.Infoln("                             UUID:", provProfileInfo.UUID)
+		log.Infoln("                         TeamName:", provProfileInfo.TeamName)
+		log.Infoln("                           TeamID:", provProfileInfo.Entitlements.TeamID)
 		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
 		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
