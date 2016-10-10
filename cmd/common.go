@@ -173,8 +173,16 @@ func collectAndExportProvisioningProfiles(codeSigningSettings common.CodeSigning
 	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
 	fmt.Println()
 	for _, aAppBundleID := range codeSigningSettings.AppIDs {
-		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
-		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
+		bundleOrAppIDPattern := common.BundleIDFromAppID(aAppBundleID)
+		if bundleOrAppIDPattern == "" {
+			// no bundle ID found in the app id
+			bundleOrAppIDPattern = aAppBundleID
+		} else {
+			// bundle ID found, make it a glob pattern
+			bundleOrAppIDPattern = "*." + bundleOrAppIDPattern
+		}
+		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID pattern")+": %s", bundleOrAppIDPattern)
+		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(bundleOrAppIDPattern)
 		if err != nil {
 			return provProfileFileInfos, fmt.Errorf("Error during Provisioning Profile search: %s", err)
 		}
@@ -282,14 +290,18 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
 	exportTargetDirPath string) error {
 
-	for _, aProvProfileFileInfo := range provProfileFileInfos {
+	for idx, aProvProfileFileInfo := range provProfileFileInfos {
+		if idx != 0 {
+			fmt.Println()
+		}
 		provProfileInfo := aProvProfileFileInfo.ProvisioningProfileInfo
 		log.Infoln("   "+colorstring.Green("Exporting Provisioning Profile:"), provProfileInfo.Name)
 		log.Infoln("                      App ID Name:", provProfileInfo.AppIDName)
+		log.Infoln("                           App ID:", provProfileInfo.Entitlements.AppID)
 		log.Infoln("                  Expiration Date:", provProfileInfo.ExpirationDate)
 		log.Infoln("                             UUID:", provProfileInfo.UUID)
 		log.Infoln("                         TeamName:", provProfileInfo.TeamName)
-		log.Infoln("                           TeamID:", provProfileInfo.Entitlements.TeamID)
+		log.Infoln("                          Team ID:", provProfileInfo.Entitlements.TeamID)
 		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
 		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
