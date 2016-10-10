@@ -17,51 +17,51 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/builtinutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/cmdex",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/colorstring",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/errorutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/fileutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/maputil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/pathutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/progress",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/readerutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/regexputil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/sliceutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/testutil",
-			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+			"Rev": "4b0a3d3ec144ab85f08d3cd9caf7fba8c38ed5e8"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/goinp/goinp",
@@ -108,7 +108,7 @@
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
-			"Rev": "9c28e4bbd74e5c3ed7aacbc552b2cab7cfdfe744"
+			"Rev": "ec2fe7859914a5106dcab4e7901633d959bfc2f4"
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",
