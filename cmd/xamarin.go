@@ -94,7 +94,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		xamarinProjectsToChooseFrom := []project.Model{}
 		for _, aXamarinProject := range xamSln.ProjectMap {
 			switch aXamarinProject.ProjectType {
-			case constants.ProjectTypeIos, constants.ProjectTypeTVOs, constants.ProjectTypeMac:
+			case constants.ProjectTypeIOS, constants.ProjectTypeTvOS, constants.ProjectTypeMacOS:
 				if aXamarinProject.OutputType == "exe" {
 					// possible project
 					xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)

@@ -49,7 +49,7 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 	identitiesMap := map[string]common.CodeSigningIdentityInfo{}
 	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
 	teamIDsMap := map[string]interface{}{}
-	appBundleIDsMap := map[string]interface{}{}
+	appIDsMap := map[string]interface{}{}
 
 	// scan log line by line
 	{
@@ -57,9 +57,9 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 		for ; readErr == nil; line, readErr = readerutil.ReadLongLine(logReader) {
 			// Team ID
 			if rexp := regexp.MustCompile(`^[[:space:]]*"com.apple.developer.team-identifier" = (?P<teamid>[a-zA-Z0-9]+);$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan TeamID: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan TeamID: not found in the logs")
 					continue
 				}
 				teamIDsMap[results["teamid"]] = 1
@@ -67,19 +67,19 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 
 			// App Bundle ID
 			if rexp := regexp.MustCompile(`^[[:space:]]*"application-identifier" = "(?P<appbundleid>.+)";$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan App Bundle ID: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan App Bundle ID: not found in the logs")
 					continue
 				}
-				appBundleIDsMap[results["appbundleid"]] = 1
+				appIDsMap[results["appbundleid"]] = 1
 			}
 
 			// Signing Identity
 			if rexp := regexp.MustCompile(`^[[:space:]]*Signing Identity:[[:space:]]*"(?P<title>.+)"$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan Signing Identity title: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan Signing Identity title: not found in the logs")
 					continue
 				}
 				codeSigningID := common.CodeSigningIdentityInfo{Title: results["title"]}
@@ -87,9 +87,9 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 			}
 			// Prov. Profile - title line
 			if rexp := regexp.MustCompile(`^[[:space:]]*Provisioning Profile:[[:space:]]*"(?P<title>.+)"$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan Provisioning Profile title: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan Provisioning Profile title: not found in the logs")
 					continue
 				}
 				tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
@@ -106,9 +106,9 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 				provProfileUUIDLine := line
 
 				rexp = regexp.MustCompile(`^[[:space:]]*\((?P<uuid>[a-zA-Z0-9-]{36})\)`)
-				results, err = regexputil.NamedFindStringSubmatch(rexp, provProfileUUIDLine)
-				if err != nil {
-					log.Errorf("Failed to scan Provisioning Profile UUID: %s | line was: %s", err, provProfileUUIDLine)
+				results, isFound = regexputil.NamedFindStringSubmatch(rexp, provProfileUUIDLine)
+				if !isFound {
+					log.Errorf("Failed to scan Provisioning Profile UUID: pattern not found | line was: %s", provProfileUUIDLine)
 					continue
 				}
 				tmpProvProfile.UUID = results["uuid"]
@@ -129,13 +129,13 @@ func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSig
 		provProfiles = append(provProfiles, v)
 	}
 	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
-	appBundleIDs := maputil.KeysOfStringInterfaceMap(appBundleIDsMap)
+	appIDs := maputil.KeysOfStringInterfaceMap(appIDsMap)
 
 	return common.CodeSigningSettings{
 		Identities:   identities,
 		ProvProfiles: provProfiles,
 		TeamIDs:      teamIDs,
-		AppBundleIDs: appBundleIDs,
+		AppIDs:       appIDs,
 	}, nil
 }
 

@@ -1,14 +1,18 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
@@ -82,8 +86,8 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println("==========================================")
 
 	fmt.Println()
-	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppBundleIDs))
-	for idx, anAppBundleID := range codeSigningSettings.AppBundleIDs {
+	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppIDs))
+	for idx, anAppBundleID := range codeSigningSettings.AppIDs {
 		utils.Printlnf(" * (%d): %s", idx+1, anAppBundleID)
 	}
 	fmt.Println("==========================================")
@@ -123,6 +127,92 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 		log.Debug("Allow Export flag was set - doing export without asking")
 	}
 
+	exportedProvProfiles, err := collectAndExportProvisioningProfiles(codeSigningSettings, absExportOutputDirPath)
+	if err != nil {
+		return printFinishedWithError(toolName, "Failed to export Provisioning Profiles, error: %s", err)
+	}
+
+	if err := collectAndExportIdentities(codeSigningSettings, exportedProvProfiles.CollectTeamIDs(), absExportOutputDirPath); err != nil {
+		return printFinishedWithError(toolName, "Failed to export identities, error: %s", err)
+	}
+
+	fmt.Println()
+	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
+	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
+		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
+	}
+	fmt.Println("Opened the directory in Finder.")
+	fmt.Println()
+
+	printFinished()
+	return nil
+}
+
+func collectAndExportProvisioningProfiles(codeSigningSettings common.CodeSigningSettings,
+	absExportOutputDirPath string) (provprofile.ProvisioningProfileFileInfoModels, error) {
+
+	provProfileFileInfos := []provprofile.ProvisioningProfileFileInfoModel{}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Searching for required Provisioning Profiles"), "...")
+	fmt.Println()
+
+	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
+	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
+		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
+		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
+		if err != nil {
+			return provProfileFileInfos, fmt.Errorf("Failed to find Provisioning Profile: %s", err)
+		}
+		log.Infof("   File found at: %s", provProfileFileInfo.Path)
+
+		provProfileUUIDLookupMap[provProfileFileInfo.ProvisioningProfileInfo.UUID] = provProfileFileInfo
+	}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
+	fmt.Println()
+	for _, aAppBundleID := range codeSigningSettings.AppIDs {
+		bundleOrAppIDPattern := common.BundleIDFromAppID(aAppBundleID)
+		if bundleOrAppIDPattern == "" {
+			// no bundle ID found in the app id
+			bundleOrAppIDPattern = aAppBundleID
+		} else {
+			// bundle ID found, make it a glob pattern
+			bundleOrAppIDPattern = "*." + bundleOrAppIDPattern
+		}
+		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID pattern")+": %s", bundleOrAppIDPattern)
+		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(bundleOrAppIDPattern)
+		if err != nil {
+			return provProfileFileInfos, fmt.Errorf("Error during Provisioning Profile search: %s", err)
+		}
+		if len(provProfileFileInfos) < 1 {
+			log.Warn("   No Provisioning Profile found for this Bundle ID")
+			continue
+		}
+		log.Infof("   Found matching Provisioning Profile count: %d", len(provProfileFileInfos))
+
+		for _, aProvProfileFileInfo := range provProfileFileInfos {
+			provProfileUUIDLookupMap[aProvProfileFileInfo.ProvisioningProfileInfo.UUID] = aProvProfileFileInfo
+		}
+	}
+
+	fmt.Println()
+	log.Println(colorstring.Green("Exporting Provisioning Profiles"), "...")
+	fmt.Println()
+	for _, aProvProfFileInfo := range provProfileUUIDLookupMap {
+		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
+	}
+	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
+		return provProfileFileInfos, fmt.Errorf("Failed to export the Provisioning Profile into the export directory: %s", err)
+	}
+
+	return provProfileFileInfos, nil
+}
+
+func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, additionalTeamIDs []string,
+	absExportOutputDirPath string) error {
+
 	fmt.Println()
 	log.Println("Collecting the required Identities (Certificates) for a base Xcode Archive ...")
 	fmt.Println()
@@ -134,11 +224,11 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
 		if err != nil {
-			return printFinishedWithError(toolName, "Failed to export, error: %s", err)
+			return fmt.Errorf("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
-			return printFinishedWithError(toolName, "Identity not found in the keychain, or it was invalid (expired)!")
+			return errors.New("Identity not found in the keychain, or it was invalid (expired)!")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
@@ -151,11 +241,12 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	log.Println("Collecting additional identities, for Distribution builds ...")
 	fmt.Println()
 
-	for _, aTeamID := range codeSigningSettings.TeamIDs {
+	totalTeamIDs := append(codeSigningSettings.TeamIDs, additionalTeamIDs...)
+	for _, aTeamID := range sliceutil.UniqueStringSlice(totalTeamIDs) {
 		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
 		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
 		if err != nil {
-			return printFinishedWithError(toolName, "Failed to export, error: %s", err)
+			return fmt.Errorf("Failed to export, error: %s", err)
 		}
 
 		if len(validIdentityRefs) < 1 {
@@ -190,64 +281,48 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println()
 
 	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
-		return printFinishedWithError(toolName, "Failed to export from Keychain: %s", err)
+		return fmt.Errorf("Failed to export from Keychain: %s", err)
 	}
 
-	fmt.Println()
-	log.Println(colorstring.Green("Searching for required Provisioning Profiles"), "...")
-	fmt.Println()
-
-	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
-	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
-		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
-		if err != nil {
-			return printFinishedWithError(toolName, "Failed to find Provisioning Profile: %s", err)
-		}
-		log.Infof("   File found at: %s", provProfileFileInfo.Path)
-
-		provProfileUUIDLookupMap[provProfileFileInfo.ProvisioningProfileInfo.UUID] = provProfileFileInfo
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
-	fmt.Println()
-	for _, aAppBundleID := range codeSigningSettings.AppBundleIDs {
-		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID")+": %s", aAppBundleID)
-		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(aAppBundleID)
-		if err != nil {
-			return printFinishedWithError(toolName, "Error during Provisioning Profile search: %s", err)
-		}
-		if len(provProfileFileInfos) < 1 {
-			log.Warn("   No Provisioning Profile found for this Bundle ID")
-			continue
-		}
-		log.Infof("   Found matching Provisioning Profile count: %d", len(provProfileFileInfos))
-
-		for _, aProvProfileFileInfo := range provProfileFileInfos {
-			provProfileUUIDLookupMap[aProvProfileFileInfo.ProvisioningProfileInfo.UUID] = aProvProfileFileInfo
-		}
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Exporting Provisioning Profiles"), "...")
-	fmt.Println()
-	provProfileFileInfos := []provprofile.ProvisioningProfileFileInfoModel{}
-	for _, aProvProfFileInfo := range provProfileUUIDLookupMap {
-		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
-	}
-	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
-		return printFinishedWithError(toolName, "Failed to export the Provisioning Profile into the export directory: %s", err)
-	}
-
-	fmt.Println()
-	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
-	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
-	}
-	fmt.Println("Opened the directory in Finder.")
-	fmt.Println()
-
-	printFinished()
 	return nil
+}
+
+func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
+	exportTargetDirPath string) error {
+
+	for idx, aProvProfileFileInfo := range provProfileFileInfos {
+		if idx != 0 {
+			fmt.Println()
+		}
+		provProfileInfo := aProvProfileFileInfo.ProvisioningProfileInfo
+		log.Infoln("   "+colorstring.Green("Exporting Provisioning Profile:"), provProfileInfo.Name)
+		log.Infoln("                      App ID Name:", provProfileInfo.AppIDName)
+		log.Infoln("                           App ID:", provProfileInfo.Entitlements.AppID)
+		log.Infoln("                  Expiration Date:", provProfileInfo.ExpirationDate)
+		log.Infoln("                             UUID:", provProfileInfo.UUID)
+		log.Infoln("                         TeamName:", provProfileInfo.TeamName)
+		log.Infoln("                          Team ID:", provProfileInfo.Entitlements.TeamID)
+		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
+		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
+		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
+			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
+				aProvProfileFileInfo.Path, exportPth, err)
+		}
+	}
+	return nil
+}
+
+func provProfileExportFileName(provProfileFileInfo provprofile.ProvisioningProfileFileInfoModel) string {
+	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
+	if err != nil {
+		log.Warn("Invalid regex, error: %s", err)
+		return ""
+	}
+	safeTitle := replaceRexp.ReplaceAllString(provProfileFileInfo.ProvisioningProfileInfo.Name, "")
+	extension := ".mobileprovision"
+	if strings.HasSuffix(provProfileFileInfo.Path, ".provisionprofile") {
+		extension = ".provisionprofile"
+	}
+
+	return provProfileFileInfo.ProvisioningProfileInfo.UUID + "." + safeTitle + extension
 }

@@ -76,7 +76,7 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 	identitiesMap := map[string]common.CodeSigningIdentityInfo{}
 	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
 	teamIDsMap := map[string]interface{}{}
-	appBundleIDsMap := map[string]interface{}{}
+	appIDsMap := map[string]interface{}{}
 
 	// scan log line by line
 	{
@@ -85,9 +85,9 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 
 			// App ID
 			if rexp := regexp.MustCompile(`^[[:space:]]*App Id: (?P<appid>.+)$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan App Bundle ID: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan App Bundle ID: not found in the logs")
 					continue
 				}
 				appID := results["appid"]
@@ -102,14 +102,14 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 					continue
 				}
 				teamIDsMap[teamID] = 1
-				appBundleIDsMap[appID] = 1
+				appIDsMap[appID] = 1
 			}
 
 			// Signing Identity
 			if rexp := regexp.MustCompile(`^[[:space:]]*Code Signing Key: "(?P<title>.+)" \((?P<identityid>[a-zA-Z0-9]+)\)$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan Signing Identity title: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan Signing Identity title: not found in the logs")
 					continue
 				}
 				codeSigningID := common.CodeSigningIdentityInfo{Title: results["title"]}
@@ -117,9 +117,9 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 			}
 			// Prov. Profile - title line
 			if rexp := regexp.MustCompile(`^[[:space:]]*Provisioning Profile: "(?P<title>.+)" \((?P<uuid>[a-zA-Z0-9-]+)\)$`); rexp.MatchString(line) {
-				results, err := regexputil.NamedFindStringSubmatch(rexp, line)
-				if err != nil {
-					log.Errorf("Failed to scan Provisioning Profile: %s", err)
+				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
+				if !isFound {
+					log.Error("Failed to scan Provisioning Profile: not found in the logs")
 					continue
 				}
 				tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
@@ -141,12 +141,12 @@ func parseCodeSigningSettingsFromOutput(logOutput string) (common.CodeSigningSet
 		provProfiles = append(provProfiles, v)
 	}
 	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
-	appBundleIDs := maputil.KeysOfStringInterfaceMap(appBundleIDsMap)
+	appIDs := maputil.KeysOfStringInterfaceMap(appIDsMap)
 
 	return common.CodeSigningSettings{
 		Identities:   identities,
 		ProvProfiles: provProfiles,
 		TeamIDs:      teamIDs,
-		AppBundleIDs: appBundleIDs,
+		AppIDs:       appIDs,
 	}, nil
 }
