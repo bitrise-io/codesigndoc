@@ -3,16 +3,12 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/spf13/cobra"
 )
@@ -137,35 +133,4 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	log.Debugf("codeSigningSettings: %#v", codeSigningSettings)
 
 	return exportCodeSigningFiles("Xcode", absExportOutputDirPath, codeSigningSettings)
-}
-
-func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
-	exportTargetDirPath string) error {
-
-	for _, aProvProfileFileInfo := range provProfileFileInfos {
-		log.Infoln("   " + colorstring.Green("Exporting Provisioning Profile:") + " " + aProvProfileFileInfo.ProvisioningProfileInfo.Name)
-		log.Infoln("                             UUID: " + aProvProfileFileInfo.ProvisioningProfileInfo.UUID)
-		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
-		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
-		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
-			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
-				aProvProfileFileInfo.Path, exportPth, err)
-		}
-	}
-	return nil
-}
-
-func provProfileExportFileName(provProfileFileInfo provprofile.ProvisioningProfileFileInfoModel) string {
-	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
-	if err != nil {
-		log.Warn("Invalid regex, error: %s", err)
-		return ""
-	}
-	safeTitle := replaceRexp.ReplaceAllString(provProfileFileInfo.ProvisioningProfileInfo.Name, "")
-	extension := ".mobileprovision"
-	if strings.HasSuffix(provProfileFileInfo.Path, ".provisionprofile") {
-		extension = ".provisionprofile"
-	}
-
-	return provProfileFileInfo.ProvisioningProfileInfo.UUID + "." + safeTitle + extension
 }

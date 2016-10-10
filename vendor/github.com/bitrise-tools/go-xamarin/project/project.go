@@ -161,9 +161,7 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 				if exist, err := pathutil.IsPathExists(targetDefinitionPth); err != nil {
 					return Model{}, err
-				} else if !exist {
-					return Model{}, fmt.Errorf("target definition file not exist at: %s", targetDefinitionPth)
-				} else {
+				} else if exist {
 					proj, err := analyzeTargetDefinition(project, targetDefinitionPth)
 					if err != nil {
 						return Model{}, err

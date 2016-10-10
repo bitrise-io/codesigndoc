@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	plist "github.com/DHowett/go-plist"
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/ryanuber/go-glob"
 )
 
 const (
@@ -23,20 +26,36 @@ type ProvisioningProfileInfo struct {
 
 // EntitlementsModel ...
 type EntitlementsModel struct {
-	AppID string `plist:"application-identifier"`
+	AppID  string `plist:"application-identifier"`
+	TeamID string `plist:"com.apple.developer.team-identifier"`
 }
 
 // ProvisioningProfileModel ...
 type ProvisioningProfileModel struct {
-	Entitlements EntitlementsModel `plist:"Entitlements"`
-	UUID         string            `plist:"UUID"`
-	Name         string            `plist:"Name"`
+	Entitlements   EntitlementsModel `plist:"Entitlements"`
+	UUID           string            `plist:"UUID"`
+	TeamName       string            `plist:"TeamName"`
+	Name           string            `plist:"Name"`
+	AppIDName      string            `plist:"AppIDName"`
+	ExpirationDate time.Time         `plist:"ExpirationDate"`
 }
 
 // ProvisioningProfileFileInfoModel ...
 type ProvisioningProfileFileInfoModel struct {
 	Path                    string
 	ProvisioningProfileInfo ProvisioningProfileModel
+}
+
+// ProvisioningProfileFileInfoModels ...
+type ProvisioningProfileFileInfoModels []ProvisioningProfileFileInfoModel
+
+// CollectTeamIDs ...
+func (ppFileInfos ProvisioningProfileFileInfoModels) CollectTeamIDs() []string {
+	teamIDsMap := map[string]interface{}{}
+	for _, aProvProfileFileInfo := range ppFileInfos {
+		teamIDsMap[aProvProfileFileInfo.ProvisioningProfileInfo.Entitlements.TeamID] = 1
+	}
+	return maputil.KeysOfStringInterfaceMap(teamIDsMap)
 }
 
 // CreateProvisioningProfileModelFromFile ...
@@ -63,6 +82,8 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 }
 
 // FindProvProfilesByAppID ...
+// `appID`` supports "glob", e.g.: *.bundle.id will match any Prov Profile with ".bundle.id"
+//   app ID suffix
 func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, error) {
 	absProvProfileDirPath, err := pathutil.AbsPath(provProfileSystemDirPath)
 	if err != nil {
@@ -82,7 +103,7 @@ func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, 
 				aPth, err)
 		}
 
-		if provProfileData.Entitlements.AppID == appID {
+		if glob.Glob(appID, provProfileData.Entitlements.AppID) {
 			provProfilePathsToReturn = append(provProfilePathsToReturn, ProvisioningProfileFileInfoModel{
 				Path: aPth,
 				ProvisioningProfileInfo: provProfileData,

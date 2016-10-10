@@ -1,15 +1,12 @@
 package regexputil
 
-import (
-	"errors"
-	"regexp"
-)
+import "regexp"
 
 // NamedFindStringSubmatch ...
-func NamedFindStringSubmatch(rexp *regexp.Regexp, text string) (map[string]string, error) {
+func NamedFindStringSubmatch(rexp *regexp.Regexp, text string) (map[string]string, bool) {
 	match := rexp.FindStringSubmatch(text)
 	if match == nil {
-		return map[string]string{}, errors.New("No match found")
+		return nil, false
 	}
 	result := map[string]string{}
 	for i, name := range rexp.SubexpNames() {
@@ -17,5 +14,5 @@ func NamedFindStringSubmatch(rexp *regexp.Regexp, text string) (map[string]strin
 			result[name] = match[i]
 		}
 	}
-	return result, nil
+	return result, true
 }
