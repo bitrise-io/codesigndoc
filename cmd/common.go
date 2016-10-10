@@ -232,6 +232,8 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
+		} else {
+			log.Infoln("   " + colorstring.Green("Found - OK"))
 		}
 
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
@@ -252,6 +254,7 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 		if len(validIdentityRefs) < 1 {
 			log.Infoln("No valid identity found for this Team ID")
 		}
+		log.Infoln("   "+colorstring.Green("Found identities count")+":", len(validIdentityRefs))
 
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
 	}
