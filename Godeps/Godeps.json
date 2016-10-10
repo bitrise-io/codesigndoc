@@ -17,47 +17,51 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/builtinutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/cmdex",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/colorstring",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/errorutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/fileutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/maputil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/pathutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/progress",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/readerutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/regexputil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
+		},
+		{
+			"ImportPath": "github.com/bitrise-io/go-utils/sliceutil",
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/go-utils/testutil",
-			"Rev": "5c210e4691a5a75e5685d2e842a104ca55ec7697"
+			"Rev": "1841add13a05e3f1046f250aa833eb48745a1835"
 		},
 		{
 			"ImportPath": "github.com/bitrise-io/goinp/goinp",
@@ -65,23 +69,23 @@
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/constants",
-			"Comment": "0.9.0-8-g8974f9d",
-			"Rev": "8974f9db4c43a3d9d831416e549a66b85daa65ea"
+			"Comment": "0.9.0-16-g4ff6181",
+			"Rev": "4ff618179cadff1f4a61517107a7a9ea263a4896"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/project",
-			"Comment": "0.9.0-8-g8974f9d",
-			"Rev": "8974f9db4c43a3d9d831416e549a66b85daa65ea"
+			"Comment": "0.9.0-16-g4ff6181",
+			"Rev": "4ff618179cadff1f4a61517107a7a9ea263a4896"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/solution",
-			"Comment": "0.9.0-8-g8974f9d",
-			"Rev": "8974f9db4c43a3d9d831416e549a66b85daa65ea"
+			"Comment": "0.9.0-16-g4ff6181",
+			"Rev": "4ff618179cadff1f4a61517107a7a9ea263a4896"
 		},
 		{
 			"ImportPath": "github.com/bitrise-tools/go-xamarin/utility",
-			"Comment": "0.9.0-8-g8974f9d",
-			"Rev": "8974f9db4c43a3d9d831416e549a66b85daa65ea"
+			"Comment": "0.9.0-16-g4ff6181",
+			"Rev": "4ff618179cadff1f4a61517107a7a9ea263a4896"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
@@ -103,7 +107,7 @@
 		},
 		{
 			"ImportPath": "github.com/spf13/pflag",
-			"Rev": "c7e63cf4530bcd3ba943729cee0efeff2ebea63f"
+			"Rev": "b83537d79690b75cac5e021b036ae16792bf0f20"
 		},
 		{
 			"ImportPath": "github.com/stretchr/testify/assert",
@@ -117,7 +121,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
+			"Rev": "8d1157a435470616f975ff9bb013bea8d0962067"
 		}
 	]
 }

@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	plist "github.com/DHowett/go-plist"
 	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
 )
 
@@ -29,15 +31,30 @@ type EntitlementsModel struct {
 
 // ProvisioningProfileModel ...
 type ProvisioningProfileModel struct {
-	Entitlements EntitlementsModel `plist:"Entitlements"`
-	UUID         string            `plist:"UUID"`
-	Name         string            `plist:"Name"`
+	Entitlements   EntitlementsModel `plist:"Entitlements"`
+	UUID           string            `plist:"UUID"`
+	TeamName       string            `plist:"TeamName"`
+	Name           string            `plist:"Name"`
+	AppIDName      string            `plist:"AppIDName"`
+	ExpirationDate time.Time         `plist:"ExpirationDate"`
 }
 
 // ProvisioningProfileFileInfoModel ...
 type ProvisioningProfileFileInfoModel struct {
 	Path                    string
 	ProvisioningProfileInfo ProvisioningProfileModel
+}
+
+// ProvisioningProfileFileInfoModels ...
+type ProvisioningProfileFileInfoModels []ProvisioningProfileFileInfoModel
+
+// CollectTeamIDs ...
+func (ppFileInfos ProvisioningProfileFileInfoModels) CollectTeamIDs() []string {
+	teamIDsMap := map[string]interface{}{}
+	for _, aProvProfileFileInfo := range ppFileInfos {
+		teamIDsMap[aProvProfileFileInfo.ProvisioningProfileInfo.Entitlements.TeamID] = 1
+	}
+	return maputil.KeysOfStringInterfaceMap(teamIDsMap)
 }
 
 // CreateProvisioningProfileModelFromFile ...
@@ -48,6 +65,8 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 			fmt.Errorf("Failed to retrieve information about Provisioning Profile, error: %s",
 				err)
 	}
+
+	log.Printf("profileContent: %s", profileContent)
 
 	var provProfileData ProvisioningProfileModel
 	if err := plist.NewDecoder(strings.NewReader(profileContent)).Decode(&provProfileData); err != nil {
