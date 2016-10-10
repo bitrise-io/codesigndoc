@@ -23,7 +23,8 @@ type ProvisioningProfileInfo struct {
 
 // EntitlementsModel ...
 type EntitlementsModel struct {
-	AppID string `plist:"application-identifier"`
+	AppID  string `plist:"application-identifier"`
+	TeamID string `plist:"com.apple.developer.team-identifier"`
 }
 
 // ProvisioningProfileModel ...
