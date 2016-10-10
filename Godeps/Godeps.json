@@ -102,6 +102,11 @@
 			"Rev": "792786c7400a136282c1664665ae0a8db921c6c2"
 		},
 		{
+			"ImportPath": "github.com/ryanuber/go-glob",
+			"Comment": "v0.1",
+			"Rev": "572520ed46dbddaed19ea3d9541bdd0494163693"
+		},
+		{
 			"ImportPath": "github.com/spf13/cobra",
 			"Rev": "9c28e4bbd74e5c3ed7aacbc552b2cab7cfdfe744"
 		},
