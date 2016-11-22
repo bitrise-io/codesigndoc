@@ -236,7 +236,7 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 		}
 
 		if len(validIdentityRefs) < 1 {
-			return errors.New("Identity not found in the keychain, or it was invalid (expired)!")
+			return errors.New("Identity not found in the keychain, or it was invalid (expired)")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))

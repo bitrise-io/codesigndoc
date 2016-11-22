@@ -190,7 +190,7 @@ func FindIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRe
 	identitiesArrRef := C.CFArrayRef(resultRefs)
 	identitiesCount := C.CFArrayGetCount(identitiesArrRef)
 	if identitiesCount < 1 {
-		return nil, fmt.Errorf("No Identity (certificate + related private key) found in your Keychain!")
+		return nil, fmt.Errorf("No Identity (certificate + related private key) found in your Keychain")
 	}
 	log.Debugf("identitiesCount: %d", identitiesCount)
 
