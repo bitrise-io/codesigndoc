@@ -66,9 +66,17 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println()
 	fmt.Println()
 	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
+	cleanedUpIdentities := []common.CodeSigningIdentityInfo{}
 	for idx, anIdentity := range codeSigningSettings.Identities {
 		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
+		if anIdentity.Title == "-" {
+			fmt.Println("   " + colorstring.Yellow("WARNING:") + " This entry (" + colorstring.Yellow("-") + ") means that one of your target/project is set to " + colorstring.Yellow("NO CODE SIGN"))
+			fmt.Println("            Please try to fix this issue first if you'd experience any code signing problems!")
+		} else {
+			cleanedUpIdentities = append(cleanedUpIdentities, anIdentity)
+		}
 	}
+	codeSigningSettings.Identities = cleanedUpIdentities
 	fmt.Println("============================================")
 
 	fmt.Println()
