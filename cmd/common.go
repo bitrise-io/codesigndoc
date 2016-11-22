@@ -66,9 +66,17 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 	fmt.Println()
 	fmt.Println()
 	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
+	cleanedUpIdentities := []common.CodeSigningIdentityInfo{}
 	for idx, anIdentity := range codeSigningSettings.Identities {
 		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
+		if anIdentity.Title == "-" {
+			fmt.Println("   " + colorstring.Yellow("WARNING:") + " This entry (" + colorstring.Yellow("-") + ") means that one of your target/project is set to " + colorstring.Yellow("NO CODE SIGN"))
+			fmt.Println("            Please try to fix this issue first if you'd experience any code signing problems!")
+		} else {
+			cleanedUpIdentities = append(cleanedUpIdentities, anIdentity)
+		}
 	}
+	codeSigningSettings.Identities = cleanedUpIdentities
 	fmt.Println("============================================")
 
 	fmt.Println()
@@ -228,7 +236,7 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 		}
 
 		if len(validIdentityRefs) < 1 {
-			return errors.New("Identity not found in the keychain, or it was invalid (expired)!")
+			return errors.New("Identity not found in the keychain, or it was invalid (expired)")
 		}
 		if len(validIdentityRefs) > 1 {
 			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
