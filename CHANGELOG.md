@@ -1,6 +1,9 @@
 
 ### 0.9.16 - 0.9.15 (2016 Nov 22)
 
+* [1623a3b] Viktor Benei - install wrap version update (2016 Nov 22)
+* [b07c4a0] Viktor Benei - codesigndoc version --full (2016 Nov 22)
+* [ba8e898] Viktor Benei - changelog (2016 Nov 22)
 * [919cd19] Viktor Benei - v0.9.16 (2016 Nov 22)
 * [2073453] Viktor Benei - ignore / don't try to export the dash (-) identity (#26) (2016 Nov 22)
 * [474043d] Viktor Benei - debug print all found prov profile content (2016 Oct 12)
