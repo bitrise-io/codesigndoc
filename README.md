@@ -62,7 +62,7 @@ Performing a clean archive from Terminal is as easy as running this command (*on
 
 In the output you'll see code signing infos, namely you should search for the text `Signing Identity` which is followed by a `Provisioning Profile` line. There might be more than one configuration in the log - these are the configurations used by Xcode on your Mac when you do an Archive.
 
-To make an Xcode Archive work _on any Mac_, you need the same Code Signing Identity (certificate) and Provisioning Profile(s). T_he signing Identities (certificates) and Provisioning Profiles present in the log are __required__, regardless of the final distribution type you use._
+To make an Xcode Archive work _on any Mac_, you need the same Code Signing Identity (certificate) and Provisioning Profile(s). _The signing Identities (certificates) and Provisioning Profiles present in the log are **required**, regardless of the final distribution type you use._
 
 To run the `xcodebuild` command and only show these lines you can add the postfix: ` | grep -i -e 'Signing Identity' -e 'Provisioning Profile' -e '` to your call, for example: `xcodebuild -workspace "YOUR.xcworkspace" -scheme "a Shared scheme" clean archive | grep -i -e 'Signing Identity' -e 'Provisioning Profile' -e '`. This will run the exact same command, but will filter out every other text in the output except these lines you're searching for.
 
