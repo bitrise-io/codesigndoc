@@ -85,6 +85,7 @@ If you see more than one `Signing Identity` or `Provisioning Profile` line that 
 1. run `releaseman create-changelog --version THE.NEW.VERSION` (with the right version number of course)
 1. commit the CHANGELOG
 1. run `gows bitrise run create-release`
-1. commit the changes & `git push`
-1. tag the release: `git tag THE.NEW.VERSION && git push origin tags/THE.NEW.VERSION`
+1. commit the changes
+1. tag the release: `git tag THE.NEW.VERSION`
+1. push the changes: `git push && git push origin tags/THE.NEW.VERSION`
 1. create the release on GitHub, and upload the new version's binary
