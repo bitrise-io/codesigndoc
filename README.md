@@ -75,3 +75,16 @@ Provisioning Profile: "BuildAnything"
 ```
 
 If you see more than one `Signing Identity` or `Provisioning Profile` line that means that Xcode had to switch between code signing configurations to be able to create your archive. __All of the listed certificates & provisioning profiles have to be available to create an archive of your project__ with your current code signing settings.
+
+
+## Development
+
+### Create a new release
+
+1. bump the version in `version/version.go`
+1. run `releaseman create-changelog --version THE.NEW.VERSION` (with the right version number of course)
+1. commit the CHANGELOG
+1. run `gows bitrise run create-release`
+1. commit the changes & `git push`
+1. tag the release: `git tag THE.NEW.VERSION && git push origin tags/THE.NEW.VERSION`
+1. create the release on GitHub, and upload the new version's binary
