@@ -140,12 +140,12 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 		return printFinishedWithError(toolName, "Failed to export Provisioning Profiles, error: %s", err)
 	}
 
-	teamIDs, err := exportedProvProfiles.CollectTeamIDs()
+	provProfileTeamIDs, err := exportedProvProfiles.CollectTeamIDs()
 	if err != nil {
 		return printFinishedWithError(toolName, "Failed to collect Team IDs from Provisioning Profiles, error: %s", err)
 	}
 
-	if err := collectAndExportIdentities(codeSigningSettings, teamIDs, absExportOutputDirPath); err != nil {
+	if err := collectAndExportIdentities(codeSigningSettings, provProfileTeamIDs, absExportOutputDirPath); err != nil {
 		return printFinishedWithError(toolName, "Failed to export identities, error: %s", err)
 	}
 
@@ -311,7 +311,7 @@ func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningP
 			fmt.Println()
 		}
 		provProfileInfo := aProvProfileFileInfo.ProvisioningProfileInfo
-		teamID, err := provProfileInfo.TeamID()
+		provProfileTeamID, err := provProfileInfo.TeamID()
 		if err != nil {
 			return fmt.Errorf("Invalid Team ID in provisioning profile (uuid: %s), error: %s",
 				provProfileInfo.UUID, err)
@@ -323,7 +323,7 @@ func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningP
 		log.Infoln("                  Expiration Date:", provProfileInfo.ExpirationDate)
 		log.Infoln("                             UUID:", provProfileInfo.UUID)
 		log.Infoln("                         TeamName:", provProfileInfo.TeamName)
-		log.Infoln("                          Team ID:", teamID)
+		log.Infoln("                          Team ID:", provProfileTeamID)
 
 		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
