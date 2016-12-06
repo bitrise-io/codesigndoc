@@ -1,6 +1,7 @@
 package provprofile
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -26,18 +27,35 @@ type ProvisioningProfileInfo struct {
 
 // EntitlementsModel ...
 type EntitlementsModel struct {
-	AppID  string `plist:"application-identifier"`
-	TeamID string `plist:"com.apple.developer.team-identifier"`
+	AppID string `plist:"application-identifier"`
 }
 
 // ProvisioningProfileModel ...
 type ProvisioningProfileModel struct {
-	Entitlements   EntitlementsModel `plist:"Entitlements"`
-	UUID           string            `plist:"UUID"`
-	TeamName       string            `plist:"TeamName"`
-	Name           string            `plist:"Name"`
-	AppIDName      string            `plist:"AppIDName"`
-	ExpirationDate time.Time         `plist:"ExpirationDate"`
+	Entitlements    EntitlementsModel `plist:"Entitlements"`
+	UUID            string            `plist:"UUID"`
+	TeamName        string            `plist:"TeamName"`
+	Name            string            `plist:"Name"`
+	AppIDName       string            `plist:"AppIDName"`
+	TeamIdentifiers []string          `plist:"TeamIdentifier"`
+	ExpirationDate  time.Time         `plist:"ExpirationDate"`
+}
+
+// TeamID ...
+func (provProfile ProvisioningProfileModel) TeamID() (string, error) {
+	if len(provProfile.TeamIdentifiers) == 0 {
+		return "", errors.New("No TeamIdentifier specified")
+	}
+	if len(provProfile.TeamIdentifiers) != 1 {
+		return "", errors.New("More than one TeamIdentifier specified")
+	}
+
+	teamID := provProfile.TeamIdentifiers[0]
+	if len(teamID) == 0 {
+		return "", errors.New("An empty item specified for TeamIdentifier")
+	}
+
+	return teamID, nil
 }
 
 // ProvisioningProfileFileInfoModel ...
@@ -50,12 +68,16 @@ type ProvisioningProfileFileInfoModel struct {
 type ProvisioningProfileFileInfoModels []ProvisioningProfileFileInfoModel
 
 // CollectTeamIDs ...
-func (ppFileInfos ProvisioningProfileFileInfoModels) CollectTeamIDs() []string {
+func (ppFileInfos ProvisioningProfileFileInfoModels) CollectTeamIDs() ([]string, error) {
 	teamIDsMap := map[string]interface{}{}
 	for _, aProvProfileFileInfo := range ppFileInfos {
-		teamIDsMap[aProvProfileFileInfo.ProvisioningProfileInfo.Entitlements.TeamID] = 1
+		teamID, err := aProvProfileFileInfo.ProvisioningProfileInfo.TeamID()
+		if err != nil {
+			return []string{}, fmt.Errorf("Team ID error for profile (uuid: %s), error: %s", aProvProfileFileInfo.ProvisioningProfileInfo.UUID, err)
+		}
+		teamIDsMap[teamID] = 1
 	}
-	return maputil.KeysOfStringInterfaceMap(teamIDsMap)
+	return maputil.KeysOfStringInterfaceMap(teamIDsMap), nil
 }
 
 // CreateProvisioningProfileModelFromFile ...
