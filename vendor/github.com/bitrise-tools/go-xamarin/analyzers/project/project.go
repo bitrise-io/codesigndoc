@@ -65,74 +65,30 @@ type ConfigurationPlatformModel struct {
 
 // Model ...
 type Model struct {
-	// These properties are set througth solution analyze
-	Name      string
-	Pth       string
+	Pth  string
+	Name string // Set by solution analyze or set its path's filename without extension
+
+	// Solution Configuration|Platform - Project Configuration|Platform map
+	// !!! only set by solution analyze
 	ConfigMap map[string]string
-	// ---
 
-	ID           string
-	ProjectType  constants.ProjectType
-	OutputType   string
-	AssemblyName string
+	ID            string
+	SDK           constants.SDK
+	TestFramework constants.TestFramework
+	OutputType    string
+	AssemblyName  string
 
-	TestFramworks      []constants.TestFramwork
 	ReferredProjectIDs []string
 
 	ManifestPth        string
 	AndroidApplication bool
 
-	Configs map[string]ConfigurationPlatformModel
+	Configs map[string]ConfigurationPlatformModel // Project Configuration|Platform - ConfigurationPlatformModel map
 }
 
 // New ...
 func New(pth string) (Model, error) {
 	return analyzeProject(pth)
-}
-
-func (config ConfigurationPlatformModel) String() string {
-	s := ""
-	s += fmt.Sprintf("Configuration: %s\n", config.Configuration)
-	s += fmt.Sprintf("Platform: %s\n", config.Platform)
-	s += fmt.Sprintf("OutputDir: %s\n", config.OutputDir)
-	s += fmt.Sprintf("MtouchArchs: %v\n", config.MtouchArchs)
-	s += fmt.Sprintf("SignAndroid: %v\n", config.SignAndroid)
-	s += fmt.Sprintf("BuildIpa: %v\n", config.BuildIpa)
-	return s
-}
-
-func (project Model) String() string {
-	s := ""
-	s += fmt.Sprintf("ID: %s\n", project.ID)
-	s += fmt.Sprintf("Name: %s\n", project.Name)
-	s += fmt.Sprintf("Pth: %s\n", project.Pth)
-	s += fmt.Sprintf("ProjectType: %s\n", project.ProjectType)
-	s += "\n"
-	s += fmt.Sprintf("TestFramworks:\n")
-	for _, framwork := range project.TestFramworks {
-		s += fmt.Sprintf("%s\n", framwork)
-	}
-	s += "\n"
-	s += fmt.Sprintf("ReferredProjectIDs:\n")
-	for _, ID := range project.ReferredProjectIDs {
-		s += fmt.Sprintf("%s\n", ID)
-	}
-	s += "\n"
-	s += fmt.Sprintf("OutputType: %s\n", project.OutputType)
-	s += fmt.Sprintf("AssemblyName: %s\n", project.AssemblyName)
-	s += fmt.Sprintf("ManifestPth: %s\n", project.ManifestPth)
-	s += fmt.Sprintf("AndroidApplication: %v\n", project.AndroidApplication)
-	s += "\n"
-	s += fmt.Sprintf("ConfigMap:\n")
-	for config, mappedConfig := range project.ConfigMap {
-		s += fmt.Sprintf("%s -> %s\n", config, mappedConfig)
-	}
-	s += "\n"
-	s += fmt.Sprintf("Configs:\n")
-	for _, config := range project.Configs {
-		s += fmt.Sprintf("%s\n", config.String())
-	}
-	return s
 }
 
 func analyzeTargetDefinition(project Model, pth string) (Model, error) {
@@ -153,6 +109,7 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 		line := strings.TrimSpace(scanner.Text())
 
 		// Target definition
+		// Analyze target definition and point the current project to the target analyze result
 		if matches := regexp.MustCompile(targetDefinitionPattern).FindStringSubmatch(line); len(matches) == 2 {
 			targetDefinitionRelativePth := utility.FixWindowsPath(matches[1])
 
@@ -162,11 +119,18 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 				if exist, err := pathutil.IsPathExists(targetDefinitionPth); err != nil {
 					return Model{}, err
 				} else if exist {
-					proj, err := analyzeTargetDefinition(project, targetDefinitionPth)
+					projectFromTargetDefinition, err := analyzeTargetDefinition(project, targetDefinitionPth)
 					if err != nil {
 						return Model{}, err
 					}
-					project = proj
+
+					// Set properties became from solution analyze
+					projectFromTargetDefinition.Name = project.Name
+					projectFromTargetDefinition.Pth = project.Pth
+					projectFromTargetDefinition.ConfigMap = project.ConfigMap
+					// ---
+
+					project = projectFromTargetDefinition
 				}
 			}
 
@@ -175,7 +139,7 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 		// ProjectGuid
 		if matches := regexp.MustCompile(guidPattern).FindStringSubmatch(line); len(matches) == 2 {
-			project.ID = matches[1]
+			project.ID = strings.ToUpper(matches[1])
 			continue
 		}
 
@@ -221,16 +185,9 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 		// PropertyGroup with Condition (Configuration & Platform)
 		if matches := regexp.MustCompile(propertyGroupWithConditionConfigurationAndPlatformPattern).FindStringSubmatch(line); len(matches) == 3 {
-			platform := matches[2]
-			/*
-				if platform == "AnyCPU" {
-					platform = "Any CPU"
-				}
-			*/
-
 			configurationPlatform = ConfigurationPlatformModel{
 				Configuration: matches[1],
-				Platform:      platform,
+				Platform:      matches[2],
 			}
 
 			isPropertyGroupSection = true
@@ -249,15 +206,8 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 		// PropertyGroup with Condition (Platform)
 		if matches := regexp.MustCompile(propertyGroupWithConditionPlatformPattern).FindStringSubmatch(line); len(matches) == 2 {
-			platform := matches[2]
-			/*
-				if platform == "AnyCPU" {
-					platform = "Any CPU"
-				}
-			*/
-
 			configurationPlatform = ConfigurationPlatformModel{
-				Platform: platform,
+				Platform: matches[1],
 			}
 
 			isPropertyGroupSection = true
@@ -287,14 +237,6 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 				continue
 			}
 
-			/*
-				// IpaPackageName
-				if match := regexp.MustCompile(ipaPackageNamePattern).FindString(line); match != "" {
-					configurationPlatform.IpaPackage = true
-					continue
-				}
-			*/
-
 			// BuildIpa ...
 			if match := regexp.MustCompile(buildIpaPattern).FindString(line); match != "" {
 				configurationPlatform.BuildIpa = true
@@ -307,34 +249,36 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 		// ProjectTypeGuids
 		if matches := regexp.MustCompile(typeGUIDsPattern).FindStringSubmatch(line); len(matches) == 2 {
-			projectType := constants.ProjectTypeUnknown
+			sdk := constants.SDKUnknown
 			projectTypeList := strings.Split(matches[1], ";")
 			for _, guid := range projectTypeList {
 				guid = strings.TrimPrefix(guid, "{")
 				guid = strings.TrimSuffix(guid, "}")
 
-				projectType, err = constants.ParseProjectTypeGUID(guid)
+				sdk, err = constants.ParseProjectTypeGUID(guid)
 				if err == nil {
 					break
 				}
 			}
 
-			project.ProjectType = projectType
+			project.SDK = sdk
 			continue
 		}
 
 		if match := regexp.MustCompile(referenceXamarinUITestPattern).FindString(line); match != "" {
-			project.TestFramworks = append(project.TestFramworks, constants.XamarinUITest)
+			project.TestFramework = constants.TestFrameworkXamarinUITest
 			continue
 		}
 
 		if match := regexp.MustCompile(referenceNunitFramework).FindString(line); match != "" {
-			project.TestFramworks = append(project.TestFramworks, constants.NunitTest)
+			if project.TestFramework == constants.TestFrameworkUnknown {
+				project.TestFramework = constants.TestFrameworkNunitTest
+			}
 			continue
 		}
 
 		if match := regexp.MustCompile(referenceNunitLiteFramework).FindString(line); match != "" {
-			project.TestFramworks = append(project.TestFramworks, constants.NunitLiteTest)
+			project.TestFramework = constants.TestFrameworkNunitLiteTest
 			continue
 		}
 
@@ -349,18 +293,14 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 
 		// ProjectReference
 		if matches := regexp.MustCompile(projectRefernceStartPattern).FindStringSubmatch(line); len(matches) == 2 {
-			/*
-				projectRelativePth := fixWindowsPath(matches[1])
-				projectPth := filepath.Join(projectDir, projectRelativePth)
-			*/
-
 			isProjectReferenceSection = true
 			continue
 		}
 
 		if isProjectReferenceSection {
 			if matches := regexp.MustCompile(referredProjectIDPattern).FindStringSubmatch(line); len(matches) == 2 {
-				project.ReferredProjectIDs = append(project.ReferredProjectIDs, matches[1])
+				referredProjectID := strings.ToUpper(matches[1])
+				project.ReferredProjectIDs = append(project.ReferredProjectIDs, referredProjectID)
 			}
 			continue
 		}
@@ -374,9 +314,22 @@ func analyzeTargetDefinition(project Model, pth string) (Model, error) {
 }
 
 func analyzeProject(pth string) (Model, error) {
-	project := Model{
-		ConfigMap: map[string]string{},
-		Configs:   map[string]ConfigurationPlatformModel{},
+	absPth, err := pathutil.AbsPath(pth)
+	if err != nil {
+		return Model{}, fmt.Errorf("Failed to expand path (%s), error: %s", pth, err)
 	}
-	return analyzeTargetDefinition(project, pth)
+
+	fileName := filepath.Base(absPth)
+	ext := filepath.Ext(absPth)
+	fileName = strings.TrimSuffix(fileName, ext)
+
+	project := Model{
+		Pth:           absPth,
+		Name:          fileName,
+		ConfigMap:     map[string]string{},
+		Configs:       map[string]ConfigurationPlatformModel{},
+		SDK:           constants.SDKUnknown,
+		TestFramework: constants.TestFrameworkUnknown,
+	}
+	return analyzeTargetDefinition(project, absPth)
 }

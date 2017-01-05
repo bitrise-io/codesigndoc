@@ -23,13 +23,15 @@ func CastInterfaceToInterfaceSlice(slice interface{}) ([]interface{}, error) {
 
 // DeepEqualSlices ...
 func DeepEqualSlices(expected, actual []interface{}) bool {
-	expectedMap := map[interface{}]bool{}
+	expectedMap := map[string]bool{}
 	for _, itm := range expected {
-		expectedMap[itm] = true
+		itmAsStr := fmt.Sprintf("%#v", itm)
+		expectedMap[itmAsStr] = true
 	}
-	actualMap := map[interface{}]bool{}
+	actualMap := map[string]bool{}
 	for _, itm := range actual {
-		actualMap[itm] = true
+		itmAsStr := fmt.Sprintf("%#v", itm)
+		actualMap[itmAsStr] = true
 	}
 	return reflect.DeepEqual(expectedMap, actualMap)
 }
