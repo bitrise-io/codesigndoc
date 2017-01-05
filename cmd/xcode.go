@@ -54,6 +54,16 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
 	}
 
+	// Output tools versions
+	xcodebuildVersion, err := xcode.GetXcodeVersion()
+	if err != nil {
+		return printXcodeScanFinishedWithError("Failed to get Xcode (xcodebuild) version, error: %s", err)
+	}
+	fmt.Println()
+	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"),
+		xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+	fmt.Println()
+
 	xcodebuildOutput := ""
 	xcodeCmd := xcode.CommandModel{}
 	if paramXcodebuildOutputLogFilePath != "" {
