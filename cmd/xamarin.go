@@ -93,8 +93,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		// filter only the iOS "app"" projects
 		xamarinProjectsToChooseFrom := []project.Model{}
 		for _, aXamarinProject := range xamSln.ProjectMap {
-			switch aXamarinProject.ProjectType {
-			case constants.ProjectTypeIOS, constants.ProjectTypeTvOS, constants.ProjectTypeMacOS:
+			switch aXamarinProject.SDK {
+			case constants.SDKIOS, constants.SDKTvOS, constants.SDKMacOS:
 				if aXamarinProject.OutputType == "exe" {
 					// possible project
 					xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)
