@@ -208,7 +208,7 @@ func (xccmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (
 func (xccmd CommandModel) ScanSchemes() ([]string, error) {
 	xcoutput, err := xccmd.RunXcodebuildCommand("-list")
 	if err != nil {
-		return []string{}, err
+		return []string{}, fmt.Errorf("error: %s | xcodebuild output: %s", err, xcoutput)
 	}
 
 	parsedSchemes := parseSchemesFromXcodeOutput(xcoutput)
