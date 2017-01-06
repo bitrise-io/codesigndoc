@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-tools/go-xamarin/analyzers/project"
 	"github.com/bitrise-tools/go-xamarin/constants"
-	"github.com/bitrise-tools/go-xamarin/project"
 	"github.com/bitrise-tools/go-xamarin/utility"
 )
 
@@ -27,31 +28,18 @@ const (
 
 // Model ...
 type Model struct {
-	ID  string
-	Pth string
+	Pth  string
+	Name string
+	ID   string
 
-	ConfigMap map[string]string
+	ConfigMap map[string]string // Internal Configuartion|Platform - External Configuartion|Platform map
 
-	ProjectMap map[string]project.Model
+	ProjectMap map[string]project.Model // Project ID - Project Model map
 }
 
 // New ...
 func New(pth string, loadProjects bool) (Model, error) {
 	return analyzeSolution(pth, loadProjects)
-}
-
-func (solution Model) String() string {
-	s := ""
-	s += fmt.Sprintf("ID: %s\n", solution.ID)
-	s += fmt.Sprintf("Pth: %s\n", solution.Pth)
-	s += "\n"
-	s += fmt.Sprintf("ConfigMap:\n")
-	s += fmt.Sprintf("%v\n", solution.ConfigMap)
-	s += "\n"
-	s += fmt.Sprintf("ProjectMap:\n")
-	s += fmt.Sprintf("%v\n", solution.ProjectMap)
-	s += "\n"
-	return s
 }
 
 // ConfigList ...
@@ -64,8 +52,18 @@ func (solution Model) ConfigList() []string {
 }
 
 func analyzeSolution(pth string, analyzeProjects bool) (Model, error) {
+	absPth, err := pathutil.AbsPath(pth)
+	if err != nil {
+		return Model{}, fmt.Errorf("Failed to expand path (%s), error: %s", pth, err)
+	}
+
+	fileName := filepath.Base(absPth)
+	ext := filepath.Ext(absPth)
+	fileName = strings.TrimSuffix(fileName, ext)
+
 	solution := Model{
-		Pth:        pth,
+		Pth:        absPth,
+		Name:       fileName,
 		ConfigMap:  map[string]string{},
 		ProjectMap: map[string]project.Model{},
 	}
@@ -73,11 +71,11 @@ func analyzeSolution(pth string, analyzeProjects bool) (Model, error) {
 	isSolutionConfigurationPlatformsSection := false
 	isProjectConfigurationPlatformsSection := false
 
-	solutionDir := filepath.Dir(pth)
+	solutionDir := filepath.Dir(absPth)
 
-	content, err := fileutil.ReadStringFromFile(pth)
+	content, err := fileutil.ReadStringFromFile(absPth)
 	if err != nil {
-		return Model{}, fmt.Errorf("failed to read solution (%s), error: %s", pth, err)
+		return Model{}, fmt.Errorf("failed to read solution (%s), error: %s", absPth, err)
 	}
 
 	scanner := bufio.NewScanner(strings.NewReader(content))
@@ -86,9 +84,9 @@ func analyzeSolution(pth string, analyzeProjects bool) (Model, error) {
 
 		// Projects
 		if matches := regexp.MustCompile(solutionProjectsPattern).FindStringSubmatch(line); len(matches) == 5 {
-			ID := matches[1]
+			ID := strings.ToUpper(matches[1])
 			projectName := matches[2]
-			projectID := matches[4]
+			projectID := strings.ToUpper(matches[4])
 			projectRelativePth := utility.FixWindowsPath(matches[3])
 			projectPth := filepath.Join(solutionDir, projectRelativePth)
 
@@ -154,18 +152,19 @@ func analyzeSolution(pth string, analyzeProjects bool) (Model, error) {
 
 		if isProjectConfigurationPlatformsSection {
 			if matches := regexp.MustCompile(projectConfigurationPlatformPattern).FindStringSubmatch(line); len(matches) == 6 {
-				projectID := matches[1]
+				projectID := strings.ToUpper(matches[1])
+
+				project, found := solution.ProjectMap[projectID]
+				if !found {
+					continue
+				}
+
 				solutionConfiguration := matches[2]
 				solutionPlatform := matches[3]
 				projectConfiguration := matches[4]
 				projectPlatform := matches[5]
 				if projectPlatform == "Any CPU" {
 					projectPlatform = "AnyCPU"
-				}
-
-				project, found := solution.ProjectMap[projectID]
-				if !found {
-					return Model{}, fmt.Errorf("no project found with ID: %s", projectID)
 				}
 
 				project.ConfigMap[utility.ToConfig(solutionConfiguration, solutionPlatform)] = utility.ToConfig(projectConfiguration, projectPlatform)

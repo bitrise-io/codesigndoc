@@ -9,9 +9,9 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
+	"github.com/bitrise-tools/go-xamarin/analyzers/project"
+	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
 	"github.com/bitrise-tools/go-xamarin/constants"
-	"github.com/bitrise-tools/go-xamarin/project"
-	"github.com/bitrise-tools/go-xamarin/solution"
 	"github.com/spf13/cobra"
 )
 
@@ -93,8 +93,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		// filter only the iOS "app"" projects
 		xamarinProjectsToChooseFrom := []project.Model{}
 		for _, aXamarinProject := range xamSln.ProjectMap {
-			switch aXamarinProject.ProjectType {
-			case constants.ProjectTypeIOS, constants.ProjectTypeTvOS, constants.ProjectTypeMacOS:
+			switch aXamarinProject.SDK {
+			case constants.SDKIOS, constants.SDKTvOS, constants.SDKMacOS:
 				if aXamarinProject.OutputType == "exe" {
 					// possible project
 					xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)
