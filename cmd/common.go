@@ -151,7 +151,7 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 
 	fmt.Println()
 	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
-	if err := command.Run("open", absExportOutputDirPath); err != nil {
+	if err := command.RunCommand("open", absExportOutputDirPath); err != nil {
 		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
 	}
 	fmt.Println("Opened the directory in Finder.")
@@ -327,7 +327,7 @@ func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningP
 
 		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
-		if err := command.Run("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
+		if err := command.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
 			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
 				aProvProfileFileInfo.Path, exportPth, err)
 		}
