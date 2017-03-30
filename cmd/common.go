@@ -183,7 +183,7 @@ func collectAndExportProvisioningProfiles(codeSigningSettings common.CodeSigning
 	}
 
 	fmt.Println()
-	log.Println(colorstring.Green("Searching for additinal, Distribution Provisioning Profiles"), "...")
+	log.Println(colorstring.Green("Searching for additional, Distribution Provisioning Profiles"), "...")
 	fmt.Println()
 	for _, aAppBundleID := range codeSigningSettings.AppIDs {
 		bundleOrAppIDPattern := common.BundleIDFromAppID(aAppBundleID)
