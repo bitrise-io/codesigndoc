@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/cmdex"
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
@@ -151,7 +151,7 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 
 	fmt.Println()
 	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
-	if err := cmdex.RunCommand("open", absExportOutputDirPath); err != nil {
+	if err := command.Run("open", absExportOutputDirPath); err != nil {
 		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
 	}
 	fmt.Println("Opened the directory in Finder.")
@@ -327,7 +327,7 @@ func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningP
 
 		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
-		if err := cmdex.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
+		if err := command.Run("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
 			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
 				aProvProfileFileInfo.Path, exportPth, err)
 		}

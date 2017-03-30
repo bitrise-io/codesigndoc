@@ -9,7 +9,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/progress"
 	"github.com/bitrise-io/go-utils/readerutil"
@@ -55,9 +55,9 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
 		fmt.Sprintf("-c:%s", xamarinCmd.ConfigurationName),
 		fmt.Sprintf("-p:%s", xamarinCmd.ProjectName),
 	}
-	log.Infof("$ %s", cmdex.PrintableCommandArgs(true, cmdArgs))
+	log.Infof("$ %s", command.PrintableCommandArgs(true, cmdArgs))
 	fmt.Print("Running and analyzing log ...")
-	cmd, err := cmdex.NewCommandFromSlice(cmdArgs)
+	cmd, err := command.NewFromSlice(cmdArgs...)
 	if err != nil {
 		return "", fmt.Errorf("Failed to create Xamarin command, error: %s", err)
 	}
