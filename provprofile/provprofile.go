@@ -9,7 +9,7 @@ import (
 
 	plist "github.com/DHowett/go-plist"
 	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/cmdex"
+	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/ryanuber/go-glob"
@@ -82,7 +82,7 @@ func (ppFileInfos ProvisioningProfileFileInfoModels) CollectTeamIDs() ([]string,
 
 // CreateProvisioningProfileModelFromFile ...
 func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfileModel, error) {
-	profileContent, err := cmdex.NewCommand("security", "cms", "-D", "-i", filePth).RunAndReturnTrimmedCombinedOutput()
+	profileContent, err := command.New("security", "cms", "-D", "-i", filePth).RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
 		return ProvisioningProfileModel{},
 			fmt.Errorf("Failed to retrieve information about Provisioning Profile, error: %s",
