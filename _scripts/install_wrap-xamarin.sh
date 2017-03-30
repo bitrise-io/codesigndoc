@@ -5,7 +5,7 @@ echo " => Creating a temporary directory for codesigndoc ..."
 temp_dir="$(mktemp -d -t codesigndocXXXXXX)"
 codesigndoc_bin_path="${temp_dir}/codesigndoc"
 
-version_to_use="0.9.18"
+version_to_use="1.0.0"
 if [ "$1" != "" ] ; then
     version_to_use="$1"
 fi
