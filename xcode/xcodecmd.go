@@ -20,10 +20,25 @@ import (
 
 // CommandModel ...
 type CommandModel struct {
+	// --- Required ---
+
 	// ProjectFilePath - might be a `xcodeproj` or `xcworkspace`
-	ProjectFilePath  string
-	Scheme           string
+	ProjectFilePath string
+
+	// --- Optional ---
+
+	// Scheme will be passed to xcodebuild as the -scheme flag's value
+	// Only passed to xcodebuild if not empty!
+	Scheme string
+
+	// CodeSignIdentity will be passed to xcodebuild as an CODE_SIGN_IDENTITY= argument.
+	// Only passed to xcodebuild if not empty!
 	CodeSignIdentity string
+
+	// SDK: if defined it'll be passed as the -sdk flag to xcodebuild.
+	// For more info about the possible values please see xcodebuild's docs about the -sdk flag.
+	// Only passed to xcodebuild if not empty!
+	SDK string
 }
 
 func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
@@ -178,6 +193,10 @@ func (xccmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...st
 	baseArgs := []string{projParam, xccmd.ProjectFilePath}
 	if xccmd.Scheme != "" {
 		baseArgs = append(baseArgs, "-scheme", xccmd.Scheme)
+	}
+
+	if xccmd.SDK != "" {
+		baseArgs = append(baseArgs, "-sdk", xccmd.SDK)
 	}
 
 	if xccmd.CodeSignIdentity != "" {

@@ -28,6 +28,7 @@ var (
 	paramXcodeProjectFilePath        = ""
 	paramXcodeScheme                 = ""
 	paramXcodebuildOutputLogFilePath = ""
+	paramXcodebuildSDK               = ""
 )
 
 func init() {
@@ -42,6 +43,9 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodebuildOutputLogFilePath,
 		"xcodebuild-log", "",
 		"xcodebuild output log (file path). If specified it will be used instead of running xcodebuild")
+	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK,
+		"xcodebuild-sdk", "",
+		"xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
 }
 
 func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
@@ -110,6 +114,10 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 			schemeToUse = selectedScheme
 		}
 		xcodeCmd.Scheme = schemeToUse
+
+		if paramXcodebuildSDK != "" {
+			xcodeCmd.SDK = paramXcodebuildSDK
+		}
 
 		fmt.Println()
 		fmt.Println()
