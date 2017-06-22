@@ -9,6 +9,7 @@ import (
 
 	plist "github.com/DHowett/go-plist"
 	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
@@ -128,7 +129,10 @@ func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, 
 		}
 
 		if time.Now().After(provProfileData.ExpirationDate) {
-			log.Warnf("Provisioning profile %s expired at %s. Skipping.", provProfileData.UUID, provProfileData.ExpirationDate)
+			log.Warnf(colorstring.Yellow(" (!) ")+"Provisioning Profile %s "+colorstring.Yellow("expired")+" at %s. Skipping.",
+				colorstring.Blue(provProfileData.UUID), colorstring.Blue(provProfileData.ExpirationDate))
+			log.Warnf("     If you want to delete this Provisioning Profile you can find it at: %s",
+				colorstring.Yellow(aPth))
 			continue
 		}
 
