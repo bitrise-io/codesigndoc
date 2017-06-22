@@ -57,7 +57,7 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
 	}
 	log.Infof("$ %s", command.PrintableCommandArgs(true, cmdArgs))
 	fmt.Print("Running and analyzing log ...")
-	cmd, err := command.NewFromSlice(cmdArgs...)
+	cmd, err := command.NewFromSlice(cmdArgs)
 	if err != nil {
 		return "", fmt.Errorf("Failed to create Xamarin command, error: %s", err)
 	}
