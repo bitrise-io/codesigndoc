@@ -127,6 +127,11 @@ func FindProvProfilesByAppID(appID string) ([]ProvisioningProfileFileInfoModel, 
 				aPth, err)
 		}
 
+		if time.Now().After(provProfileData.ExpirationDate) {
+			log.Warnf("Provisioning profile %s expired at %s. Skipping.", provProfileData.UUID, provProfileData.ExpirationDate)
+			continue
+		}
+
 		if glob.Glob(appID, provProfileData.Entitlements.AppID) {
 			provProfilePathsToReturn = append(provProfilePathsToReturn, ProvisioningProfileFileInfoModel{
 				Path: aPth,
