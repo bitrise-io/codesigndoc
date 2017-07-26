@@ -16,6 +16,7 @@ import (
 	"github.com/bitrise-io/go-utils/regexputil"
 	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
+	"github.com/bitrise-tools/go-xamarin/constants"
 )
 
 // CommandModel ...
@@ -49,12 +50,21 @@ func (xamarinCmd CommandModel) ScanCodeSigningSettings(logToScan string) (common
 
 // RunBuildCommand ...
 func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
-	mdtoolPth := "/Applications/Xamarin Studio.app/Contents/MacOS/mdtool"
-	cmdArgs := []string{mdtoolPth, "build",
-		xamarinCmd.SolutionFilePath,
-		fmt.Sprintf("-c:%s", xamarinCmd.ConfigurationName),
-		fmt.Sprintf("-p:%s", xamarinCmd.ProjectName),
+	split := strings.Split(xamarinCmd.ConfigurationName, "|")
+	if len(split) != 2 {
+		return "", fmt.Errorf("failed to parse configuration: %s", xamarinCmd.ConfigurationName)
 	}
+	configuration := split[0]
+	platform := split[1]
+	projectName := strings.Replace(xamarinCmd.ProjectName, ".", "_", -1)
+
+	cmdArgs := []string{constants.MsbuildPath,
+		xamarinCmd.SolutionFilePath,
+		fmt.Sprintf("/p:Configuration=%s", configuration),
+		fmt.Sprintf("/p:Platform=%s", platform),
+		fmt.Sprintf("/t:%s", projectName),
+	}
+
 	log.Infof("$ %s", command.PrintableCommandArgs(true, cmdArgs))
 	fmt.Print("Running and analyzing log ...")
 	cmd, err := command.NewFromSlice(cmdArgs)
