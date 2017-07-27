@@ -21,9 +21,23 @@ import (
 
 // CommandModel ...
 type CommandModel struct {
-	SolutionFilePath  string
-	ProjectName       string
-	ConfigurationName string
+	SolutionFilePath string
+	ProjectName      string
+	Configuration    string
+	Platform         string
+}
+
+// SetConfigurationPlatformCombination - `configPlatformCombination` should be a composite string
+// with the format: "CONFIGURATION|PLATFORM"
+// e.g.: Release|iPhone
+func (xamarinCmd *CommandModel) SetConfigurationPlatformCombination(configPlatformCombination string) error {
+	split := strings.Split(configPlatformCombination, "|")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid configuration-platform combination (%s), should include exactly one pipe (|) character", configPlatformCombination)
+	}
+	xamarinCmd.Configuration = split[0]
+	xamarinCmd.Platform = split[1]
+	return nil
 }
 
 // GenerateLog ...
@@ -50,20 +64,14 @@ func (xamarinCmd CommandModel) ScanCodeSigningSettings(logToScan string) (common
 
 // RunBuildCommand ...
 func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
-	split := strings.Split(xamarinCmd.ConfigurationName, "|")
-	if len(split) != 2 {
-		return "", fmt.Errorf("failed to parse configuration: %s", xamarinCmd.ConfigurationName)
-	}
-	configuration := split[0]
-	platform := split[1]
 	// STO: https://stackoverflow.com/a/19534376/5842489
 	// if your project has a . (dot) in its name, replace it with a _ (underscore) when specifying it with /t
 	projectName := strings.Replace(xamarinCmd.ProjectName, ".", "_", -1)
 
 	cmdArgs := []string{constants.MsbuildPath,
 		xamarinCmd.SolutionFilePath,
-		fmt.Sprintf("/p:Configuration=%s", configuration),
-		fmt.Sprintf("/p:Platform=%s", platform),
+		fmt.Sprintf("/p:Configuration=%s", xamarinCmd.Configuration),
+		fmt.Sprintf("/p:Platform=%s", xamarinCmd.Platform),
 		fmt.Sprintf("/t:%s", projectName),
 	}
 
