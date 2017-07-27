@@ -56,6 +56,8 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
 	}
 	configuration := split[0]
 	platform := split[1]
+	// STO: https://stackoverflow.com/a/19534376/5842489
+	// if your project has a . (dot) in its name, replace it with a _ (underscore) when specifying it with /t
 	projectName := strings.Replace(xamarinCmd.ProjectName, ".", "_", -1)
 
 	cmdArgs := []string{constants.MsbuildPath,
