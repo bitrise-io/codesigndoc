@@ -16,13 +16,28 @@ import (
 	"github.com/bitrise-io/go-utils/regexputil"
 	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
+	"github.com/bitrise-tools/go-xamarin/constants"
 )
 
 // CommandModel ...
 type CommandModel struct {
-	SolutionFilePath  string
-	ProjectName       string
-	ConfigurationName string
+	SolutionFilePath string
+	ProjectName      string
+	Configuration    string
+	Platform         string
+}
+
+// SetConfigurationPlatformCombination - `configPlatformCombination` should be a composite string
+// with the format: "CONFIGURATION|PLATFORM"
+// e.g.: Release|iPhone
+func (xamarinCmd *CommandModel) SetConfigurationPlatformCombination(configPlatformCombination string) error {
+	split := strings.Split(configPlatformCombination, "|")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid configuration-platform combination (%s), should include exactly one pipe (|) character", configPlatformCombination)
+	}
+	xamarinCmd.Configuration = split[0]
+	xamarinCmd.Platform = split[1]
+	return nil
 }
 
 // GenerateLog ...
@@ -49,12 +64,17 @@ func (xamarinCmd CommandModel) ScanCodeSigningSettings(logToScan string) (common
 
 // RunBuildCommand ...
 func (xamarinCmd CommandModel) RunBuildCommand() (string, error) {
-	mdtoolPth := "/Applications/Xamarin Studio.app/Contents/MacOS/mdtool"
-	cmdArgs := []string{mdtoolPth, "build",
+	// STO: https://stackoverflow.com/a/19534376/5842489
+	// if your project has a . (dot) in its name, replace it with a _ (underscore) when specifying it with /t
+	projectName := strings.Replace(xamarinCmd.ProjectName, ".", "_", -1)
+
+	cmdArgs := []string{constants.MsbuildPath,
 		xamarinCmd.SolutionFilePath,
-		fmt.Sprintf("-c:%s", xamarinCmd.ConfigurationName),
-		fmt.Sprintf("-p:%s", xamarinCmd.ProjectName),
+		fmt.Sprintf("/p:Configuration=%s", xamarinCmd.Configuration),
+		fmt.Sprintf("/p:Platform=%s", xamarinCmd.Platform),
+		fmt.Sprintf("/t:%s", projectName),
 	}
+
 	log.Infof("$ %s", command.PrintableCommandArgs(true, cmdArgs))
 	fmt.Print("Running and analyzing log ...")
 	cmd, err := command.NewFromSlice(cmdArgs)

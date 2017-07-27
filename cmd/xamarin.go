@@ -219,7 +219,9 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 				`No acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
 			)
 		}
-		xamarinCmd.ConfigurationName = selectedXamarinConfigurationName
+		if err := xamarinCmd.SetConfigurationPlatformCombination(selectedXamarinConfigurationName); err != nil {
+			return printXamarinScanFinishedWithError("Failed to set Configuration Platform combination for the command, error: %s", err)
+		}
 
 		fmt.Println()
 		fmt.Println()
@@ -237,7 +239,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 				log.Infoln(colorstring.Red(`and make sure that you can "Archive for Publishing" this project from Xamarin!`))
 				fmt.Println()
 				log.Infoln("Open the project: ", xamarinCmd.SolutionFilePath)
-				log.Infoln(`And do "Archive for Publishing", after selecting the Configuration: `, xamarinCmd.ConfigurationName)
+				log.Infof(`And do "Archive for Publishing", after selecting the Configuration+Platform: %s|%s`, xamarinCmd.Configuration, xamarinCmd.Platform)
 				fmt.Println()
 			}
 		}
