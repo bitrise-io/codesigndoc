@@ -1,7 +1,6 @@
 package provprofile
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/maputil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/pkg/errors"
 	"github.com/ryanuber/go-glob"
 )
 
@@ -106,6 +106,40 @@ func CreateProvisioningProfileModelFromFile(filePth string) (ProvisioningProfile
 	return provProfileData, nil
 }
 
+func walkProvProfiles(ppWalkFn func(provProfile ProvisioningProfileFileInfoModel) error) error {
+	absProvProfileDirPath, err := pathutil.AbsPath(provProfileSystemDirPath)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get Absolute path of Provisioning Profiles dir")
+	}
+
+	pths, err := filepath.Glob(absProvProfileDirPath + "/*.mobileprovision")
+	if err != nil {
+		return errors.Wrap(err, "Failed to perform *.mobileprovision search")
+	}
+
+	for _, aPth := range pths {
+		provProfileData, err := CreateProvisioningProfileModelFromFile(aPth)
+		if err != nil {
+			return errors.Wrapf(err, "Failed to read Provisioning Profile infos from file (path: %s)",
+				aPth)
+		}
+
+		if time.Now().After(provProfileData.ExpirationDate) {
+			log.Warnf(colorstring.Yellow(" (!) ")+"Provisioning Profile %s "+colorstring.Yellow("expired")+" at %s. Skipping.",
+				colorstring.Blue(provProfileData.UUID), colorstring.Blue(provProfileData.ExpirationDate))
+			log.Warnf("     If you want to delete this Provisioning Profile you can find it at: %s",
+				colorstring.Yellow(aPth))
+			continue
+		}
+
+		if err := ppWalkFn(ProvisioningProfileFileInfoModel{Path: aPth, ProvisioningProfileInfo: provProfileData}); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
 // FindProvProfilesByAppID ...
 // `appID`` supports "glob", e.g.: *.bundle.id will match any Prov Profile with ".bundle.id"
 //   app ID suffix
@@ -156,11 +190,32 @@ func FindProvProfileByUUID(provProfileUUID string) (ProvisioningProfileFileInfoM
 
 	// iOS / .mobileprovision
 	{
+		isFound := false
 		mobileProvPth := filepath.Join(absProvProfileDirPath, provProfileUUID+".mobileprovision")
 		exist, err := pathutil.IsPathExists(mobileProvPth)
-		if !exist || err != nil {
+		if err != nil {
 			log.Debugf("No mobileprovision file found at: %s | err: %s", mobileProvPth, err)
+		} else if !exist {
+			log.Debugf("Not found at path (%s), doing a full search by content ...", mobileProvPth)
+			// try by content
+			err := walkProvProfiles(func(ppf ProvisioningProfileFileInfoModel) error {
+				if ppf.ProvisioningProfileInfo.UUID == provProfileUUID {
+					isFound = true
+					mobileProvPth = ppf.Path
+				}
+				return nil
+			})
+			if err != nil {
+				log.Debugf("Error during Prov Profile walk: %+v", errors.WithStack(err))
+			}
+			if !isFound {
+				log.Debugf("Prov Profile not found by UUID (walk)")
+			}
 		} else {
+			isFound = true
+		}
+
+		if isFound {
 			provProfileData, err := CreateProvisioningProfileModelFromFile(mobileProvPth)
 			if err != nil {
 				return ProvisioningProfileFileInfoModel{},

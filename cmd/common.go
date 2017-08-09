@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +17,7 @@ import (
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/codesigndoc/provprofile"
 	"github.com/bitrise-tools/codesigndoc/utils"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -137,7 +137,7 @@ func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigning
 
 	exportedProvProfiles, err := collectAndExportProvisioningProfiles(codeSigningSettings, absExportOutputDirPath)
 	if err != nil {
-		return printFinishedWithError(toolName, "Failed to export Provisioning Profiles, error: %s", err)
+		return printFinishedWithError(toolName, "Failed to export Provisioning Profiles, error: %+v", err)
 	}
 
 	provProfileTeamIDs, err := exportedProvProfiles.CollectTeamIDs()
@@ -175,7 +175,7 @@ func collectAndExportProvisioningProfiles(codeSigningSettings common.CodeSigning
 		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
 		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
 		if err != nil {
-			return provProfileFileInfos, fmt.Errorf("Failed to find Provisioning Profile: %s", err)
+			return provProfileFileInfos, errors.Wrap(err, "Failed to find Provisioning Profile")
 		}
 		log.Infof("   File found at: %s", provProfileFileInfo.Path)
 
