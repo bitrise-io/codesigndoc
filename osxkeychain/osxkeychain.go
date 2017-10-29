@@ -7,10 +7,9 @@ import (
 	"strings"
 	"unsafe"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
-	"github.com/bitrise-tools/codesigndoc/certutil"
+	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-tools/go-xcode/certificateutil"
 )
 
 /*
@@ -78,7 +77,7 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 		return fmt.Errorf("ExportFromKeychain: failed to write into file: %s", err)
 	}
 
-	log.Debug("Export - success")
+	log.Debugf("Export - success")
 
 	return nil
 }
@@ -140,7 +139,7 @@ type IdentityWithRefModel struct {
 // FindAndValidateIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
 //             you can use the ReleaseIdentityWithRefList method to do that
-func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRefModel, error) {
+func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) (*IdentityWithRefModel, error) {
 	foundIdentityRefs, err := FindIdentity(identityLabel, isFullLabelMatch)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to find Identity, error: %s", err)
@@ -150,22 +149,27 @@ func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) ([]Ide
 	}
 
 	// check validity
-	validIdentityRefs := []IdentityWithRefModel{}
+	var latestIdentityRef *IdentityWithRefModel
+	var latestCertificate x509.Certificate
+
 	for _, aIdentityRef := range foundIdentityRefs {
 		cert, err := GetCertificateDataFromIdentityRef(aIdentityRef.KeychainRef)
 		if err != nil {
-			return validIdentityRefs, fmt.Errorf("Failed to read certificate data, error: %s", err)
+			return nil, fmt.Errorf("Failed to read certificate data, error: %s", err)
 		}
 
-		if err := certutil.CheckCertificateValidity(cert); err != nil {
-			log.Warning(colorstring.Yellowf("Certificate is not valid, skipping: %s", err))
+		if err := certificateutil.CheckValidity(*cert); err != nil {
+			log.Warnf("Certificate is not valid, skipping: %s", err)
 			continue
 		}
 
-		validIdentityRefs = append(validIdentityRefs, aIdentityRef)
+		if latestIdentityRef == nil || cert.NotAfter.After(latestCertificate.NotAfter) {
+			latestIdentityRef = &aIdentityRef
+			latestCertificate = *cert
+		}
 	}
 
-	return validIdentityRefs, nil
+	return latestIdentityRef, nil
 }
 
 // FindIdentity ...

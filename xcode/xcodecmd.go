@@ -3,19 +3,15 @@ package xcode
 import (
 	"bufio"
 	"fmt"
-	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/maputil"
+	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
-	"github.com/bitrise-io/go-utils/readerutil"
-	"github.com/bitrise-io/go-utils/regexputil"
-	"github.com/bitrise-tools/codesigndoc/common"
-	"github.com/bitrise-tools/codesigndoc/provprofile"
 )
 
 // CommandModel ...
@@ -41,138 +37,26 @@ type CommandModel struct {
 	SDK string
 }
 
-func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
-	scanner := bufio.NewScanner(strings.NewReader(xcodeOutput))
-
-	foundSchemes := []string{}
-	isSchemeDelimiterFound := false
-	for scanner.Scan() {
-		line := scanner.Text()
-		if isSchemeDelimiterFound {
-			foundSchemes = append(foundSchemes, strings.TrimSpace(line))
-		}
-		if regexp.MustCompile(`^[[:space:]]*Schemes:$`).MatchString(line) {
-			isSchemeDelimiterFound = true
-		}
-	}
-	return foundSchemes
-}
-
-func parseCodeSigningSettingsFromXcodeOutput(xcodeOutput string) (common.CodeSigningSettings, error) {
-	logReader := bufio.NewReader(strings.NewReader(xcodeOutput))
-
-	identitiesMap := map[string]common.CodeSigningIdentityInfo{}
-	provProfilesMap := map[string]provprofile.ProvisioningProfileInfo{}
-	teamIDsMap := map[string]interface{}{}
-	appIDsMap := map[string]interface{}{}
-
-	// scan log line by line
-	{
-		line, readErr := readerutil.ReadLongLine(logReader)
-		for ; readErr == nil; line, readErr = readerutil.ReadLongLine(logReader) {
-			// Team ID
-			if rexp := regexp.MustCompile(`^[[:space:]]*"com.apple.developer.team-identifier" = (?P<teamid>[a-zA-Z0-9]+);$`); rexp.MatchString(line) {
-				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
-				if !isFound {
-					log.Error("Failed to scan TeamID: not found in the logs")
-					continue
-				}
-				teamIDsMap[results["teamid"]] = 1
-			}
-
-			// App Bundle ID
-			if rexp := regexp.MustCompile(`^[[:space:]]*"application-identifier" = "(?P<appbundleid>.+)";$`); rexp.MatchString(line) {
-				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
-				if !isFound {
-					log.Error("Failed to scan App Bundle ID: not found in the logs")
-					continue
-				}
-				appIDsMap[results["appbundleid"]] = 1
-			}
-
-			// Signing Identity
-			if rexp := regexp.MustCompile(`^[[:space:]]*Signing Identity:[[:space:]]*"(?P<title>.+)"$`); rexp.MatchString(line) {
-				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
-				if !isFound {
-					log.Error("Failed to scan Signing Identity title: not found in the logs")
-					continue
-				}
-				codeSigningID := common.CodeSigningIdentityInfo{Title: results["title"]}
-				identitiesMap[codeSigningID.Title] = codeSigningID
-			}
-			// Prov. Profile - title line
-			if rexp := regexp.MustCompile(`^[[:space:]]*Provisioning Profile:[[:space:]]*"(?P<title>.+)"$`); rexp.MatchString(line) {
-				results, isFound := regexputil.NamedFindStringSubmatch(rexp, line)
-				if !isFound {
-					log.Error("Failed to scan Provisioning Profile title: not found in the logs")
-					continue
-				}
-				tmpProvProfile := provprofile.ProvisioningProfileInfo{Title: results["title"]}
-
-				// read next line
-				line, readErr = readerutil.ReadLongLine(logReader)
-				if readErr != nil {
-					continue
-				}
-				if line == "" {
-					log.Error("Failed to scan Provisioning Profile UUID: no more lines to scan")
-					continue
-				}
-				provProfileUUIDLine := line
-
-				rexp = regexp.MustCompile(`^[[:space:]]*\((?P<uuid>[a-zA-Z0-9-]{36})\)`)
-				results, isFound = regexputil.NamedFindStringSubmatch(rexp, provProfileUUIDLine)
-				if !isFound {
-					log.Errorf("Failed to scan Provisioning Profile UUID: pattern not found | line was: %s", provProfileUUIDLine)
-					continue
-				}
-				tmpProvProfile.UUID = results["uuid"]
-				provProfilesMap[tmpProvProfile.Title] = tmpProvProfile
-			}
-		}
-		if readErr != nil && readErr != io.EOF {
-			return common.CodeSigningSettings{}, fmt.Errorf("Failed to scan log output, error: %s", readErr)
-		}
-	}
-
-	identities := []common.CodeSigningIdentityInfo{}
-	for _, v := range identitiesMap {
-		identities = append(identities, v)
-	}
-	provProfiles := []provprofile.ProvisioningProfileInfo{}
-	for _, v := range provProfilesMap {
-		provProfiles = append(provProfiles, v)
-	}
-	teamIDs := maputil.KeysOfStringInterfaceMap(teamIDsMap)
-	appIDs := maputil.KeysOfStringInterfaceMap(appIDsMap)
-
-	return common.CodeSigningSettings{
-		Identities:   identities,
-		ProvProfiles: provProfiles,
-		TeamIDs:      teamIDs,
-		AppIDs:       appIDs,
-	}, nil
-}
-
-// GenerateLog : generates the log for subsequent "Scan" call
-func (xccmd CommandModel) GenerateLog() (string, error) {
+// GenerateArchive : generates the archive for subsequent "Scan"
+func (xccmd CommandModel) GenerateArchive() (string, string, error) {
 	xcoutput := ""
 	var err error
 
+	tmpDir, err := pathutil.NormalizedOSTempDirPath("__codesigndoc__")
+	if err != nil {
+		return "", "", fmt.Errorf("Failed to create temp dir for archives, error: %s", err)
+	}
+	tmpArchivePath := filepath.Join(tmpDir, xccmd.Scheme+".xcarchive")
+
 	progress.SimpleProgress(".", 1*time.Second, func() {
-		xcoutput, err = xccmd.RunXcodebuildCommand("clean", "archive")
+		xcoutput, err = xccmd.RunXcodebuildCommand("clean", "archive", "-archivePath", tmpArchivePath)
 	})
 	fmt.Println()
 
 	if err != nil {
-		return xcoutput, fmt.Errorf("Failed to Archive, error: %s", err)
+		return "", xcoutput, fmt.Errorf("Failed to Archive, error: %s", err)
 	}
-	return xcoutput, nil
-}
-
-// ScanCodeSigningSettings ...
-func (xccmd CommandModel) ScanCodeSigningSettings(logToScan string) (common.CodeSigningSettings, error) {
-	return parseCodeSigningSettingsFromXcodeOutput(logToScan)
+	return tmpArchivePath, xcoutput, nil
 }
 
 func (xccmd CommandModel) xcodeProjectOrWorkspaceParam() (string, error) {
@@ -213,7 +97,6 @@ func (xccmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (
 	}
 
 	log.Infof("$ xcodebuild %s", command.PrintableCommandArgs(true, xcodeCmdParamsToRun))
-	fmt.Print("Running and analyzing log ...")
 	xcoutput, err := command.RunCommandAndReturnCombinedStdoutAndStderr("xcodebuild", xcodeCmdParamsToRun...)
 	if err != nil {
 		return xcoutput, fmt.Errorf("Failed to run xcodebuild command, error: %s", err)
@@ -232,4 +115,21 @@ func (xccmd CommandModel) ScanSchemes() ([]string, error) {
 
 	parsedSchemes := parseSchemesFromXcodeOutput(xcoutput)
 	return parsedSchemes, nil
+}
+
+func parseSchemesFromXcodeOutput(xcodeOutput string) []string {
+	scanner := bufio.NewScanner(strings.NewReader(xcodeOutput))
+
+	foundSchemes := []string{}
+	isSchemeDelimiterFound := false
+	for scanner.Scan() {
+		line := scanner.Text()
+		if isSchemeDelimiterFound {
+			foundSchemes = append(foundSchemes, strings.TrimSpace(line))
+		}
+		if regexp.MustCompile(`^[[:space:]]*Schemes:$`).MatchString(line) {
+			isSchemeDelimiterFound = true
+		}
+	}
+	return foundSchemes
 }
