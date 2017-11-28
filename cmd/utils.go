@@ -40,16 +40,16 @@ func exportMethod(group export.IosCodeSignGroup) string {
 	return ""
 }
 
-func findCertificate(nameOrSHA1Fingerprint string, certificates []certificateutil.CertificateInfoModel) *certificateutil.CertificateInfoModel {
+func findCertificate(nameOrSHA1Fingerprint string, certificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
 	for _, certificate := range certificates {
 		if certificate.CommonName == nameOrSHA1Fingerprint {
-			return &certificate
+			return certificate, nil
 		}
 		if strings.ToLower(certificate.SHA1Fingerprint) == strings.ToLower(nameOrSHA1Fingerprint) {
-			return &certificate
+			return certificate, nil
 		}
 	}
-	return nil
+	return certificateutil.CertificateInfoModel{}, fmt.Errorf("installed certificate not found with common name or sha1 hash: %s", nameOrSHA1Fingerprint)
 }
 
 func isDistributionCertificate(certificate certificateutil.CertificateInfoModel) bool {

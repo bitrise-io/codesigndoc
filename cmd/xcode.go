@@ -9,10 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xcode"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
 	"github.com/bitrise-tools/go-xcode/utility"
-	"github.com/bitrise-tools/go-xcode/xcarchive"
 	"github.com/spf13/cobra"
 )
 
@@ -46,7 +43,6 @@ func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
 }
 
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
-	initLogVerbosity()
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
 		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
@@ -90,13 +86,19 @@ the one you usually open in Xcode, then hit Enter.
 		}
 		log.Debugf("schemes: %v", schemes)
 
-		fmt.Println()
-		selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemes)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
+		if len(schemes) == 0 {
+			return printXcodeScanFinishedWithError("No schemes found")
+		} else if len(schemes) == 1 {
+			schemeToUse = schemes[0]
+		} else {
+			fmt.Println()
+			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemes)
+			if err != nil {
+				return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
+			}
+			log.Debugf("selected scheme: %v", selectedScheme)
+			schemeToUse = selectedScheme
 		}
-		log.Debugf("selected scheme: %v", selectedScheme)
-		schemeToUse = selectedScheme
 	}
 	xcodeCmd.Scheme = schemeToUse
 
@@ -128,71 +130,5 @@ the one you usually open in Xcode, then hit Enter.
 		return printXcodeScanFinishedWithError("Failed to run Xcode Archive: %s", err)
 	}
 
-	// archive code sign settings
-	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
-	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to list installed code signing identities, error: %s", err)
-	}
-	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
-
-	installedProfiles, err := profileutil.InstalledProvisioningProfileInfos(profileutil.ProfileTypeIos)
-	if err != nil {
-		return err
-	}
-
-	archive, err := xcarchive.NewIosArchive(archivePath)
-	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to analyze archive, error: %s", err)
-	}
-
-	archiveCodeSignGroup, err := analyzeArchive(archive, installedCertificates)
-	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to analyze the archive, error: %s", err)
-	}
-
-	fmt.Println()
-	fmt.Println()
-	log.Infof("Codesign settings used for Xcode archive:")
-	fmt.Println()
-	printCodesignGroup(archiveCodeSignGroup)
-
-	// ipa export code sign settings
-	fmt.Println()
-	fmt.Println()
-	log.Printf("🔦  Analyzing the archive, to get ipa export code signing settings...")
-
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
-
-	if certificatsOnly {
-		ipaExportCertificate, err := collectIpaExportCertificate(archiveCodeSignGroup.Certificate, installedCertificates)
-		if err != nil {
-			return err
-		}
-
-		certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
-	} else {
-		ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(archive, installedCertificates, installedProfiles)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to collect ipa export code sign groups, error: %s", err)
-		}
-
-		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-		certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
-
-		certificatesToExport = append(certificatesToExport, certificates...)
-		profilesToExport = append(profilesToExport, profiles...)
-	}
-
-	if err := collectAndExportIdentities(certificatesToExport, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export codesign identities, error: %s", err)
-	}
-
-	if err := collectAndExportProvisioningProfiles(profilesToExport, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export provisioning profiles, error: %s", err)
-	}
-
-	printFinished()
-
-	return nil
+	return exportCodesignFiles("Xcode", archivePath, absExportOutputDirPath)
 }

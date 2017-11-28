@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"strings"
 	"unsafe"
 
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -139,8 +138,8 @@ type IdentityWithRefModel struct {
 // FindAndValidateIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
 //             you can use the ReleaseIdentityWithRefList method to do that
-func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) (*IdentityWithRefModel, error) {
-	foundIdentityRefs, err := FindIdentity(identityLabel, isFullLabelMatch)
+func FindAndValidateIdentity(identityLabel string) (*IdentityWithRefModel, error) {
+	foundIdentityRefs, err := FindIdentity(identityLabel)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to find Identity, error: %s", err)
 	}
@@ -175,7 +174,7 @@ func FindAndValidateIdentity(identityLabel string, isFullLabelMatch bool) (*Iden
 // FindIdentity ...
 //  IMPORTANT: you have to C.CFRelease the returned items (one-by-one)!!
 //             you can use the ReleaseIdentityWithRefList method to do that
-func FindIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRefModel, error) {
+func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 
 	queryDict := C.CFDictionaryCreateMutable(nil, 0, nil, nil)
 	defer C.CFRelease(C.CFTypeRef(queryDict))
@@ -216,14 +215,8 @@ func FindIdentity(identityLabel string, isFullLabelMatch bool) ([]IdentityWithRe
 			return nil, fmt.Errorf("FindIdentity: failed to get 'labl' property: %s", err)
 		}
 		log.Debugf("labl: %#v", labl)
-		if isFullLabelMatch {
-			if labl != identityLabel {
-				continue
-			}
-		} else {
-			if !strings.Contains(labl, identityLabel) {
-				continue
-			}
+		if labl != identityLabel {
+			continue
 		}
 		log.Debugf("Found identity with label: %s", labl)
 

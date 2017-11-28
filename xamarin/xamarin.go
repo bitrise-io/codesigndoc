@@ -1,6 +1,7 @@
 package xamarin
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -104,9 +105,9 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 	}
 
 	if len(newArchives) == 0 {
-		return "", xamarinBuildOutput, fmt.Errorf("No archive generated during the build")
+		return "", xamarinBuildOutput, errors.New("No archive generated during the build")
 	} else if len(newArchives) > 1 {
-		log.Warnf("Multiple archives generated during the build, using first ...")
+		return "", xamarinBuildOutput, errors.New("multiple archives generated during the build")
 	}
 
 	return newArchives[0], xamarinBuildOutput, nil
@@ -115,7 +116,7 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 func listArchives() ([]string, error) {
 	userHomeDir := os.Getenv("HOME")
 	if userHomeDir == "" {
-		return []string{}, fmt.Errorf("failed to get user home dir")
+		return []string{}, errors.New("failed to get user home dir")
 	}
 	xcodeArchivesDir := filepath.Join(userHomeDir, "Library/Developer/Xcode/Archives")
 	if exist, err := pathutil.IsDirExists(xcodeArchivesDir); err != nil {

@@ -13,9 +13,6 @@ import (
 	"github.com/bitrise-tools/go-xamarin/analyzers/project"
 	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
 	"github.com/bitrise-tools/go-xamarin/constants"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
-	"github.com/bitrise-tools/go-xcode/xcarchive"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +46,6 @@ func printXamarinScanFinishedWithError(format string, args ...interface{}) error
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
-	initLogVerbosity()
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
 		return printXamarinScanFinishedWithError("Failed to prepare Export directory: %s", err)
@@ -232,80 +228,5 @@ and then hit Enter`
 		return printXamarinScanFinishedWithError("Failed to run xamarin build command: %s", err)
 	}
 
-	// archive code sign settings
-	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
-	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to list installed code signing identities, error: %s", err)
-	}
-	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
-
-	log.Debugf("Installed certificates:")
-	for _, installedCertificate := range installedCertificates {
-		log.Debugf(installedCertificate.String())
-	}
-
-	installedProfiles, err := profileutil.InstalledProvisioningProfileInfos(profileutil.ProfileTypeIos)
-	if err != nil {
-		return err
-	}
-
-	log.Debugf("Installed profiles:")
-	for _, profileInfo := range installedProfiles {
-		log.Debugf(profileInfo.String(installedCertificates...))
-	}
-
-	archive, err := xcarchive.NewIosArchive(archivePath)
-	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to analyze archive, error: %s", err)
-	}
-
-	archiveCodeSignGroup, err := analyzeArchive(archive, installedCertificates)
-	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to analyze the archive, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("Codesign settings used for Xamarin archive:")
-	fmt.Println()
-	printCodesignGroup(archiveCodeSignGroup)
-
-	// ipa export code sign settings
-	fmt.Println()
-	fmt.Println()
-	log.Printf("🔦  Analyzing the archive, to get ipa export code signing settings...")
-
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
-
-	if certificatsOnly {
-		ipaExportCertificate, err := collectIpaExportCertificate(archiveCodeSignGroup.Certificate, installedCertificates)
-		if err != nil {
-			return err
-		}
-
-		certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
-	} else {
-		ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(archive, installedCertificates, installedProfiles)
-		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to collect ipa export code sign groups, error: %s", err)
-		}
-
-		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-		certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
-
-		certificatesToExport = append(certificatesToExport, certificates...)
-		profilesToExport = append(profilesToExport, profiles...)
-	}
-
-	if err := collectAndExportIdentities(certificatesToExport, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export codesign identities, error: %s", err)
-	}
-
-	if err := collectAndExportProvisioningProfiles(profilesToExport, absExportOutputDirPath); err != nil {
-		return printXcodeScanFinishedWithError("Failed to export provisioning profiles, error: %s", err)
-	}
-
-	printFinished()
-
-	return nil
+	return exportCodesignFiles("Xamarin Studio", archivePath, absExportOutputDirPath)
 }
