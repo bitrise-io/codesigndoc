@@ -510,7 +510,7 @@ func provProfileExportFileName(info profileutil.ProvisioningProfileInfoModel, pa
 	return info.UUID + "." + safeTitle + extension
 }
 
-func exportCodesignFiles(toolName, archivePath, utputDirPath string) error {
+func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 	// archive code sign settings
 	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
 	if err != nil {
@@ -576,13 +576,20 @@ func exportCodesignFiles(toolName, archivePath, utputDirPath string) error {
 		profilesToExport = append(profilesToExport, profiles...)
 	}
 
-	if err := collectAndExportIdentities(certificatesToExport, utputDirPath); err != nil {
+	if err := collectAndExportIdentities(certificatesToExport, outputDirPath); err != nil {
 		return printFinishedWithError(toolName, "Failed to export codesign identities, error: %s", err)
 	}
 
-	if err := collectAndExportProvisioningProfiles(profilesToExport, utputDirPath); err != nil {
+	if err := collectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
 		return printFinishedWithError(toolName, "Failed to export provisioning profiles, error: %s", err)
 	}
+
+	fmt.Println()
+	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+	if err := command.RunCommand("open", outputDirPath); err != nil {
+		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
+	}
+	fmt.Println("Opened the directory in Finder.")
 
 	printFinished()
 

@@ -26,6 +26,7 @@ func printFinished() {
 	fmt.Println()
 	fmt.Println(colorstring.Green("That's all."))
 	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
+	fmt.Println()
 }
 
 func printCodesignGroup(group export.IosCodeSignGroup) {

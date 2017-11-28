@@ -7,13 +7,13 @@ var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan a project's code signing settings",
 	Long: `Scan a project's code signing settings,
-and optionally export the require code signing files.`,
+and export the require code signing files.`,
 }
 
 var (
 	isAllowExport    = false
 	isAskForPassword = false
-	certificatesOnly  = false
+	certificatesOnly = false
 )
 
 func init() {
