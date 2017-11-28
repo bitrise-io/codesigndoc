@@ -7,6 +7,7 @@ import (
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/pkg/errors"
 )
 
 func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
@@ -49,7 +50,7 @@ func findCertificate(nameOrSHA1Fingerprint string, certificates []certificateuti
 			return certificate, nil
 		}
 	}
-	return certificateutil.CertificateInfoModel{}, fmt.Errorf("installed certificate not found with common name or sha1 hash: %s", nameOrSHA1Fingerprint)
+	return certificateutil.CertificateInfoModel{}, errors.Errorf("installed certificate not found with common name or sha1 hash: %s", nameOrSHA1Fingerprint)
 }
 
 func isDistributionCertificate(certificate certificateutil.CertificateInfoModel) bool {

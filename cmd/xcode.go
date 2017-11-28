@@ -96,9 +96,10 @@ the one you usually open in Xcode, then hit Enter.
 			if err != nil {
 				return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
 			}
-			log.Debugf("selected scheme: %v", selectedScheme)
 			schemeToUse = selectedScheme
 		}
+
+		log.Debugf("selected scheme: %v", schemeToUse)
 	}
 	xcodeCmd.Scheme = schemeToUse
 
