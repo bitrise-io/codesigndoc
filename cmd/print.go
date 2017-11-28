@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-tools/go-xcode/export"
 )
 
@@ -24,8 +25,8 @@ func printFinishedWithError(toolName, format string, args ...interface{}) error 
 
 func printFinished() {
 	fmt.Println()
-	fmt.Println(colorstring.Green("That's all."))
-	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
+	log.Successf("That's all.")
+	log.Warnf("You just have to upload the found code signing files (.p12 and .mobileprovision) and you'll be good to go!")
 	fmt.Println()
 }
 
