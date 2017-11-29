@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/spf13/cobra"
 )
 
 var (
-	paramLogLevel = "info"
+	enableVerboseLog = false
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -25,13 +25,8 @@ At the end of the process you'll have all the code signing files
 and the required Provisioning Profiles) required to do a successful Archive of your iOS project.`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Log level
-		logLevel, err := log.ParseLevel(paramLogLevel)
-		if err != nil {
-			return fmt.Errorf("Failed to parse log level: %s", err)
-		}
-		log.SetLevel(logLevel)
-		log.Debugf("Loglevel: %s", logLevel)
+		log.SetEnableDebugLog(enableVerboseLog)
+		log.Debugf("EnableDebugLog: %v", enableVerboseLog)
 
 		return nil
 	},
@@ -47,8 +42,5 @@ func Execute() {
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringVarP(&paramLogLevel,
-		"loglevel", "l",
-		"info",
-		"Log level (options: debug, info, warn, error, fatal, panic).")
+	RootCmd.PersistentFlags().BoolVarP(&enableVerboseLog, "verbose", "v", false, "Enable verbose logging")
 }

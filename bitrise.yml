@@ -80,7 +80,10 @@ workflows:
             set -ex
             go install
 
-  godeps-update:
+  dep-update:
+    title: Dep update
+    description: |
+      Used for updating bitrise dependencies with dep
     steps:
     - script:
         title: Dependency update
@@ -88,15 +91,9 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-            go get -u github.com/tools/godep
-            rm -rf ./Godeps
-            rm -rf ./vendor
-            go get -t -d ./...
-            go get golang.org/x/sys/unix
-            go get github.com/davecgh/go-spew/spew
-            go get github.com/pmezard/go-difflib/difflib
-            go get github.com/inconshreveable/mousetrap
-            godep save ./...
+            go get -u -v github.com/golang/dep/cmd/dep
+            dep ensure -v
+            dep ensure -v -update
 
   ci:
     before_run:

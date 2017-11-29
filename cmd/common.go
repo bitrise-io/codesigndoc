@@ -5,46 +5,24 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/common"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
-	"github.com/bitrise-tools/codesigndoc/provprofile"
-	"github.com/bitrise-tools/codesigndoc/utils"
+	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-tools/go-xcode/export"
+	"github.com/bitrise-tools/go-xcode/exportoptions"
+	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-tools/go-xcode/xcarchive"
 	"github.com/pkg/errors"
 )
 
-const (
-	confExportOutputDirPath = "./codesigndoc_exports"
-)
-
-func printFinishedWithError(toolName, format string, args ...interface{}) error {
-	fmt.Println()
-	fmt.Println("------------------------------")
-	fmt.Println("First of all " + colorstring.Red("please make sure that you can Archive your app from "+toolName+"."))
-	fmt.Println("codesigndoc only works if you can archive your app from " + toolName + ".")
-	fmt.Println("If you can, and you get a valid IPA file if you export from " + toolName + ",")
-	fmt.Println(colorstring.Red("please create an issue") + " on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues")
-	fmt.Println("with as many details & logs as you can share!")
-	fmt.Println("------------------------------")
-	fmt.Println()
-
-	return fmt.Errorf(colorstring.Red("Error: ")+format, args...)
-}
-
-func printFinished() {
-	fmt.Println()
-	fmt.Println(colorstring.Green("That's all."))
-	fmt.Println("You just have to upload the found code signing files and you'll be good to go!")
-}
-
 func initExportOutputDir() (string, error) {
+	confExportOutputDirPath := "./codesigndoc_exports"
 	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
 	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
 	if err != nil {
@@ -57,243 +35,437 @@ func initExportOutputDir() (string, error) {
 			return absExportOutputDirPath, fmt.Errorf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
 		}
 	} else {
-		log.Infof("Export output dir already exists at path: %s", absExportOutputDirPath)
+		log.Warnf("Export output dir already exists at path: %s", absExportOutputDirPath)
 	}
 	return absExportOutputDirPath, nil
 }
 
-func exportCodeSigningFiles(toolName, absExportOutputDirPath string, codeSigningSettings common.CodeSigningSettings) error {
+func analyzeArchive(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel) (export.IosCodeSignGroup, error) {
+	signingIdentity := archive.SigningIdentity()
+	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
+
+	if signingIdentity == "" {
+		return export.IosCodeSignGroup{}, fmt.Errorf("no signing identity found")
+	}
+
+	certificate, err := findCertificate(signingIdentity, installedCertificates)
+	if err != nil {
+		return export.IosCodeSignGroup{}, err
+	}
+
+	return export.IosCodeSignGroup{
+		Certificate:        certificate,
+		BundleIDProfileMap: bundleIDProfileInfoMap,
+	}, nil
+}
+
+func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.SelectableCodeSignGroup, error) {
+	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
+
 	fmt.Println()
 	fmt.Println()
-	utils.Printlnf("=== Required Identities/Certificates (%d) ===", len(codeSigningSettings.Identities))
-	cleanedUpIdentities := []common.CodeSigningIdentityInfo{}
-	for idx, anIdentity := range codeSigningSettings.Identities {
-		utils.Printlnf(" * (%d): %s", idx+1, anIdentity.Title)
-		if anIdentity.Title == "-" {
-			fmt.Println("   " + colorstring.Yellow("WARNING:") + " This entry (" + colorstring.Yellow("-") + ") means that one of your target/project is set to " + colorstring.Yellow("NO CODE SIGN"))
-			fmt.Println("            Please try to fix this issue first if you'd experience any code signing problems!")
-		} else {
-			cleanedUpIdentities = append(cleanedUpIdentities, anIdentity)
-		}
-	}
-	codeSigningSettings.Identities = cleanedUpIdentities
-	fmt.Println("============================================")
-
+	log.Infof("Targets to sign:")
 	fmt.Println()
-	utils.Printlnf("=== Required Provisioning Profiles (%d) ===", len(codeSigningSettings.ProvProfiles))
-	for idx, aProvProfile := range codeSigningSettings.ProvProfiles {
-		utils.Printlnf(" * (%d): %s (UUID: %s)", idx+1, aProvProfile.Title, aProvProfile.UUID)
+	for bundleID, entitlements := range bundleIDEntitlemenstMap {
+		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
 	}
-	fmt.Println("==========================================")
-
-	fmt.Println()
-	utils.Printlnf("=== Team IDs (%d) ===", len(codeSigningSettings.TeamIDs))
-	for idx, aTeamID := range codeSigningSettings.TeamIDs {
-		utils.Printlnf(" * (%d): %s", idx+1, aTeamID)
-	}
-	fmt.Println("==========================================")
-
-	fmt.Println()
-	utils.Printlnf("=== App/Bundle IDs (%d) ===", len(codeSigningSettings.AppIDs))
-	for idx, anAppBundleID := range codeSigningSettings.AppIDs {
-		utils.Printlnf(" * (%d): %s", idx+1, anAppBundleID)
-	}
-	fmt.Println("==========================================")
 	fmt.Println()
 
-	//
-	// --- Code Signing issue checks / report
-	//
-
-	if len(codeSigningSettings.Identities) < 1 {
-		return printFinishedWithError(toolName, "No Code Signing Identity detected!")
+	bundleIDs := []string{}
+	for bundleID := range bundleIDEntitlemenstMap {
+		bundleIDs = append(bundleIDs, bundleID)
 	}
-	if len(codeSigningSettings.Identities) > 1 {
-		log.Warning(colorstring.Yellow("More than one Code Signing Identity (certificate) is required to sign your app!"))
-		log.Warning("You should check your settings and make sure a single Identity/Certificate can be used")
-		log.Warning(" for Archiving your app!")
+	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
+
+	log.Debugf("Codesign Groups:")
+	for _, group := range codeSignGroups {
+		log.Debugf(group.String())
 	}
 
-	if len(codeSigningSettings.ProvProfiles) < 1 {
-		return printFinishedWithError(toolName, "No Provisioning Profiles detected!")
+	if len(codeSignGroups) == 0 {
+		log.Errorf("Failed to create codesigning groups for the project")
+		return []export.SelectableCodeSignGroup{}, nil
 	}
 
-	//
-	// --- Export
-	//
+	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
+		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
+	)
 
-	if !isAllowExport {
-		isShouldExport, err := goinp.AskForBoolWithDefault("Do you want to export these files?", true)
+	// Handle if archive used NON xcode managed profile
+	if len(codeSignGroups) > 0 && !archive.IsXcodeManaged() {
+		log.Warnf("App was signed with NON xcode managed profile when archiving,")
+		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
+		log.Warnf("Removing xcode managed CodeSignInfo groups")
+
+		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
+			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
+		)
+	}
+
+	log.Debugf("\n")
+	log.Debugf("Filtered Codesign Groups:")
+	for _, group := range codeSignGroups {
+		log.Debugf(group.String())
+	}
+
+	if len(codeSignGroups) == 0 {
+		log.Errorf("Failed to create codesigning groups for the project")
+	}
+
+	return codeSignGroups, nil
+}
+
+func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
+	iosCodeSignGroups := []export.IosCodeSignGroup{}
+
+	codeSignGroups, err := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
+	if err != nil {
+		return nil, printXcodeScanFinishedWithError("Failed to collect valid code sign settings: %s", err)
+	}
+
+	if len(codeSignGroups) == 0 {
+		fmt.Println()
+		log.Errorf("No code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa")
+		log.Errorf("To collect available code sign files, we search for intsalled Provisioning Profiles:")
+		log.Errorf("- which has installed Codesign Identity in your Keychain")
+		log.Errorf("- which can provision your application target's bundle ids")
+		log.Errorf("- which has the project defined Capabilities set")
+		return nil, printXcodeScanFinishedWithError("Failed to find code sign files")
+	}
+
+	exportMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
+
+	for true {
+		fmt.Println()
+		selectedExportMethod, err := goinp.SelectFromStringsWithDefault("Select the ipa export method", 1, exportMethods)
 		if err != nil {
-			return printFinishedWithError(toolName, "Failed to process your input: %s", err)
+			return nil, printXcodeScanFinishedWithError("Failed to select ipa export method: %s", err)
 		}
-		if !isShouldExport {
-			printFinished()
-			return nil
+		log.Debugf("selected export method: %v", selectedExportMethod)
+
+		fmt.Println()
+		filteredCodeSignGroups := export.FilterSelectableCodeSignGroups(codeSignGroups,
+			export.CreateExportMethodSelectableCodeSignGroupFilter(exportoptions.Method(selectedExportMethod)),
+		)
+
+		log.Debugf("\n")
+		log.Debugf("Filtered Codesign Groups:")
+		for _, group := range codeSignGroups {
+			log.Debugf(group.String())
+		}
+
+		if len(filteredCodeSignGroups) == 0 {
+			fmt.Println()
+			log.Errorf("No code sign files (Codesign Identities and Provisioning Profiles) are installed for %s ipa export", selectedExportMethod)
+			log.Errorf("To collect available code sign files, we search for intsalled Provisioning Profiles:")
+			log.Errorf("- which has installed Codesign Identity in your Keychain")
+			log.Errorf("- which can provision your application target's bundle ids")
+			log.Errorf("- which has the project defined Capabilities set")
+			log.Errorf("- which matches to the selected ipa export method")
+
+			fmt.Println()
+			fmt.Println()
+			question := "Do you want to collect another ipa export code sign files"
+			question += "\n(select NO to finish collecting codesign files and continue)"
+			anotherExport, err := goinp.AskForBoolWithDefault(question, false)
+			if err != nil {
+				return nil, fmt.Errorf("failed to ask: %s", err)
+			}
+			if !anotherExport {
+				break
+			}
+			continue
+		}
+
+		// Select certificate
+		certificates := []certificateutil.CertificateInfoModel{}
+		certificateOptions := []string{}
+		for _, group := range filteredCodeSignGroups {
+			certificate := group.Certificate
+			certificates = append(certificates, certificate)
+			certificateOption := fmt.Sprintf("%s [%s] - development team: %s", certificate.CommonName, certificate.Serial, certificate.TeamName)
+			certificateOptions = append(certificateOptions, certificateOption)
+		}
+
+		selectedCertificateOption := ""
+		if len(certificateOptions) == 1 {
+			selectedCertificateOption = certificateOptions[0]
+
+			fmt.Printf("Codesign Indentity for %s ipa export: %s\n", selectedExportMethod, selectedCertificateOption)
+		} else {
+			sort.Strings(certificateOptions)
+
+			fmt.Println()
+			question := fmt.Sprintf("Select the Codesign Indentity for %s ipa export", selectedExportMethod)
+			selectedCertificateOption, err = goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
+			if err != nil {
+				return nil, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+			}
+		}
+
+		var selectedCertificate *certificateutil.CertificateInfoModel
+		for _, certificate := range certificates {
+			option := fmt.Sprintf("%s [%s] - development team: %s", certificate.CommonName, certificate.Serial, certificate.TeamName)
+			if option == selectedCertificateOption {
+				selectedCertificate = &certificate
+				break
+			}
+		}
+		if selectedCertificate == nil {
+			return nil, printXcodeScanFinishedWithError("Failed to find selected Codesign Indentity")
+		}
+
+		// Select Profiles
+		bundleIDProfilesMap := map[string][]profileutil.ProvisioningProfileInfoModel{}
+		for _, group := range filteredCodeSignGroups {
+			option := fmt.Sprintf("%s [%s] - development team: %s", group.Certificate.CommonName, group.Certificate.Serial, group.Certificate.TeamName)
+			if option == selectedCertificateOption {
+				bundleIDProfilesMap = group.BundleIDProfilesMap
+				break
+			}
+		}
+		if len(bundleIDProfilesMap) == 0 {
+			return nil, printXcodeScanFinishedWithError("Failed to find Provisioning Profiles for Code Sign Identity")
+		}
+
+		selectedBundleIDProfileMap := map[string]profileutil.ProvisioningProfileInfoModel{}
+		for bundleID, profiles := range bundleIDProfilesMap {
+			profileOptions := []string{}
+			for _, profile := range profiles {
+				profileOption := fmt.Sprintf("%s (%s)", profile.Name, profile.UUID)
+				profileOptions = append(profileOptions, profileOption)
+			}
+
+			selectedProfileOption := ""
+			if len(profileOptions) == 1 {
+				selectedProfileOption = profileOptions[0]
+
+				fmt.Printf("Provisioning Profile to sign target (%s): %s\n", bundleID, selectedProfileOption)
+			} else {
+				sort.Strings(profileOptions)
+
+				fmt.Println()
+				question := fmt.Sprintf("Select the Provisioning Profile to sign target with bundle ID: %s", bundleID)
+				selectedProfileOption, err = goinp.SelectFromStringsWithDefault(question, 1, profileOptions)
+				if err != nil {
+					return nil, printXcodeScanFinishedWithError("Failed to select Provisioning Profile: %s", err)
+				}
+			}
+
+			for _, profile := range profiles {
+				option := fmt.Sprintf("%s (%s)", profile.Name, profile.UUID)
+				if option == selectedProfileOption {
+					selectedBundleIDProfileMap[bundleID] = profile
+				}
+			}
+		}
+		if len(selectedBundleIDProfileMap) != len(bundleIDProfilesMap) {
+			return nil, printXcodeScanFinishedWithError("Failed to find Provisioning Profiles for ipa export")
+		}
+
+		iosCodeSignGroup := export.IosCodeSignGroup{
+			Certificate:        *selectedCertificate,
+			BundleIDProfileMap: selectedBundleIDProfileMap,
+		}
+
+		fmt.Println()
+		fmt.Println()
+		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(iosCodeSignGroup))
+		fmt.Println()
+		printCodesignGroup(iosCodeSignGroup)
+
+		iosCodeSignGroups = append(iosCodeSignGroups, iosCodeSignGroup)
+
+		fmt.Println()
+		fmt.Println()
+		question := "Do you want to collect another ipa export code sign files"
+		question += "\n(select NO to finish collecting codesign files and continue)"
+		anotherExport, err := goinp.AskForBoolWithDefault(question, false)
+		if err != nil {
+			return nil, fmt.Errorf("failed to ask: %s", err)
+		}
+		if !anotherExport {
+			break
+		}
+	}
+
+	return iosCodeSignGroups, nil
+}
+
+func collectIpaExportCertificate(archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
+	fmt.Println()
+	fmt.Println()
+	question := fmt.Sprintf(`The Xcode archive used codesigning files of team: %s - %s
+Would you like to use this team to sign your project?`, archiveCertificate.TeamID, archiveCertificate.TeamName)
+	useArchiveTeam, err := goinp.AskForBoolWithDefault(question, true)
+	if err != nil {
+		return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to ask: %s", err)
+	}
+
+	selectedTeam := ""
+	certificatesByTeam := mapCertificatesByTeam(installedCertificates)
+
+	if !useArchiveTeam {
+		teams := []string{}
+		for team := range certificatesByTeam {
+			teams = append(teams, team)
+		}
+
+		fmt.Println()
+		selectedTeam, err = goinp.SelectFromStringsWithDefault("Select the Development team to sign your project", 1, teams)
+		if err != nil {
+			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
 		}
 	} else {
-		log.Debug("Allow Export flag was set - doing export without asking")
+		selectedTeam = fmt.Sprintf("%s - %s", archiveCertificate.TeamID, archiveCertificate.TeamName)
 	}
 
-	exportedProvProfiles, err := collectAndExportProvisioningProfiles(codeSigningSettings, absExportOutputDirPath)
-	if err != nil {
-		return printFinishedWithError(toolName, "Failed to export Provisioning Profiles, error: %+v", err)
+	selectedCertificate := certificateutil.CertificateInfoModel{}
+
+	if isDistributionCertificate(archiveCertificate) {
+		certificates := certificatesByTeam[selectedTeam]
+		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return !isDistributionCertificate(certInfo)
+		})
+
+		certificateOptions := []string{}
+		for _, certInfo := range developmentCertificates {
+			certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
+			certificateOptions = append(certificateOptions, certificateOption)
+		}
+
+		fmt.Println()
+		question := fmt.Sprintf(`The Xcode archive used distribution certificate: %s [%s].
+Please select a development certificate:`, archiveCertificate.CommonName, archiveCertificate.Serial)
+		selectedCertificateOption, err := goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
+		if err != nil {
+			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+		}
+
+		for _, certInfo := range developmentCertificates {
+			certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
+			if certificateOption == selectedCertificateOption {
+				selectedCertificate = certInfo
+			}
+		}
+	} else {
+		certificates := certificatesByTeam[selectedTeam]
+		distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return isDistributionCertificate(certInfo)
+		})
+
+		certificateOptions := []string{}
+		for _, certInfo := range distributionCertificates {
+			certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
+			certificateOptions = append(certificateOptions, certificateOption)
+		}
+
+		fmt.Println()
+		question := fmt.Sprintf(`The Xcode archive used development certificate: %s [%s].
+Please select a distribution certificate:`, archiveCertificate.CommonName, archiveCertificate.Serial)
+		selectedCertificateOption, err := goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
+		if err != nil {
+			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+		}
+
+		for _, certInfo := range distributionCertificates {
+			certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
+			if certificateOption == selectedCertificateOption {
+				selectedCertificate = certInfo
+			}
+		}
 	}
 
-	provProfileTeamIDs, err := exportedProvProfiles.CollectTeamIDs()
-	if err != nil {
-		return printFinishedWithError(toolName, "Failed to collect Team IDs from Provisioning Profiles, error: %s", err)
-	}
+	return selectedCertificate, nil
+}
 
-	if err := collectAndExportIdentities(codeSigningSettings, provProfileTeamIDs, absExportOutputDirPath); err != nil {
-		return printFinishedWithError(toolName, "Failed to export identities, error: %s", err)
+func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel, absExportOutputDirPath string) error {
+	if len(profiles) == 0 {
+		return nil
 	}
 
 	fmt.Println()
-	fmt.Printf(colorstring.Green("Exports finished")+" you can find the exported files at: %s\n", absExportOutputDirPath)
-	if err := command.RunCommand("open", absExportOutputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", absExportOutputDirPath)
+	log.Infof("Required Provisioning Profiles (%d)", len(profiles))
+	fmt.Println()
+	for _, profile := range profiles {
+		log.Printf("- %s (UUID: %s)", profile.Name, profile.UUID)
 	}
-	fmt.Println("Opened the directory in Finder.")
+
+	profilePathInfoMap := map[string]profileutil.ProvisioningProfileInfoModel{}
+
+	fmt.Println()
+	log.Infof("Exporting Provisioning Profiles...")
 	fmt.Println()
 
-	printFinished()
+	for _, profile := range profiles {
+		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
+		_, pth, err := profileutil.FindProvisioningProfileInfo(profile.UUID)
+		if err != nil {
+			return errors.Wrap(err, "Failed to find Provisioning Profile")
+		}
+		profilePathInfoMap[pth] = profile
+		log.Printf("file found at: %s", pth)
+	}
+
+	if err := exportProvisioningProfiles(profilePathInfoMap, absExportOutputDirPath); err != nil {
+		return fmt.Errorf("Failed to export the Provisioning Profile into the export directory: %s", err)
+	}
+
 	return nil
 }
 
-func collectAndExportProvisioningProfiles(codeSigningSettings common.CodeSigningSettings,
-	absExportOutputDirPath string) (provprofile.ProvisioningProfileFileInfoModels, error) {
-
-	provProfileFileInfos := []provprofile.ProvisioningProfileFileInfoModel{}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Searching for required Provisioning Profiles"), "...")
-	fmt.Println()
-
-	provProfileUUIDLookupMap := map[string]provprofile.ProvisioningProfileFileInfoModel{}
-	for _, aProvProfile := range codeSigningSettings.ProvProfiles {
-		log.Infof(" * "+colorstring.Blue("Searching for required Provisioning Profile")+": %s (UUID: %s)", aProvProfile.Title, aProvProfile.UUID)
-		provProfileFileInfo, err := provprofile.FindProvProfileByUUID(aProvProfile.UUID)
-		if err != nil {
-			return provProfileFileInfos, errors.Wrap(err, "Failed to find Provisioning Profile")
-		}
-		log.Infof("   File found at: %s", provProfileFileInfo.Path)
-
-		provProfileUUIDLookupMap[provProfileFileInfo.ProvisioningProfileInfo.UUID] = provProfileFileInfo
+func collectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, absExportOutputDirPath string) error {
+	if len(certificates) == 0 {
+		return nil
 	}
 
 	fmt.Println()
-	log.Println(colorstring.Green("Searching for additional, Distribution Provisioning Profiles"), "...")
 	fmt.Println()
-	for _, aAppBundleID := range codeSigningSettings.AppIDs {
-		bundleOrAppIDPattern := common.BundleIDFromAppID(aAppBundleID)
-		if bundleOrAppIDPattern == "" {
-			// no bundle ID found in the app id
-			bundleOrAppIDPattern = aAppBundleID
-		} else {
-			// bundle ID found, make it a glob pattern
-			bundleOrAppIDPattern = "*." + bundleOrAppIDPattern
-		}
-		log.Infof(" * "+colorstring.Blue("Searching for Provisioning Profiles with App ID pattern")+": %s", bundleOrAppIDPattern)
-		provProfileFileInfos, err := provprofile.FindProvProfilesByAppID(bundleOrAppIDPattern)
-		if err != nil {
-			return provProfileFileInfos, fmt.Errorf("Error during Provisioning Profile search: %s", err)
-		}
-		if len(provProfileFileInfos) < 1 {
-			log.Warn("   No Provisioning Profile found for this Bundle ID")
-			continue
-		}
-		log.Infof("   Found matching Provisioning Profile count: %d", len(provProfileFileInfos))
-
-		for _, aProvProfileFileInfo := range provProfileFileInfos {
-			provProfileUUIDLookupMap[aProvProfileFileInfo.ProvisioningProfileInfo.UUID] = aProvProfileFileInfo
-		}
+	log.Infof("Required Identities/Certificates (%d)", len(certificates))
+	fmt.Println()
+	for _, certificate := range certificates {
+		log.Printf("- %s", certificate.CommonName)
 	}
 
 	fmt.Println()
-	log.Println(colorstring.Green("Exporting Provisioning Profiles"), "...")
-	fmt.Println()
-	for _, aProvProfFileInfo := range provProfileUUIDLookupMap {
-		provProfileFileInfos = append(provProfileFileInfos, aProvProfFileInfo)
-	}
-	if err := exportProvisioningProfiles(provProfileFileInfos, absExportOutputDirPath); err != nil {
-		return provProfileFileInfos, fmt.Errorf("Failed to export the Provisioning Profile into the export directory: %s", err)
-	}
-
-	return provProfileFileInfos, nil
-}
-
-func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, additionalTeamIDs []string,
-	absExportOutputDirPath string) error {
-
-	fmt.Println()
-	log.Println("Collecting the required Identities (Certificates) for a base Xcode Archive ...")
+	log.Infof("Exporting the Identities (Certificates):")
 	fmt.Println()
 
 	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
 	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
 
-	for _, aIdentity := range codeSigningSettings.Identities {
-		log.Infof(" * "+colorstring.Blue("Searching for Identity")+": %s", aIdentity.Title)
-		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(aIdentity.Title, true)
+	for _, certificate := range certificates {
+		log.Printf("searching for Identity: %s", certificate.CommonName)
+		identityRef, err := osxkeychain.FindAndValidateIdentity(certificate.CommonName)
 		if err != nil {
 			return fmt.Errorf("Failed to export, error: %s", err)
 		}
 
-		if len(validIdentityRefs) < 1 {
+		if identityRef == nil {
 			return errors.New("Identity not found in the keychain, or it was invalid (expired)")
 		}
-		if len(validIdentityRefs) > 1 {
-			log.Warning(colorstring.Yellow("Multiple matching Identities found in Keychain! Most likely you have duplicated identities in separate Keychains, e.g. one in System.keychain and one in your Login.keychain, or you have revoked versions of the Certificate."))
-		} else {
-			log.Infoln("   " + colorstring.Green("Found - OK"))
-		}
 
-		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
+		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
 	}
-
-	fmt.Println()
-	log.Println("Collecting additional identities, for Distribution builds ...")
-	fmt.Println()
-
-	totalTeamIDs := append(codeSigningSettings.TeamIDs, additionalTeamIDs...)
-	for _, aTeamID := range sliceutil.UniqueStringSlice(totalTeamIDs) {
-		log.Infof(" * "+colorstring.Blue("Searching for Identities with Team ID")+": %s", aTeamID)
-		validIdentityRefs, err := osxkeychain.FindAndValidateIdentity(fmt.Sprintf("(%s)", aTeamID), false)
-		if err != nil {
-			return fmt.Errorf("Failed to export, error: %s", err)
-		}
-
-		if len(validIdentityRefs) < 1 {
-			log.Infoln("No valid identity found for this Team ID")
-		}
-		log.Infoln("   "+colorstring.Green("Found identities count")+":", len(validIdentityRefs))
-
-		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, validIdentityRefs...)
-	}
-
-	fmt.Println()
-	log.Println(colorstring.Green("Exporting the Identities") + " (Certificates):")
-	fmt.Println()
 
 	identityKechainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
 	for _, aIdentityWithRefItm := range identitiesWithKeychainRefs {
-		fmt.Println(" * "+colorstring.Blue("Identity")+":", aIdentityWithRefItm.Label)
+		fmt.Println("exporting Identity:", aIdentityWithRefItm.Label)
 		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
 	}
 
 	fmt.Println()
 	if isAskForPassword {
-		log.Infoln(colorstring.Blue("Exporting from Keychain"))
-		log.Infoln(colorstring.Yellow(" You'll be asked to provide a Passphrase for the .p12 file!"))
+		log.Infof("Exporting from Keychain")
+		log.Warnf(" You'll be asked to provide a Passphrase for the .p12 file!")
 	} else {
-		log.Infoln(colorstring.Blue("Exporting from Keychain") + ", " + colorstring.Yellow("using empty Passphrase") + " ...")
-		log.Info(" This means that " + colorstring.Yellow("if you want to import the file the passphrase at import should be left empty") + ",")
-		log.Info(" you don't have to type in anything, just leave the passphrase input empty.")
+		log.Warnf("Exporting from Keychain using empty Passphrase...")
+		log.Printf("This means that if you want to import the file the passphrase at import should be left empty,")
+		log.Printf("you don't have to type in anything, just leave the passphrase input empty.")
 	}
 	fmt.Println()
-	log.Info(colorstring.Blue("You'll most likely see popups") + " (one for each Identity) from Keychain,")
-	log.Info(colorstring.Yellow(" you will have to accept (Allow)") + " those to be able to export the Identities!")
+	log.Warnf("You'll most likely see popups one for each Identity from Keychain,")
+	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
 	fmt.Println()
 
 	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
@@ -303,49 +475,123 @@ func collectAndExportIdentities(codeSigningSettings common.CodeSigningSettings, 
 	return nil
 }
 
-func exportProvisioningProfiles(provProfileFileInfos []provprofile.ProvisioningProfileFileInfoModel,
-	exportTargetDirPath string) error {
+func exportProvisioningProfiles(profilePathInfoMap map[string]profileutil.ProvisioningProfileInfoModel, exportTargetDirPath string) error {
+	idx := -1
+	for path, profileInfo := range profilePathInfoMap {
+		idx++
 
-	for idx, aProvProfileFileInfo := range provProfileFileInfos {
 		if idx != 0 {
 			fmt.Println()
 		}
-		provProfileInfo := aProvProfileFileInfo.ProvisioningProfileInfo
-		provProfileTeamID, err := provProfileInfo.TeamID()
-		if err != nil {
-			return fmt.Errorf("Invalid Team ID in provisioning profile (uuid: %s), error: %s",
-				provProfileInfo.UUID, err)
-		}
 
-		log.Infoln("   "+colorstring.Green("Exporting Provisioning Profile:"), provProfileInfo.Name)
-		log.Infoln("                      App ID Name:", provProfileInfo.AppIDName)
-		log.Infoln("                           App ID:", provProfileInfo.Entitlements.AppID)
-		log.Infoln("                  Expiration Date:", provProfileInfo.ExpirationDate)
-		log.Infoln("                             UUID:", provProfileInfo.UUID)
-		log.Infoln("                         TeamName:", provProfileInfo.TeamName)
-		log.Infoln("                          Team ID:", provProfileTeamID)
+		log.Printf("exporting Provisioning Profile: %s (%s)", profileInfo.Name, profileInfo.UUID)
 
-		exportFileName := provProfileExportFileName(aProvProfileFileInfo)
+		exportFileName := provProfileExportFileName(profileInfo, path)
 		exportPth := filepath.Join(exportTargetDirPath, exportFileName)
-		if err := command.RunCommand("cp", aProvProfileFileInfo.Path, exportPth); err != nil {
-			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s",
-				aProvProfileFileInfo.Path, exportPth, err)
+		if err := command.RunCommand("cp", path, exportPth); err != nil {
+			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s", path, exportPth, err)
 		}
 	}
 	return nil
 }
 
-func provProfileExportFileName(provProfileFileInfo provprofile.ProvisioningProfileFileInfoModel) string {
+func provProfileExportFileName(info profileutil.ProvisioningProfileInfoModel, path string) string {
 	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
 	if err != nil {
-		log.Warn("Invalid regex, error: %s", err)
+		log.Warnf("Invalid regex, error: %s", err)
 		return ""
 	}
-	safeTitle := replaceRexp.ReplaceAllString(provProfileFileInfo.ProvisioningProfileInfo.Name, "")
+	safeTitle := replaceRexp.ReplaceAllString(info.Name, "")
 	extension := ".mobileprovision"
-	if strings.HasSuffix(provProfileFileInfo.Path, ".provisionprofile") {
+	if strings.HasSuffix(path, ".provisionprofile") {
 		extension = ".provisionprofile"
 	}
 
-	return provProfileFileInfo.ProvisioningProfileInfo.UUID + "." + safeTitle + extension
+	return info.UUID + "." + safeTitle + extension
+}
+
+func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
+	// archive code sign settings
+	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
+	if err != nil {
+		return printFinishedWithError(toolName, "Failed to list installed code signing identities, error: %s", err)
+	}
+	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
+
+	log.Debugf("Installed certificates:")
+	for _, installedCertificate := range installedCertificates {
+		log.Debugf(installedCertificate.String())
+	}
+
+	installedProfiles, err := profileutil.InstalledProvisioningProfileInfos(profileutil.ProfileTypeIos)
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("Installed profiles:")
+	for _, profileInfo := range installedProfiles {
+		log.Debugf(profileInfo.String(installedCertificates...))
+	}
+
+	archive, err := xcarchive.NewIosArchive(archivePath)
+	if err != nil {
+		return printFinishedWithError(toolName, "Failed to analyze archive, error: %s", err)
+	}
+
+	archiveCodeSignGroup, err := analyzeArchive(archive, installedCertificates)
+	if err != nil {
+		return printFinishedWithError(toolName, "Failed to analyze the archive, error: %s", err)
+	}
+
+	fmt.Println()
+	log.Infof("Codesign settings used for Xamarin archive:")
+	fmt.Println()
+	printCodesignGroup(archiveCodeSignGroup)
+
+	// ipa export code sign settings
+	fmt.Println()
+	fmt.Println()
+	log.Printf("🔦  Analyzing the archive, to get ipa export code signing settings...")
+
+	certificatesToExport := []certificateutil.CertificateInfoModel{}
+	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
+
+	if certificatesOnly {
+		ipaExportCertificate, err := collectIpaExportCertificate(archiveCodeSignGroup.Certificate, installedCertificates)
+		if err != nil {
+			return err
+		}
+
+		certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
+	} else {
+		ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(archive, installedCertificates, installedProfiles)
+		if err != nil {
+			return printFinishedWithError(toolName, "Failed to collect ipa export code sign groups, error: %s", err)
+		}
+
+		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
+		certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
+
+		certificatesToExport = append(certificatesToExport, certificates...)
+		profilesToExport = append(profilesToExport, profiles...)
+	}
+
+	if err := collectAndExportIdentities(certificatesToExport, outputDirPath); err != nil {
+		return printFinishedWithError(toolName, "Failed to export codesign identities, error: %s", err)
+	}
+
+	if err := collectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
+		return printFinishedWithError(toolName, "Failed to export provisioning profiles, error: %s", err)
+	}
+
+	fmt.Println()
+	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+	if err := command.RunCommand("open", outputDirPath); err != nil {
+		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
+	}
+	fmt.Println("Opened the directory in Finder.")
+
+	printFinished()
+
+	return nil
 }
