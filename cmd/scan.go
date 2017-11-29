@@ -8,6 +8,7 @@ var scanCmd = &cobra.Command{
 	Short: "Scan a project's code signing settings",
 	Long: `Scan a project's code signing settings,
 and export the require code signing files.`,
+	TraverseChildren: true,
 }
 
 var (
