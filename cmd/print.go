@@ -23,10 +23,14 @@ func printFinishedWithError(toolName, format string, args ...interface{}) error 
 	return fmt.Errorf(colorstring.Red("Error: ")+format, args...)
 }
 
-func printFinished() {
+func printFinished(certsOnly bool) {
 	fmt.Println()
 	log.Successf("That's all.")
-	log.Warnf("You just have to upload the found code signing files (.p12 and .mobileprovision) and you'll be good to go!")
+	if certsOnly {
+		log.Warnf("You just have to upload the found certificates (.p12) and you'll be good to go!")
+	} else {
+		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
+	}
 	fmt.Println()
 }
 
