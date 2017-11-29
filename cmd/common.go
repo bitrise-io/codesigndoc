@@ -591,7 +591,7 @@ func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 	}
 	fmt.Println("Opened the directory in Finder.")
 
-	printFinished()
+	printFinished(certificatesOnly)
 
 	return nil
 }
