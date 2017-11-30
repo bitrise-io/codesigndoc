@@ -115,6 +115,33 @@ func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, inst
 	return codeSignGroups, nil
 }
 
+func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) []profileutil.ProvisioningProfileInfoModel {
+	profilesByBundleIDAndName := map[string][]profileutil.ProvisioningProfileInfoModel{}
+	for _, profile := range profiles {
+		bundleID := profile.BundleID
+		name := profile.Name
+		bundleIDAndName := bundleID + name
+		profs, ok := profilesByBundleIDAndName[bundleIDAndName]
+		if !ok {
+			profs = []profileutil.ProvisioningProfileInfoModel{}
+		}
+		profs = append(profs, profile)
+		profilesByBundleIDAndName[bundleIDAndName] = profs
+	}
+
+	filteredProfiles := []profileutil.ProvisioningProfileInfoModel{}
+	for _, profiles := range profilesByBundleIDAndName {
+		var latestProfile *profileutil.ProvisioningProfileInfoModel
+		for _, profile := range profiles {
+			if latestProfile == nil || profile.ExpirationDate.After(latestProfile.ExpirationDate) {
+				latestProfile = &profile
+			}
+		}
+		filteredProfiles = append(filteredProfiles, *latestProfile)
+	}
+	return filteredProfiles
+}
+
 func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
 	iosCodeSignGroups := []export.IosCodeSignGroup{}
 
@@ -230,6 +257,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 
 		selectedBundleIDProfileMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 		for bundleID, profiles := range bundleIDProfilesMap {
+			profiles = filterLatestProfiles(profiles)
 			profileOptions := []string{}
 			for _, profile := range profiles {
 				profileOption := fmt.Sprintf("%s (%s)", profile.Name, profile.UUID)
