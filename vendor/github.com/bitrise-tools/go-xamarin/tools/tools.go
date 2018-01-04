@@ -1,15 +1,17 @@
 package tools
 
+import "io"
+
 // Runnable ...
 type Runnable interface {
-	PrintableCommand() string
+	String() string
 	SetCustomOptions(options ...string)
-	Run() error
+	Run(outWriter, errWriter io.Writer) error
 }
 
 // Printable ...
 type Printable interface {
-	PrintableCommand() string
+	String() string
 }
 
 // Editable ...
@@ -21,8 +23,8 @@ type Editable interface {
 // EmptyCommand - for return type in case of failed to create a RunnableCommand
 type EmptyCommand struct{}
 
-// PrintableCommand ...
-func (cmd *EmptyCommand) PrintableCommand() string { return "" }
+// String ...
+func (cmd *EmptyCommand) String() string { return "" }
 
 // SetCustomOptions ...
 func (cmd *EmptyCommand) SetCustomOptions(options ...string) {}
@@ -35,7 +37,7 @@ func (cmd *EmptyCommand) Run() error { return nil }
 // PrintableSliceContains ...
 func PrintableSliceContains(cmdSlice []Printable, cmd Printable) bool {
 	for _, c := range cmdSlice {
-		if c.PrintableCommand() == cmd.PrintableCommand() {
+		if c.String() == cmd.String() {
 			return true
 		}
 	}

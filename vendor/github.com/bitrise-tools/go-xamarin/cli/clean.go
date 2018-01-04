@@ -34,9 +34,5 @@ func cleanCmd(c *cli.Context) error {
 	}
 
 	log.Infof("Cleaning solution: %s", solutionPth)
-	if err := builder.CleanAll(callback); err != nil {
-		return err
-	}
-
-	return nil
+	return builder.CleanAll(callback)
 }

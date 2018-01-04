@@ -37,7 +37,7 @@ func (builder Model) buildSolutionCommand(configuration, platform string) (tools
 	return buildCommand, nil
 }
 
-func (builder Model) buildProjectCommand(configuration, platform string, proj project.Model) ([]tools.Runnable, []string, error) {
+func (builder Model) buildProjectCommand(configuration, platform string, proj project.Model, buildIpa bool) ([]tools.Runnable, []string, error) {
 	warnings := []string{}
 
 	solutionConfig := utility.ToConfig(configuration, platform)
@@ -73,10 +73,10 @@ func (builder Model) buildProjectCommand(configuration, platform string, proj pr
 		command.SetTarget("Build")
 		command.SetConfiguration(configuration)
 		command.SetPlatform(platform)
+		command.SetArchiveOnBuild(true)
 
-		if isArchitectureArchiveable(projectConfig.MtouchArchs...) {
+		if IsDeviceArch(projectConfig.MtouchArchs...) && buildIpa {
 			command.SetBuildIpa(true)
-			command.SetArchiveOnBuild(true)
 		}
 
 		buildCommands = append(buildCommands, command)
