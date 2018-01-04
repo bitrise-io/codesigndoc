@@ -153,7 +153,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 	if len(codeSignGroups) == 0 {
 		fmt.Println()
 		log.Errorf("No code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa")
-		log.Errorf("To collect available code sign files, we search for intsalled Provisioning Profiles:")
+		log.Errorf("To collect available code sign files, we search for installed Provisioning Profiles:")
 		log.Errorf("- which has installed Codesign Identity in your Keychain")
 		log.Errorf("- which can provision your application target's bundle ids")
 		log.Errorf("- which has the project defined Capabilities set")
@@ -184,7 +184,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 		if len(filteredCodeSignGroups) == 0 {
 			fmt.Println()
 			log.Errorf("No code sign files (Codesign Identities and Provisioning Profiles) are installed for %s ipa export", selectedExportMethod)
-			log.Errorf("To collect available code sign files, we search for intsalled Provisioning Profiles:")
+			log.Errorf("To collect available code sign files, we search for installed Provisioning Profiles:")
 			log.Errorf("- which has installed Codesign Identity in your Keychain")
 			log.Errorf("- which can provision your application target's bundle ids")
 			log.Errorf("- which has the project defined Capabilities set")
