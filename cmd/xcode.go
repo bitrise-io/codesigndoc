@@ -78,12 +78,12 @@ the one you usually open in Xcode, then hit Enter.
 		log.Printf("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
-			return XcodeArchiveError{fmt.Sprintf("failed to scan Schemes: %s", err)}
+			return ArchiveError{toolXcode, "failed to scan Schemes: " + err.Error()}
 		}
 		log.Debugf("schemes: %v", schemes)
 
 		if len(schemes) == 0 {
-			return XcodeArchiveError{"no schemes found"}
+			return ArchiveError{toolXcode, "no schemes found"}
 		} else if len(schemes) == 1 {
 			schemeToUse = schemes[0]
 		} else {
@@ -124,7 +124,7 @@ the one you usually open in Xcode, then hit Enter.
 		}
 	}
 	if err != nil {
-		return XcodeArchiveError{fmt.Sprintf("failed to run Xcode Archive: %s", err)}
+		return ArchiveError{toolXcode, "failed to run Xcode Archive: " + err.Error()}
 	}
 
 	return exportCodesignFiles("Xcode", archivePath, absExportOutputDirPath)

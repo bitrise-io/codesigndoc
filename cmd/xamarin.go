@@ -112,7 +112,7 @@ and then hit Enter`
 	archivableSolutionConfigNames := archivableSolutionConfigNames(xamSln.ProjectMap)
 
 	if len(archivableSolutionConfigNames) < 1 {
-		return XamarinArchiveError{`no acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
+		return ArchiveError{toolXamarin, `no acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
 
 	// Xamarin Configuration Name
@@ -127,7 +127,7 @@ and then hit Enter`
 				}
 			}
 			if selectedXamarinConfigurationName == "" {
-				return XamarinArchiveError{fmt.Sprintf("invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.", paramXamarinConfigurationName)}
+				return ArchiveError{toolXamarin, fmt.Sprintf("invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.", paramXamarinConfigurationName)}
 			}
 		} else {
 			// no configuration CLI param specified
@@ -145,7 +145,7 @@ and then hit Enter`
 		}
 	}
 	if selectedXamarinConfigurationName == "" {
-		return XamarinArchiveError{`no acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
+		return ArchiveError{toolXamarin, `no acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
 	if err := xamarinCmd.SetConfigurationPlatformCombination(selectedXamarinConfigurationName); err != nil {
 		return fmt.Errorf("failed to set Configuration Platform combination for the command, error: %s", err)
@@ -172,7 +172,7 @@ and then hit Enter`
 		}
 	}
 	if err != nil {
-		return XamarinArchiveError{fmt.Sprintf("failed to run xamarin build command: %s", err)}
+		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
 	return exportCodesignFiles("Xamarin Studio", archivePath, absExportOutputDirPath)
