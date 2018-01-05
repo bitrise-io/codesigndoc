@@ -50,7 +50,7 @@ func (xamarinCmd CommandModel) GenerateArchive() (string, string, error) {
 	fmt.Println()
 
 	if err != nil {
-		return "", cmdOut, fmt.Errorf("Failed to Archive, error: %s", err)
+		return "", cmdOut, err
 	}
 
 	return archivePth, cmdOut, nil
@@ -66,18 +66,17 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 	var outWriter bytes.Buffer
 	xamarinBuilder.SetOutputs(&outWriter, &outWriter)
 
-	callback := func(solutionName string, projectName string, sdk constants.SDK, testFramwork constants.TestFramework, commandStr string, alreadyPerformed bool) {
-		log.Printf("")
-		log.Printf("Building project: %s", projectName)
+	archivesBeforeBuild, err := listArchives()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to list before build archives, error: %s", err)
+	}
+
+	callback := func(_ string, projectName string, _ constants.SDK, _ constants.TestFramework, commandStr string, alreadyPerformed bool) {
+		log.Printf("\nBuilding project: %s", projectName)
 		log.Infof("$ %s", commandStr)
 		if alreadyPerformed {
 			log.Warnf("build command already performed, skipping...")
 		}
-	}
-
-	archivesBeforeBuild, err := listArchives()
-	if err != nil {
-		return "", "", fmt.Errorf("failed to list before build archives, error: %s", err)
 	}
 
 	warnings, err := xamarinBuilder.BuildAllProjects(xamarinCmd.Configuration, xamarinCmd.Platform, false, nil, callback)
@@ -100,7 +99,7 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 		return "", "", fmt.Errorf("failed to list after build archives, error: %s", err)
 	}
 
-	archivesDuringBuild := []string{}
+	var archivesDuringBuild []string
 	for _, afterArchive := range archivesAfterBuild {
 		generatedDuringBuild := true
 		for _, beforeArchive := range archivesBeforeBuild {
@@ -124,8 +123,8 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 }
 
 func listArchives() ([]string, error) {
-	userHomeDir := os.Getenv("HOME")
-	if userHomeDir == "" {
+	userHomeDir, found := os.LookupEnv("HOME")
+	if !found {
 		return []string{}, errors.New("failed to get user home dir")
 	}
 	xcodeArchivesDir := filepath.Join(userHomeDir, "Library/Developer/Xcode/Archives")

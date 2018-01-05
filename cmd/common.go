@@ -142,12 +142,12 @@ func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) [
 	return filteredProfiles
 }
 
-func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
+func collectIpaExportCodeSignGroups(toolName string, archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
 	iosCodeSignGroups := []export.IosCodeSignGroup{}
 
 	codeSignGroups, err := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if err != nil {
-		return nil, printXcodeScanFinishedWithError("Failed to collect valid code sign settings: %s", err)
+		return nil, ArchiveError{toolName, fmt.Sprintf("failed to collect valid code sign settings: %s", err)}
 	}
 
 	if len(codeSignGroups) == 0 {
@@ -157,7 +157,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 		log.Errorf("- which has installed Codesign Identity in your Keychain")
 		log.Errorf("- which can provision your application target's bundle ids")
 		log.Errorf("- which has the project defined Capabilities set")
-		return nil, printXcodeScanFinishedWithError("Failed to find code sign files")
+		return nil, ArchiveError{toolName, "failed to find code sign files"}
 	}
 
 	exportMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
@@ -166,7 +166,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 		fmt.Println()
 		selectedExportMethod, err := goinp.SelectFromStringsWithDefault("Select the ipa export method", 1, exportMethods)
 		if err != nil {
-			return nil, printXcodeScanFinishedWithError("Failed to select ipa export method: %s", err)
+			return nil, ArchiveError{toolName, fmt.Sprintf("failed to select ipa export method: %s", err)}
 		}
 		log.Debugf("selected export method: %v", selectedExportMethod)
 
@@ -226,7 +226,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 			question := fmt.Sprintf("Select the Codesign Indentity for %s ipa export", selectedExportMethod)
 			selectedCertificateOption, err = goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 			if err != nil {
-				return nil, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+				return nil, ArchiveError{toolName, fmt.Sprintf("failed to select Codesign Indentity: %s", err)}
 			}
 		}
 
@@ -239,7 +239,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 			}
 		}
 		if selectedCertificate == nil {
-			return nil, printXcodeScanFinishedWithError("Failed to find selected Codesign Indentity")
+			return nil, ArchiveError{toolName, "failed to find selected Codesign Indentity"}
 		}
 
 		// Select Profiles
@@ -252,7 +252,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 			}
 		}
 		if len(bundleIDProfilesMap) == 0 {
-			return nil, printXcodeScanFinishedWithError("Failed to find Provisioning Profiles for Code Sign Identity")
+			return nil, ArchiveError{toolName, "failed to find Provisioning Profiles for Code Sign Identity"}
 		}
 
 		selectedBundleIDProfileMap := map[string]profileutil.ProvisioningProfileInfoModel{}
@@ -276,7 +276,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 				question := fmt.Sprintf("Select the Provisioning Profile to sign target with bundle ID: %s", bundleID)
 				selectedProfileOption, err = goinp.SelectFromStringsWithDefault(question, 1, profileOptions)
 				if err != nil {
-					return nil, printXcodeScanFinishedWithError("Failed to select Provisioning Profile: %s", err)
+					return nil, ArchiveError{toolName, fmt.Sprintf("failed to select Provisioning Profile: %s", err)}
 				}
 			}
 
@@ -288,7 +288,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 			}
 		}
 		if len(selectedBundleIDProfileMap) != len(bundleIDProfilesMap) {
-			return nil, printXcodeScanFinishedWithError("Failed to find Provisioning Profiles for ipa export")
+			return nil, ArchiveError{toolName, fmt.Sprintf("failed to find Provisioning Profiles for ipa export")}
 		}
 
 		iosCodeSignGroup := export.IosCodeSignGroup{
@@ -320,7 +320,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 	return iosCodeSignGroups, nil
 }
 
-func collectIpaExportCertificate(archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
+func collectIpaExportCertificate(toolName string, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
 	fmt.Println()
 	fmt.Println()
 	question := fmt.Sprintf(`The Xcode archive used codesigning files of team: %s - %s
@@ -342,7 +342,7 @@ Would you like to use this team to sign your project?`, archiveCertificate.TeamI
 		fmt.Println()
 		selectedTeam, err = goinp.SelectFromStringsWithDefault("Select the Development team to sign your project", 1, teams)
 		if err != nil {
-			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+			return certificateutil.CertificateInfoModel{}, ArchiveError{toolName, fmt.Sprintf("failed to select Codesign Indentity: %s", err)}
 		}
 	} else {
 		selectedTeam = fmt.Sprintf("%s - %s", archiveCertificate.TeamID, archiveCertificate.TeamName)
@@ -367,7 +367,7 @@ Would you like to use this team to sign your project?`, archiveCertificate.TeamI
 Please select a development certificate:`, archiveCertificate.CommonName, archiveCertificate.Serial)
 		selectedCertificateOption, err := goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 		if err != nil {
-			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+			return certificateutil.CertificateInfoModel{}, ArchiveError{toolName, fmt.Sprintf("failed to select Codesign Indentity: %s", err)}
 		}
 
 		for _, certInfo := range developmentCertificates {
@@ -393,7 +393,7 @@ Please select a development certificate:`, archiveCertificate.CommonName, archiv
 Please select a distribution certificate:`, archiveCertificate.CommonName, archiveCertificate.Serial)
 		selectedCertificateOption, err := goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 		if err != nil {
-			return certificateutil.CertificateInfoModel{}, printXcodeScanFinishedWithError("Failed to select Codesign Indentity: %s", err)
+			return certificateutil.CertificateInfoModel{}, ArchiveError{toolName, fmt.Sprintf("failed to select Codesign Indentity: %s", err)}
 		}
 
 		for _, certInfo := range distributionCertificates {
@@ -542,7 +542,7 @@ func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 	// archive code sign settings
 	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
 	if err != nil {
-		return printFinishedWithError(toolName, "Failed to list installed code signing identities, error: %s", err)
+		return ArchiveError{toolName, fmt.Sprintf("failed to list installed code signing identities, error: %s", err)}
 	}
 	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
 
@@ -563,12 +563,12 @@ func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 
 	archive, err := xcarchive.NewIosArchive(archivePath)
 	if err != nil {
-		return printFinishedWithError(toolName, "Failed to analyze archive, error: %s", err)
+		return ArchiveError{toolName, fmt.Sprintf("failed to analyze archive, error: %s", err)}
 	}
 
 	archiveCodeSignGroup, err := analyzeArchive(archive, installedCertificates)
 	if err != nil {
-		return printFinishedWithError(toolName, "Failed to analyze the archive, error: %s", err)
+		return ArchiveError{toolName, fmt.Sprintf("failed to analyze the archive, error: %s", err)}
 	}
 
 	fmt.Println()
@@ -585,16 +585,16 @@ func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
 
 	if certificatesOnly {
-		ipaExportCertificate, err := collectIpaExportCertificate(archiveCodeSignGroup.Certificate, installedCertificates)
+		ipaExportCertificate, err := collectIpaExportCertificate(toolName, archiveCodeSignGroup.Certificate, installedCertificates)
 		if err != nil {
 			return err
 		}
 
 		certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
 	} else {
-		ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(archive, installedCertificates, installedProfiles)
+		ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(toolName, archive, installedCertificates, installedProfiles)
 		if err != nil {
-			return printFinishedWithError(toolName, "Failed to collect ipa export code sign groups, error: %s", err)
+			return ArchiveError{toolName, fmt.Sprintf("failed to collect ipa export code sign groups, error: %s", err)}
 		}
 
 		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
@@ -605,11 +605,11 @@ func exportCodesignFiles(toolName, archivePath, outputDirPath string) error {
 	}
 
 	if err := collectAndExportIdentities(certificatesToExport, outputDirPath); err != nil {
-		return printFinishedWithError(toolName, "Failed to export codesign identities, error: %s", err)
+		return ArchiveError{toolName, fmt.Sprintf("failed to export codesign identities, error: %s", err)}
 	}
 
 	if err := collectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
-		return printFinishedWithError(toolName, "Failed to export provisioning profiles, error: %s", err)
+		return ArchiveError{toolName, fmt.Sprintf("failed to export provisioning profiles, error: %s", err)}
 	}
 
 	fmt.Println()

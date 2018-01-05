@@ -38,20 +38,16 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
 }
 
-func printXcodeScanFinishedWithError(format string, args ...interface{}) error {
-	return printFinishedWithError("Xcode", format, args...)
-}
-
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to prepare Export directory: %s", err)
+		return fmt.Errorf("failed to prepare Export directory: %s", err)
 	}
 
 	// Output tools versions
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to get Xcode (xcodebuild) version, error: %s", err)
+		return fmt.Errorf("failed to get Xcode (xcodebuild) version, error: %s", err)
 	}
 	fmt.Println()
 	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
@@ -69,7 +65,7 @@ the one you usually open in Xcode, then hit Enter.
 		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to read input: %s", err)
+			return fmt.Errorf("failed to read input: %s", err)
 		}
 		projectPath = projpth
 	}
@@ -82,19 +78,19 @@ the one you usually open in Xcode, then hit Enter.
 		log.Printf("🔦  Scanning Schemes ...")
 		schemes, err := xcodeCmd.ScanSchemes()
 		if err != nil {
-			return printXcodeScanFinishedWithError("Failed to scan Schemes: %s", err)
+			return XcodeArchiveError{fmt.Sprintf("failed to scan Schemes: %s", err)}
 		}
 		log.Debugf("schemes: %v", schemes)
 
 		if len(schemes) == 0 {
-			return printXcodeScanFinishedWithError("No schemes found")
+			return XcodeArchiveError{"no schemes found"}
 		} else if len(schemes) == 1 {
 			schemeToUse = schemes[0]
 		} else {
 			fmt.Println()
 			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemes)
 			if err != nil {
-				return printXcodeScanFinishedWithError("Failed to select Scheme: %s", err)
+				return fmt.Errorf("failed to select Scheme: %s", err)
 			}
 			schemeToUse = selectedScheme
 		}
@@ -128,7 +124,7 @@ the one you usually open in Xcode, then hit Enter.
 		}
 	}
 	if err != nil {
-		return printXcodeScanFinishedWithError("Failed to run Xcode Archive: %s", err)
+		return XcodeArchiveError{fmt.Sprintf("failed to run Xcode Archive: %s", err)}
 	}
 
 	return exportCodesignFiles("Xcode", archivePath, absExportOutputDirPath)

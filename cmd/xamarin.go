@@ -41,10 +41,6 @@ func init() {
 	xamarinCmd.Flags().StringVar(&paramXamarinConfigurationName, "config", "", `Xamarin Configuration Name (e.g.: "Release|iPhone")`)
 }
 
-func printXamarinScanFinishedWithError(format string, args ...interface{}) error {
-	return printFinishedWithError("Xamarin Studio", format, args...)
-}
-
 func archivableSolutionConfigNames(projectsByID map[string]project.Model) []string {
 	archivableSolutionConfigNameSet := map[string]bool{}
 	for _, project := range projectsByID {
@@ -81,7 +77,7 @@ func archivableSolutionConfigNames(projectsByID map[string]project.Model) []stri
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to prepare Export directory: %s", err)
+		return fmt.Errorf("failed to prepare Export directory: %s", err)
 	}
 
 	xamarinCmd := xamarin.CommandModel{}
@@ -95,7 +91,7 @@ and then hit Enter`
 		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
-			return printXamarinScanFinishedWithError("Failed to read input: %s", err)
+			return fmt.Errorf("failed to read input: %s", err)
 		}
 		xamarinCmd.SolutionFilePath = projpth
 	}
@@ -103,7 +99,7 @@ and then hit Enter`
 
 	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, true)
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to analyze Xamarin solution: %s", err)
+		return fmt.Errorf("failed to analyze Xamarin solution: %s", err)
 	}
 
 	if enableVerboseLog {
@@ -116,7 +112,7 @@ and then hit Enter`
 	archivableSolutionConfigNames := archivableSolutionConfigNames(xamSln.ProjectMap)
 
 	if len(archivableSolutionConfigNames) < 1 {
-		return printXamarinScanFinishedWithError(`No acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`)
+		return XamarinArchiveError{`no acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
 
 	// Xamarin Configuration Name
@@ -131,7 +127,7 @@ and then hit Enter`
 				}
 			}
 			if selectedXamarinConfigurationName == "" {
-				return printXamarinScanFinishedWithError("Invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.", paramXamarinConfigurationName)
+				return XamarinArchiveError{fmt.Sprintf("invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.", paramXamarinConfigurationName)}
 			}
 		} else {
 			// no configuration CLI param specified
@@ -139,9 +135,9 @@ and then hit Enter`
 				selectedXamarinConfigurationName = archivableSolutionConfigNames[0]
 			} else {
 				fmt.Println()
-				answerValue, err := goinp.SelectFromStringsWithDefault(`Select the Configuration Name you use for "Archive for Publishing" (usually Release|iPhone)?`, 1, archivableSolutionConfigNames)
+				answerValue, err := goinp.SelectFromStringsWithDefault(`Select the Configuration Name you use for "Archive for Publishing" (usually Release|iPhone)`, 1, archivableSolutionConfigNames)
 				if err != nil {
-					return printXamarinScanFinishedWithError("Failed to select Configuration: %s", err)
+					return fmt.Errorf("failed to select Configuration: %s", err)
 				}
 				log.Debugf("selected configuration: %v", answerValue)
 				selectedXamarinConfigurationName = answerValue
@@ -149,12 +145,10 @@ and then hit Enter`
 		}
 	}
 	if selectedXamarinConfigurationName == "" {
-		return printXamarinScanFinishedWithError(
-			`No acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
-		)
+		return XamarinArchiveError{`no acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
 	if err := xamarinCmd.SetConfigurationPlatformCombination(selectedXamarinConfigurationName); err != nil {
-		return printXamarinScanFinishedWithError("Failed to set Configuration Platform combination for the command, error: %s", err)
+		return fmt.Errorf("failed to set Configuration Platform combination for the command, error: %s", err)
 	}
 
 	fmt.Println()
@@ -178,7 +172,7 @@ and then hit Enter`
 		}
 	}
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to run xamarin build command: %s", err)
+		return XamarinArchiveError{fmt.Sprintf("failed to run xamarin build command: %s", err)}
 	}
 
 	return exportCodesignFiles("Xamarin Studio", archivePath, absExportOutputDirPath)
