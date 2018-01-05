@@ -7,7 +7,7 @@ type Tool string
 
 const (
 	toolXcode   Tool = "Xcode"
-	toolXamarin Tool = "VisualStudio"
+	toolXamarin Tool = "Visual Studio"
 )
 
 // ArchiveError ...
