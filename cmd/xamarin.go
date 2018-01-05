@@ -11,6 +11,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
+	"github.com/bitrise-tools/go-xamarin/analyzers/project"
 	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
 	"github.com/bitrise-tools/go-xamarin/builder"
 	"github.com/bitrise-tools/go-xamarin/constants"
@@ -44,6 +45,39 @@ func printXamarinScanFinishedWithError(format string, args ...interface{}) error
 	return printFinishedWithError("Xamarin Studio", format, args...)
 }
 
+func archivableSolutionConfigNames(projectsByID map[string]project.Model) []string {
+	archivableSolutionConfigNameSet := map[string]bool{}
+	for _, project := range projectsByID {
+		if project.SDK != constants.SDKIOS || project.OutputType != "exe" {
+			continue
+		}
+
+		var archivableProjectConfigNames []string
+		for name, config := range project.Configs {
+			if builder.IsDeviceArch(config.MtouchArchs...) {
+				archivableProjectConfigNames = append(archivableProjectConfigNames, name)
+			}
+
+		}
+
+		for solutionConfigName, projectConfigName := range project.ConfigMap {
+			for _, archivableProjectConfigName := range archivableProjectConfigNames {
+				if archivableProjectConfigName == projectConfigName {
+					archivableSolutionConfigNameSet[solutionConfigName] = true
+				}
+			}
+		}
+	}
+
+	archivableSolutionConfigNames := []string{}
+	for configName := range archivableSolutionConfigNameSet {
+		archivableSolutionConfigNames = append(archivableSolutionConfigNames, configName)
+	}
+	sort.Strings(archivableSolutionConfigNames)
+
+	return archivableSolutionConfigNames
+}
+
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
@@ -73,44 +107,13 @@ and then hit Enter`
 	}
 
 	if enableVerboseLog {
-		xamSlnJSON, err := json.MarshalIndent(xamSln, "", "\t")
+		b, err := json.MarshalIndent(xamSln, "", "\t")
 		if err == nil {
-			log.Debugf("xamSln:\n%s", xamSlnJSON)
+			log.Debugf("xamarin solution:\n%s", b)
 		}
 	}
 
-	archivableSolutionConfigNameMap := map[string]bool{}
-	for _, project := range xamSln.ProjectMap {
-		if project.SDK != constants.SDKIOS {
-			continue
-		}
-
-		if project.OutputType != "exe" {
-			continue
-		}
-
-		archivableProjectConfigNames := []string{}
-		for configName, config := range project.Configs {
-			if builder.IsDeviceArch(config.MtouchArchs...) {
-				archivableProjectConfigNames = append(archivableProjectConfigNames, configName)
-			}
-
-		}
-
-		for solutionConfigName, projectConfigName := range project.ConfigMap {
-			for _, archivableProjectConfigName := range archivableProjectConfigNames {
-				if archivableProjectConfigName == projectConfigName {
-					archivableSolutionConfigNameMap[solutionConfigName] = true
-				}
-			}
-		}
-	}
-
-	archivableSolutionConfigNames := []string{}
-	for configName := range archivableSolutionConfigNameMap {
-		archivableSolutionConfigNames = append(archivableSolutionConfigNames, configName)
-	}
-	sort.Strings(archivableSolutionConfigNames)
+	archivableSolutionConfigNames := archivableSolutionConfigNames(xamSln.ProjectMap)
 
 	if len(archivableSolutionConfigNames) < 1 {
 		return printXamarinScanFinishedWithError(`No acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`)

@@ -58,13 +58,13 @@ func (xamarinCmd CommandModel) GenerateArchive() (string, string, error) {
 
 // RunBuildCommand ...
 func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
-	builder, err := builder.New(xamarinCmd.SolutionFilePath, []constants.SDK{constants.SDKIOS}, buildtools.Msbuild)
+	xamarinBuilder, err := builder.New(xamarinCmd.SolutionFilePath, []constants.SDK{constants.SDKIOS}, buildtools.Msbuild)
 	if err != nil {
 		return "", "", err
 	}
 
 	var outWriter bytes.Buffer
-	builder.SetOutputs(&outWriter, &outWriter)
+	xamarinBuilder.SetOutputs(&outWriter, &outWriter)
 
 	callback := func(solutionName string, projectName string, sdk constants.SDK, testFramwork constants.TestFramework, commandStr string, alreadyPerformed bool) {
 		log.Printf("")
@@ -80,7 +80,7 @@ func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
 		return "", "", fmt.Errorf("failed to list before build archives, error: %s", err)
 	}
 
-	warnings, err := builder.BuildAllProjects(xamarinCmd.Configuration, xamarinCmd.Platform, false, nil, callback)
+	warnings, err := xamarinBuilder.BuildAllProjects(xamarinCmd.Configuration, xamarinCmd.Platform, false, nil, callback)
 	xamarinBuildOutput := outWriter.String()
 
 	log.Debugf("xamarinBuildOutput: %s", xamarinBuildOutput)
