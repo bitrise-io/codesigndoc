@@ -2,6 +2,7 @@ package builder
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"time"
@@ -22,6 +23,15 @@ type Model struct {
 
 	projectTypeWhitelist []constants.SDK
 	buildTool            buildtools.BuildTool
+
+	outWriter io.Writer
+	errWriter io.Writer
+}
+
+// SetOutputs ...
+func (builder *Model) SetOutputs(outWriter, errWriter io.Writer) {
+	builder.outWriter = outWriter
+	builder.errWriter = errWriter
 }
 
 // OutputModel ...
@@ -136,14 +146,14 @@ func (builder Model) BuildSolution(configuration, platform string, callback Buil
 
 	// Callback to notify the caller about next running command
 	if callback != nil {
-		callback(builder.solution.Name, "", constants.SDKUnknown, constants.TestFrameworkUnknown, buildCommand.PrintableCommand(), false)
+		callback(builder.solution.Name, "", constants.SDKUnknown, constants.TestFrameworkUnknown, buildCommand.String(), false)
 	}
 
-	return buildCommand.Run()
+	return buildCommand.Run(builder.outWriter, builder.errWriter)
 }
 
 // BuildAllProjects ...
-func (builder Model) BuildAllProjects(configuration, platform string, prepareCallback PrepareCommandCallback, callback BuildCommandCallback) ([]string, error) {
+func (builder Model) BuildAllProjects(configuration, platform string, buildIpa bool, prepareCallback PrepareCommandCallback, callback BuildCommandCallback) ([]string, error) {
 	warnings := []string{}
 
 	if err := validateSolutionConfig(builder.solution, configuration, platform); err != nil {
@@ -158,7 +168,7 @@ func (builder Model) BuildAllProjects(configuration, platform string, prepareCal
 	perfomedCommands := []tools.Printable{}
 
 	for _, proj := range buildableProjects {
-		buildCommands, warns, err := builder.buildProjectCommand(configuration, platform, proj)
+		buildCommands, warns, err := builder.buildProjectCommand(configuration, platform, proj, buildIpa)
 		warnings = append(warnings, warns...)
 		if err != nil {
 			return warnings, fmt.Errorf("Failed to create build command, error: %s", err)
@@ -179,11 +189,11 @@ func (builder Model) BuildAllProjects(configuration, platform string, prepareCal
 
 			// Callback to notify the caller about next running command
 			if callback != nil {
-				callback(builder.solution.Name, proj.Name, proj.SDK, proj.TestFramework, buildCommand.PrintableCommand(), alreadyPerformed)
+				callback(builder.solution.Name, proj.Name, proj.SDK, proj.TestFramework, buildCommand.String(), alreadyPerformed)
 			}
 
 			if !alreadyPerformed {
-				if err := buildCommand.Run(); err != nil {
+				if err := buildCommand.Run(builder.outWriter, builder.errWriter); err != nil {
 					return warnings, err
 				}
 				perfomedCommands = append(perfomedCommands, buildCommand)
@@ -214,7 +224,7 @@ func (builder Model) BuildAllUITestableXamarinProjects(configuration, platform s
 	perfomedCommands := []tools.Printable{}
 
 	for _, proj := range buildableReferredProjects {
-		buildCommands, warns, err := builder.buildProjectCommand(configuration, platform, proj)
+		buildCommands, warns, err := builder.buildProjectCommand(configuration, platform, proj, true)
 		warnings = append(warnings, warns...)
 		if err != nil {
 			return warnings, fmt.Errorf("Failed to create build command, error: %s", err)
@@ -235,11 +245,11 @@ func (builder Model) BuildAllUITestableXamarinProjects(configuration, platform s
 
 			// Callback to notify the caller about next running command
 			if callback != nil {
-				callback(builder.solution.Name, proj.Name, proj.SDK, proj.TestFramework, buildCommand.PrintableCommand(), alreadyPerformed)
+				callback(builder.solution.Name, proj.Name, proj.SDK, proj.TestFramework, buildCommand.String(), alreadyPerformed)
 			}
 
 			if !alreadyPerformed {
-				if err := buildCommand.Run(); err != nil {
+				if err := buildCommand.Run(builder.outWriter, builder.errWriter); err != nil {
 					return warnings, err
 				}
 				perfomedCommands = append(perfomedCommands, buildCommand)
@@ -286,11 +296,11 @@ func (builder Model) RunAllXamarinUITests(configuration, platform string, prepar
 
 		// Callback to notify the caller about next running command
 		if callback != nil {
-			callback(builder.solution.Name, testProj.Name, testProj.SDK, testProj.TestFramework, buildCommand.PrintableCommand(), alreadyPerformed)
+			callback(builder.solution.Name, testProj.Name, testProj.SDK, testProj.TestFramework, buildCommand.String(), alreadyPerformed)
 		}
 
 		if !alreadyPerformed {
-			if err := buildCommand.Run(); err != nil {
+			if err := buildCommand.Run(builder.outWriter, builder.errWriter); err != nil {
 				return warnings, err
 			}
 			perfomedCommands = append(perfomedCommands, buildCommand)
@@ -359,11 +369,11 @@ func (builder Model) RunAllNunitTestProjects(configuration, platform string, cal
 
 		// Callback to notify the caller about next running command
 		if callback != nil {
-			callback(builder.solution.Name, testProj.Name, constants.SDKUnknown, constants.TestFrameworkNunitTest, buildCommand.PrintableCommand(), alreadyPerformed)
+			callback(builder.solution.Name, testProj.Name, constants.SDKUnknown, constants.TestFrameworkNunitTest, buildCommand.String(), alreadyPerformed)
 		}
 
 		if !alreadyPerformed {
-			if err := buildCommand.Run(); err != nil {
+			if err := buildCommand.Run(builder.outWriter, builder.errWriter); err != nil {
 				return warnings, err
 			}
 			perfomedCommands = append(perfomedCommands, buildCommand)
@@ -411,7 +421,7 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 
 		switch proj.SDK {
 		case constants.SDKIOS, constants.SDKTvOS:
-			if isArchitectureArchiveable(projectConfig.MtouchArchs...) {
+			if IsDeviceArch(projectConfig.MtouchArchs...) {
 				if xcarchivePth, err := exportLatestXCArchiveFromXcodeArchives(proj.AssemblyName, startTime, endTime); err != nil {
 					return ProjectOutputMap{}, err
 				} else if xcarchivePth != "" {
@@ -421,7 +431,7 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 					})
 				}
 
-				if ipaPth, err := exportLatestIpa(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
+				if ipaPth, err := exportIpa(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
 					return ProjectOutputMap{}, err
 				} else if ipaPth != "" {
 					projectOutputs.Outputs = append(projectOutputs.Outputs, OutputModel{

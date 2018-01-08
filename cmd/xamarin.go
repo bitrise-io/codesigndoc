@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	"github.com/bitrise-tools/codesigndoc/xamarin"
 	"github.com/bitrise-tools/go-xamarin/analyzers/project"
 	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
+	"github.com/bitrise-tools/go-xamarin/builder"
 	"github.com/bitrise-tools/go-xamarin/constants"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +31,6 @@ var xamarinCmd = &cobra.Command{
 
 var (
 	paramXamarinSolutionFilePath  = ""
-	paramXamarinProjectName       = ""
 	paramXamarinConfigurationName = ""
 )
 
@@ -37,18 +38,46 @@ func init() {
 	scanCmd.AddCommand(xamarinCmd)
 
 	xamarinCmd.Flags().StringVar(&paramXamarinSolutionFilePath, "file", "", `Xamarin Solution file path`)
-	xamarinCmd.Flags().StringVar(&paramXamarinProjectName, "project", "", `Xamarin iOS Project Name (e.g.: "MyProject.iOS")`)
 	xamarinCmd.Flags().StringVar(&paramXamarinConfigurationName, "config", "", `Xamarin Configuration Name (e.g.: "Release|iPhone")`)
 }
 
-func printXamarinScanFinishedWithError(format string, args ...interface{}) error {
-	return printFinishedWithError("Xamarin Studio", format, args...)
+func archivableSolutionConfigNames(projectsByID map[string]project.Model) []string {
+	archivableSolutionConfigNameSet := map[string]bool{}
+	for _, project := range projectsByID {
+		if project.SDK != constants.SDKIOS || project.OutputType != "exe" {
+			continue
+		}
+
+		var archivableProjectConfigNames []string
+		for name, config := range project.Configs {
+			if builder.IsDeviceArch(config.MtouchArchs...) {
+				archivableProjectConfigNames = append(archivableProjectConfigNames, name)
+			}
+
+		}
+
+		for solutionConfigName, projectConfigName := range project.ConfigMap {
+			for _, archivableProjectConfigName := range archivableProjectConfigNames {
+				if archivableProjectConfigName == projectConfigName {
+					archivableSolutionConfigNameSet[solutionConfigName] = true
+				}
+			}
+		}
+	}
+
+	archivableSolutionConfigNames := []string{}
+	for configName := range archivableSolutionConfigNameSet {
+		archivableSolutionConfigNames = append(archivableSolutionConfigNames, configName)
+	}
+	sort.Strings(archivableSolutionConfigNames)
+
+	return archivableSolutionConfigNames
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to prepare Export directory: %s", err)
+		return fmt.Errorf("failed to prepare Export directory: %s", err)
 	}
 
 	xamarinCmd := xamarin.CommandModel{}
@@ -62,7 +91,7 @@ and then hit Enter`
 		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
-			return printXamarinScanFinishedWithError("Failed to read input: %s", err)
+			return fmt.Errorf("failed to read input: %s", err)
 		}
 		xamarinCmd.SolutionFilePath = projpth
 	}
@@ -70,125 +99,45 @@ and then hit Enter`
 
 	xamSln, err := solution.New(xamarinCmd.SolutionFilePath, true)
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to analyze Xamarin solution: %s", err)
+		return fmt.Errorf("failed to analyze Xamarin solution: %s", err)
 	}
-	log.Debugf("xamSln: %#v", xamSln)
 
-	// filter only the iOS "app"" projects
-	xamarinProjectsToChooseFrom := []project.Model{}
-	for _, aXamarinProject := range xamSln.ProjectMap {
-		switch aXamarinProject.SDK {
-		case constants.SDKIOS, constants.SDKTvOS, constants.SDKMacOS:
-			if aXamarinProject.OutputType == "exe" {
-				// possible project
-				xamarinProjectsToChooseFrom = append(xamarinProjectsToChooseFrom, aXamarinProject)
-			}
-		default:
-			continue
+	if enableVerboseLog {
+		b, err := json.MarshalIndent(xamSln, "", "\t")
+		if err == nil {
+			log.Debugf("xamarin solution:\n%s", b)
 		}
 	}
-	log.Debugf("%d xamarinProjectsToChooseFrom: %#v", len(xamarinProjectsToChooseFrom), xamarinProjectsToChooseFrom)
 
-	// Xamarin Project
-	selectedXamarinProject := project.Model{}
-	{
-		if len(xamarinProjectsToChooseFrom) < 1 {
-			return printXamarinScanFinishedWithError(
-				"No acceptable Project found in the provided Solution, or none can be used for iOS Archive.",
-			)
-		}
+	archivableSolutionConfigNames := archivableSolutionConfigNames(xamSln.ProjectMap)
 
-		if paramXamarinProjectName != "" {
-			// project specified via flag/param
-			for _, aProj := range xamarinProjectsToChooseFrom {
-				if paramXamarinProjectName == aProj.Name {
-					selectedXamarinProject = aProj
-					break
-				}
-			}
-			if selectedXamarinProject.Name == "" {
-				return printXamarinScanFinishedWithError(
-					`Invalid Project specified (%s), either not found in the provided Solution or it can't be used for iOS "Archive for Publishing".`,
-					paramXamarinProjectName)
-			}
-		} else {
-			// no project CLI param specified
-			if len(xamarinProjectsToChooseFrom) == 1 {
-				selectedXamarinProject = xamarinProjectsToChooseFrom[0]
-			} else {
-				projectNames := []string{}
-				for _, aProj := range xamarinProjectsToChooseFrom {
-					projectNames = append(projectNames, aProj.Name)
-				}
-				sort.Strings(projectNames)
-
-				fmt.Println()
-				answerValue, err := goinp.SelectFromStringsWithDefault(`Select the Project Name you use for "Archive for Publishing" (usually ends with ".iOS", e.g.: MyProject.iOS)?`, 1, projectNames)
-				if err != nil {
-					return printXamarinScanFinishedWithError("Failed to select Project: %s", err)
-				}
-				log.Debugf("selected project: %v", answerValue)
-				for _, aProj := range xamarinProjectsToChooseFrom {
-					if answerValue == aProj.Name {
-						selectedXamarinProject = aProj
-						break
-					}
-				}
-			}
-		}
+	if len(archivableSolutionConfigNames) < 1 {
+		return ArchiveError{toolXamarin, `no acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
-	xamarinCmd.ProjectName = selectedXamarinProject.Name
-	log.Debugf("xamarinCmd.ProjectName: %s", xamarinCmd.ProjectName)
-	log.Debugf("selectedXamarinProject.Configs: %#v", selectedXamarinProject.Configs)
 
 	// Xamarin Configuration Name
 	selectedXamarinConfigurationName := ""
 	{
-		acceptableConfigs := []string{}
-		for configName, aConfig := range selectedXamarinProject.Configs {
-			if aConfig.Platform == "iPhone" {
-				if aConfig.Configuration == "Release" {
-					// ios & tvOS app
-					acceptableConfigs = append(acceptableConfigs, configName)
-				}
-			} else if aConfig.Platform == "x86" {
-				if aConfig.Configuration == "Release" || aConfig.Configuration == "Debug" {
-					// MacOS app
-					acceptableConfigs = append(acceptableConfigs, configName)
-				}
-			}
-		}
-		if len(acceptableConfigs) < 1 {
-			return printXamarinScanFinishedWithError(
-				`No acceptable Configuration found in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
-			)
-		}
-
 		if paramXamarinConfigurationName != "" {
 			// configuration specified via flag/param
-			for _, aConfigName := range acceptableConfigs {
-				if paramXamarinConfigurationName == aConfigName {
-					selectedXamarinConfigurationName = aConfigName
+			for _, configName := range archivableSolutionConfigNames {
+				if paramXamarinConfigurationName == configName {
+					selectedXamarinConfigurationName = configName
 					break
 				}
 			}
 			if selectedXamarinConfigurationName == "" {
-				return printXamarinScanFinishedWithError(
-					"Invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.",
-					paramXamarinConfigurationName)
+				return ArchiveError{toolXamarin, fmt.Sprintf("invalid Configuration specified (%s), either not found in the provided Solution and Project or it can't be used for iOS Archive.", paramXamarinConfigurationName)}
 			}
 		} else {
 			// no configuration CLI param specified
-			if len(acceptableConfigs) == 1 {
-				selectedXamarinConfigurationName = acceptableConfigs[0]
+			if len(archivableSolutionConfigNames) == 1 {
+				selectedXamarinConfigurationName = archivableSolutionConfigNames[0]
 			} else {
 				fmt.Println()
-				answerValue, err := goinp.SelectFromStrings(
-					`Select the Configuration Name you use for "Archive for Publishing" (usually Release|iPhone)?`,
-					acceptableConfigs,
-				)
+				answerValue, err := goinp.SelectFromStringsWithDefault(`Select the Configuration Name you use for "Archive for Publishing" (usually Release|iPhone)`, 1, archivableSolutionConfigNames)
 				if err != nil {
-					return printXamarinScanFinishedWithError("Failed to select Configuration: %s", err)
+					return fmt.Errorf("failed to select Configuration: %s", err)
 				}
 				log.Debugf("selected configuration: %v", answerValue)
 				selectedXamarinConfigurationName = answerValue
@@ -196,12 +145,10 @@ and then hit Enter`
 		}
 	}
 	if selectedXamarinConfigurationName == "" {
-		return printXamarinScanFinishedWithError(
-			`No acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`,
-		)
+		return ArchiveError{toolXamarin, `no acceptable Configuration found (it was empty) in the provided Solution and Project, or none can be used for iOS "Archive for Publishing".`}
 	}
 	if err := xamarinCmd.SetConfigurationPlatformCombination(selectedXamarinConfigurationName); err != nil {
-		return printXamarinScanFinishedWithError("Failed to set Configuration Platform combination for the command, error: %s", err)
+		return fmt.Errorf("failed to set Configuration Platform combination for the command, error: %s", err)
 	}
 
 	fmt.Println()
@@ -225,7 +172,7 @@ and then hit Enter`
 		}
 	}
 	if err != nil {
-		return printXamarinScanFinishedWithError("Failed to run xamarin build command: %s", err)
+		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
 	return exportCodesignFiles("Xamarin Studio", archivePath, absExportOutputDirPath)

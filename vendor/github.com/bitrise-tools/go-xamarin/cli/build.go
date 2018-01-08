@@ -62,7 +62,7 @@ func buildCmd(c *cli.Context) error {
 
 	startTime := time.Now()
 
-	warnings, err := buildHandler.BuildAllProjects(solutionConfiguration, solutionPlatform, nil, callback)
+	warnings, err := buildHandler.BuildAllProjects(solutionConfiguration, solutionPlatform, true, nil, callback)
 	for _, warning := range warnings {
 		log.Warnf(warning)
 	}

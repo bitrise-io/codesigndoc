@@ -189,10 +189,9 @@ func (testCloud *Model) submitCommandSlice() []string {
 	return cmdSlice
 }
 
-// PrintableCommand ...
-func (testCloud Model) PrintableCommand() string {
+// String ...
+func (testCloud Model) String() string {
 	cmdSlice := testCloud.submitCommandSlice()
-
 	return command.PrintableCommandArgs(true, cmdSlice)
 }
 

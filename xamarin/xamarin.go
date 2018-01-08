@@ -1,6 +1,7 @@
 package xamarin
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -8,11 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
+	"github.com/bitrise-tools/go-xamarin/builder"
 	"github.com/bitrise-tools/go-xamarin/constants"
+	"github.com/bitrise-tools/go-xamarin/tools/buildtools"
 )
 
 // CommandModel ...
@@ -48,7 +50,7 @@ func (xamarinCmd CommandModel) GenerateArchive() (string, string, error) {
 	fmt.Println()
 
 	if err != nil {
-		return "", cmdOut, fmt.Errorf("Failed to Archive, error: %s", err)
+		return "", cmdOut, err
 	}
 
 	return archivePth, cmdOut, nil
@@ -56,66 +58,73 @@ func (xamarinCmd CommandModel) GenerateArchive() (string, string, error) {
 
 // RunBuildCommand ...
 func (xamarinCmd CommandModel) RunBuildCommand() (string, string, error) {
-	// STO: https://stackoverflow.com/a/19534376/5842489
-	// if your project has a . (dot) in its name, replace it with a _ (underscore) when specifying it with /t
-	projectName := strings.Replace(xamarinCmd.ProjectName, ".", "_", -1)
+	xamarinBuilder, err := builder.New(xamarinCmd.SolutionFilePath, []constants.SDK{constants.SDKIOS}, buildtools.Msbuild)
+	if err != nil {
+		return "", "", err
+	}
+
+	var outWriter bytes.Buffer
+	xamarinBuilder.SetOutputs(&outWriter, &outWriter)
 
 	archivesBeforeBuild, err := listArchives()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to list archives, error: %s", err)
+		return "", "", fmt.Errorf("failed to list before build archives, error: %s", err)
 	}
 
-	cmdArgs := []string{constants.MsbuildPath,
-		xamarinCmd.SolutionFilePath,
-		fmt.Sprintf("/p:Configuration=%s", xamarinCmd.Configuration),
-		fmt.Sprintf("/p:Platform=%s", xamarinCmd.Platform),
-		fmt.Sprintf("/p:ArchiveOnBuild=true"),
-		fmt.Sprintf("/t:%s", projectName),
+	callback := func(_ string, projectName string, _ constants.SDK, _ constants.TestFramework, commandStr string, alreadyPerformed bool) {
+		log.Printf("\nBuilding project: %s", projectName)
+		log.Infof("$ %s", commandStr)
+		if alreadyPerformed {
+			log.Warnf("build command already performed, skipping...")
+		}
 	}
 
-	log.Infof("$ %s", command.PrintableCommandArgs(true, cmdArgs))
-	cmd, err := command.NewFromSlice(cmdArgs)
-	if err != nil {
-		return "", "", fmt.Errorf("Failed to create Xamarin command, error: %s", err)
-	}
-	xamarinBuildOutput, err := cmd.RunAndReturnTrimmedCombinedOutput()
-	if err != nil {
-		return "", xamarinBuildOutput, fmt.Errorf("Failed to run Xamarin command, error: %s", err)
-	}
+	warnings, err := xamarinBuilder.BuildAllProjects(xamarinCmd.Configuration, xamarinCmd.Platform, false, nil, callback)
+	xamarinBuildOutput := outWriter.String()
 
 	log.Debugf("xamarinBuildOutput: %s", xamarinBuildOutput)
 
-	archivesAfterBuild, err := listArchives()
+	if len(warnings) > 0 {
+		log.Warnf("Build warnings:")
+		for _, warning := range warnings {
+			log.Warnf(warning)
+		}
+	}
 	if err != nil {
-		return "", "", fmt.Errorf("failed to list archives, error: %s", err)
+		return "", xamarinBuildOutput, err
 	}
 
-	newArchives := []string{}
-	for _, archiveAfterBuild := range archivesAfterBuild {
-		isNew := true
-		for _, archiveBeforeBuild := range archivesBeforeBuild {
-			if archiveAfterBuild == archiveBeforeBuild {
-				isNew = false
+	archivesAfterBuild, err := listArchives()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to list after build archives, error: %s", err)
+	}
+
+	var archivesDuringBuild []string
+	for _, afterArchive := range archivesAfterBuild {
+		generatedDuringBuild := true
+		for _, beforeArchive := range archivesBeforeBuild {
+			if beforeArchive == afterArchive {
+				generatedDuringBuild = false
 				break
 			}
 		}
-		if isNew {
-			newArchives = append(newArchives, archiveAfterBuild)
+		if generatedDuringBuild {
+			archivesDuringBuild = append(archivesDuringBuild, afterArchive)
 		}
 	}
 
-	if len(newArchives) == 0 {
-		return "", xamarinBuildOutput, errors.New("No archive generated during the build")
-	} else if len(newArchives) > 1 {
-		return "", xamarinBuildOutput, errors.New("multiple archives generated during the build")
+	if len(archivesDuringBuild) == 0 {
+		return "", xamarinBuildOutput, fmt.Errorf("failed to find the xcarchive generated during the build")
+	} else if len(archivesDuringBuild) > 1 {
+		return "", xamarinBuildOutput, fmt.Errorf("multiple xcarchives generated during the build")
 	}
 
-	return newArchives[0], xamarinBuildOutput, nil
+	return archivesDuringBuild[0], xamarinBuildOutput, nil
 }
 
 func listArchives() ([]string, error) {
-	userHomeDir := os.Getenv("HOME")
-	if userHomeDir == "" {
+	userHomeDir, found := os.LookupEnv("HOME")
+	if !found {
 		return []string{}, errors.New("failed to get user home dir")
 	}
 	xcodeArchivesDir := filepath.Join(userHomeDir, "Library/Developer/Xcode/Archives")

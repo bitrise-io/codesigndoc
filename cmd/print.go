@@ -9,20 +9,6 @@ import (
 	"github.com/bitrise-tools/go-xcode/export"
 )
 
-func printFinishedWithError(toolName, format string, args ...interface{}) error {
-	fmt.Println()
-	fmt.Println("------------------------------")
-	fmt.Println("First of all " + colorstring.Red("please make sure that you can Archive your app from "+toolName+"."))
-	fmt.Println("codesigndoc only works if you can archive your app from " + toolName + ".")
-	fmt.Println("If you can, and you get a valid IPA file if you export from " + toolName + ",")
-	fmt.Println(colorstring.Red("please create an issue") + " on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues")
-	fmt.Println("with as many details & logs as you can share!")
-	fmt.Println("------------------------------")
-	fmt.Println()
-
-	return fmt.Errorf(colorstring.Red("Error: ")+format, args...)
-}
-
 func printFinished(certsOnly bool) {
 	fmt.Println()
 	log.Successf("That's all.")
