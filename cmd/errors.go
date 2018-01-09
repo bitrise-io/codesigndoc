@@ -29,3 +29,19 @@ with as many details & logs as you can share!
 
 ` + colorstring.Redf("Error: %s", e.msg)
 }
+
+// MissingCodesigningFilesError ...
+type MissingCodesigningFilesError struct {
+	msg string
+}
+
+const collectCodesigningFilesInfo = `To collect available code sign files, we search for installed Provisioning Profiles:"
+- which has installed Codesign Identity in your Keychain"
+- which can provision your application target's bundle ids"
+- which has the project defined Capabilities set"
+- which matches to the selected ipa export method"
+`
+
+func (e MissingCodesigningFilesError) Error() string {
+	return e.msg + "\n" + collectCodesigningFilesInfo
+}
