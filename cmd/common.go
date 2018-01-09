@@ -21,6 +21,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const collectCodesigningFilesInfo = `To collect available code sign files, we search for installed Provisioning Profiles:"
+- which has installed Codesign Identity in your Keychain"
+- which can provision your application target's bundle ids"
+- which has the project defined Capabilities set"
+- which matches to the selected ipa export method"
+`
+
 func initExportOutputDir() (string, error) {
 	confExportOutputDirPath := "./codesigndoc_exports"
 	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
@@ -142,7 +149,7 @@ func collectIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, ins
 
 	codeSignGroups := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
-		return nil, MissingCodesigningFilesError{msg: "no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa"}
+		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
 	}
 
 	exportMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
