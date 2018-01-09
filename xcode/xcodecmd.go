@@ -44,7 +44,7 @@ func (xccmd CommandModel) GenerateArchive() (string, string, error) {
 
 	tmpDir, err := pathutil.NormalizedOSTempDirPath("__codesigndoc__")
 	if err != nil {
-		return "", "", fmt.Errorf("Failed to create temp dir for archives, error: %s", err)
+		return "", "", fmt.Errorf("failed to create temp dir for archives, error: %s", err)
 	}
 	tmpArchivePath := filepath.Join(tmpDir, xccmd.Scheme+".xcarchive")
 
@@ -54,7 +54,7 @@ func (xccmd CommandModel) GenerateArchive() (string, string, error) {
 	fmt.Println()
 
 	if err != nil {
-		return "", xcoutput, fmt.Errorf("Failed to Archive, error: %s", err)
+		return "", xcoutput, err
 	}
 	return tmpArchivePath, xcoutput, nil
 }
@@ -65,7 +65,7 @@ func (xccmd CommandModel) xcodeProjectOrWorkspaceParam() (string, error) {
 	} else if strings.HasSuffix(xccmd.ProjectFilePath, "xcodeproj") {
 		return "-project", nil
 	}
-	return "", fmt.Errorf("Invalid project/workspace file, the extension should be either .xcworkspace or .xcodeproj ; (file path: %s)", xccmd.ProjectFilePath)
+	return "", fmt.Errorf("invalid project/workspace file, the extension should be either .xcworkspace or .xcodeproj ; (file path: %s)", xccmd.ProjectFilePath)
 }
 
 func (xccmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...string) ([]string, error) {
@@ -99,7 +99,7 @@ func (xccmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (
 	log.Infof("$ xcodebuild %s", command.PrintableCommandArgs(true, xcodeCmdParamsToRun))
 	xcoutput, err := command.RunCommandAndReturnCombinedStdoutAndStderr("xcodebuild", xcodeCmdParamsToRun...)
 	if err != nil {
-		return xcoutput, fmt.Errorf("Failed to run xcodebuild command, error: %s", err)
+		return xcoutput, fmt.Errorf("failed to run xcodebuild command, error: %s", err)
 	}
 
 	log.Debugf("xcoutput: %s", xcoutput)

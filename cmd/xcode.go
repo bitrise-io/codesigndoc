@@ -124,7 +124,7 @@ the one you usually open in Xcode, then hit Enter.
 		}
 	}
 	if err != nil {
-		return ArchiveError{toolXcode, "failed to run Xcode Archive: " + err.Error()}
+		return ArchiveError{toolXcode, err.Error()}
 	}
 
 	return exportCodesignFiles("Xcode", archivePath, absExportOutputDirPath)
