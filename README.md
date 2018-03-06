@@ -80,7 +80,7 @@ To run the `xcodebuild` command and only show these lines you can add the
 postfix: `| grep -i -e 'Signing Identity' -e 'Provisioning Profile' -e '` to
 your call, for example: `xcodebuild -workspace "YOUR.xcworkspace" -scheme "a
 Shared scheme" clean archive | grep -i -e 'Signing Identity' -e 'Provisioning
-Profile' -e '`. This will run the exact same command, but will filter out every
+Profile'`. This will run the exact same command, but will filter out every
 other text in the output except these lines you're searching for.
 
 By running this command you'll see an output similar to:
