@@ -27,13 +27,13 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 
 	var exportedData C.CFDataRef
 	var exportParams C.SecItemImportExportKeyParameters
-	exportParams.keyUsage = nil
-	exportParams.keyAttributes = nil
+	exportParams.keyUsage = 0
+	exportParams.keyAttributes = 0
 	exportParams.version = C.SEC_KEY_IMPORT_EXPORT_PARAMS_VERSION
 	if isAskForPassword {
 		exportParams.flags = C.kSecKeySecurePassphrase
-		exportParams.passphrase = nil
-		exportParams.alertTitle = nil
+		exportParams.passphrase = 0
+		exportParams.alertTitle = 0
 
 		promptText := C.CString("Enter a password which will be used to protect the exported items")
 		defer C.free(unsafe.Pointer(promptText))
@@ -41,12 +41,12 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 	} else {
 		exportParams.flags = 0
 		exportParams.passphrase = (C.CFTypeRef)(convertCStringToCFString(passphraseCString))
-		exportParams.alertTitle = nil
-		exportParams.alertPrompt = nil
+		exportParams.alertTitle = 0
+		exportParams.alertPrompt = 0
 	}
 
 	// create a C array from the input
-	ptr := (*unsafe.Pointer)(&itemRefsToExport[0])
+	ptr := (*unsafe.Pointer)(unsafe.Pointer(&itemRefsToExport[0]))
 	cfArrayForExport := C.CFArrayCreate(
 		C.kCFAllocatorDefault,
 		ptr,
@@ -119,7 +119,7 @@ func GetCertificateDataFromIdentityRef(identityRef C.CFTypeRef) (*x509.Certifica
 	}
 
 	certificateCFData := C.SecCertificateCopyData(secCertificateRef)
-	if certificateCFData == nil {
+	if certificateCFData == 0 {
 		return nil, errors.New("GetCertificateDataFromIdentityRef: SecCertificateCopyData: Failed to convert certificate data")
 	}
 	defer C.CFRelease(C.CFTypeRef(certificateCFData))
@@ -184,7 +184,7 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 	C.CFDictionaryAddValue(queryDict, unsafe.Pointer(C.kSecReturnRef), unsafe.Pointer(C.kCFBooleanTrue))
 
 	var resultRefs C.CFTypeRef
-	osStatusCode := C.SecItemCopyMatching(queryDict, &resultRefs)
+	osStatusCode := C.SecItemCopyMatching((_Ctype_CFDictionaryRef)(queryDict), &resultRefs)
 	if osStatusCode != C.errSecSuccess {
 		return nil, fmt.Errorf("Failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
 	}
@@ -244,10 +244,10 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 
 func getCFDictValueRef(dict C.CFDictionaryRef, key C.CFTypeRef) (C.CFTypeRef, error) {
 	var retVal C.CFTypeRef
-	exist := C.CFDictionaryGetValueIfPresent(dict, unsafe.Pointer(key), (*unsafe.Pointer)(retVal))
+	exist := C.CFDictionaryGetValueIfPresent(dict, unsafe.Pointer(key), (*unsafe.Pointer)(unsafe.Pointer(retVal)))
 	// log.Debugf("retVal: %#v", retVal)
 	if exist == C.Boolean(0) {
-		return nil, errors.New("getCFDictValueRef: Key doesn't exist")
+		return 0, errors.New("getCFDictValueRef: Key doesn't exist")
 	}
 	// return retVal, nil
 
@@ -257,14 +257,14 @@ func getCFDictValueRef(dict C.CFDictionaryRef, key C.CFTypeRef) (C.CFTypeRef, er
 func getCFDictValueCFStringRef(dict C.CFDictionaryRef, key C.CFTypeRef) (C.CFStringRef, error) {
 	val, err := getCFDictValueRef(dict, key)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
-	if val == nil {
-		return nil, errors.New("getCFDictValueCFStringRef: Nil value returned")
+	if val == 0 {
+		return 0, errors.New("getCFDictValueCFStringRef: Nil value returned")
 	}
 
 	if C.CFGetTypeID(val) != C.CFStringGetTypeID() {
-		return nil, errors.New("getCFDictValueCFStringRef: value is not a string")
+		return 0, errors.New("getCFDictValueCFStringRef: value is not a string")
 	}
 
 	return C.CFStringRef(val), nil
@@ -280,7 +280,7 @@ func getCFDictValueUTF8String(dict C.CFDictionaryRef, key C.CFTypeRef) (string, 
 		return "", err
 	}
 	log.Debugf("valCFStringRef: %#v", valCFStringRef)
-	if valCFStringRef == nil {
+	if valCFStringRef == 0 {
 		return "", errors.New("getCFDictValueUTF8String: Nil value")
 	}
 
