@@ -38,13 +38,6 @@ workflows:
             set -ex
             go test $GOLIST_WITHOUT_VENDOR
     - script:
-        title: Go Vet
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            go vet $GOLIST_WITHOUT_VENDOR
-    - script:
         title: Err check
         inputs:
         - content: |-
