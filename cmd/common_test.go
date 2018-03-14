@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/stretchr/testify/require"
 )
 
 func createTime(t *testing.T, timeStr string) time.Time {
@@ -53,5 +52,59 @@ func Test_filterLatestProfiles(t *testing.T) {
 	}
 	for _, found := range desiredProfileExpireMap {
 		require.True(t, found)
+	}
+}
+
+func Test_trimProjectpath(t *testing.T) {
+	type args struct {
+		projpth string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			name: "No change",
+			args: args{projpth: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj"},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "Quotation mark",
+			args: args{projpth: "\"Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\""},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "Apostrophe",
+			args: args{projpth: "'Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj'"},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "Quotation mark With whitespace",
+			args: args{projpth: "\" Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj \""},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "Apostrophe With whitespace",
+			args: args{projpth: "' Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj '"},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "New line",
+			args: args{projpth: "\nDevelop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\n"},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+		{
+			name: "Multiple",
+			args: args{projpth: "\n  \"  \nDevelop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\n  '  ' ''''\n\n\""},
+			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := trimProjectpath(tt.args.projpth); got != tt.want {
+				t.Errorf("trimProjpth() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
