@@ -619,25 +619,9 @@ func trimProjectpath(projpth string) string {
 	if len(projpth) == 0 {
 		return projpth
 	}
-	characterSetToRemove := []string{"\n", `'`, `"`}
-	for {
-		projpth = strings.Trim(projpth, "\n")
-		projpth = strings.Trim(projpth, `'`)
-		projpth = strings.Trim(projpth, `"`)
-		projpth = strings.TrimSpace(projpth)
-
-		if !contains(characterSetToRemove, projpth[:1]) && !contains(characterSetToRemove, projpth[len(projpth)-1:]) {
-			return projpth
-		}
+	projpth = strings.TrimSpace(projpth)
+	for _, character := range []string{`'`, `"`} {
+		projpth = strings.Trim(projpth, character)
 	}
-}
-
-func contains(slice []string, item string) bool {
-	set := make(map[string]struct{}, len(slice))
-	for _, s := range slice {
-		set[s] = struct{}{}
-	}
-
-	_, ok := set[item]
-	return ok
+	return projpth
 }

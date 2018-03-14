@@ -81,22 +81,12 @@ func Test_trimProjectpath(t *testing.T) {
 		},
 		{
 			name: "Quotation mark With whitespace",
-			args: args{projpth: "\" Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj \""},
+			args: args{projpth: " \"Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\" "},
 			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
 		},
 		{
 			name: "Apostrophe With whitespace",
-			args: args{projpth: "' Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj '"},
-			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
-		},
-		{
-			name: "New line",
-			args: args{projpth: "\nDevelop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\n"},
-			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
-		},
-		{
-			name: "Multiple",
-			args: args{projpth: "\n  \"  \nDevelop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj\n  '  ' ''''\n\n\""},
+			args: args{projpth: " 'Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj' "},
 			want: "Develop/XCode/XcodeArchiveTest/XcodeArchiveTest.xcodeproj",
 		},
 	}

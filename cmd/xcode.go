@@ -68,8 +68,7 @@ the one you usually open in Xcode, then hit Enter.
 			return fmt.Errorf("failed to read input: %s", err)
 		}
 
-		projpth = trimProjectpath(projpth)
-		projectPath = projpth
+		projectPath = trimProjectpath(projpth)
 	}
 	log.Debugf("projectPath: %s", projectPath)
 	xcodeCmd.ProjectFilePath = projectPath
