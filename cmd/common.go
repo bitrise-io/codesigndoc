@@ -616,12 +616,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 }
 
 func trimProjectpath(projpth string) string {
-	if len(projpth) == 0 {
-		return projpth
-	}
-	projpth = strings.TrimSpace(projpth)
-	for _, character := range []string{`'`, `"`} {
-		projpth = strings.Trim(projpth, character)
-	}
+	projpth = strings.Trim(strings.TrimSpace(projpth), "'\"")
 	return projpth
 }
