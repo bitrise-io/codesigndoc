@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -68,7 +69,7 @@ the one you usually open in Xcode, then hit Enter.
 			return fmt.Errorf("failed to read input: %s", err)
 		}
 
-		projectPath = trimProjectpath(projpth)
+		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")
 	}
 	log.Debugf("projectPath: %s", projectPath)
 	xcodeCmd.ProjectFilePath = projectPath
