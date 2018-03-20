@@ -4,9 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/stretchr/testify/require"
 )
 
 func createTime(t *testing.T, timeStr string) time.Time {
