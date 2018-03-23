@@ -13,6 +13,7 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
+	"github.com/bitrise-tools/codesigndoc/uploaders"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/exportoptions"
@@ -602,8 +603,24 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		return err
 	}
 
+	if len(profilesToExport) > 0 {
+		fmt.Println()
+		shouldUpload, err := askUploadProvProfiles()
+		if err != nil {
+			return err
+		}
+
+		if shouldUpload {
+			err := uploadProvisioningProfiles(profilesToExport, outputDirPath) // TODO
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	fmt.Println()
 	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+
 	if err := command.RunCommand("open", outputDirPath); err != nil {
 		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
 	} else {
@@ -614,3 +631,119 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 
 	return nil
 }
+<<<<<<< HEAD
+
+func trimProjectpath(projpth string) string {
+	projpth = strings.Trim(strings.TrimSpace(projpth), "'\"")
+	return projpth
+}
+
+func askUploadProvProfiles() (bool, error) {
+	messageToAsk := "Do you want to upload the provisioning profiles to Bitrise?"
+
+	answer, err := goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
+	if err != nil {
+		return answer, err
+	}
+
+	return answer, nil
+}
+
+// ----------------------------------------------------------------
+// --- Upload methods
+
+// TODO
+func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
+	// Get accesToken from stdin
+	accessToken, err := uploaders.AskAccessToken()
+
+	appList, err := uploaders.FetchMyApps(accessToken)
+	if err != nil {
+		log.Errorf("Failed to ask your app list from Bitrise: %s", err)
+		return err
+	}
+
+	selectedApp, err := selectApp(appList)
+	if err != nil {
+		return err
+	}
+
+	// Upload provisioning profiles
+	for _, profile := range profilesToUpload {
+
+		exportFileName := provProfileExportFileName(profile, outputDirPath)
+
+		provProfile, err := os.Open(outputDirPath + "/" + exportFileName)
+		if err != nil {
+			return err
+		}
+		defer provProfile.Close()
+
+		info, err := provProfile.Stat()
+		if err != nil {
+			return err
+		}
+
+		bytes := info.Size()
+		log.Debugf("\n%s size: %d", exportFileName, bytes)
+
+		provProfSlugResponseData, err := uploaders.RegisterProvisioningProfile(accessToken, selectedApp.Slug, bytes, profile)
+		if err != nil {
+			return err
+		}
+
+		err = uploaders.UploadProvisioningProfile(provProfSlugResponseData, outputDirPath, exportFileName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func selectApp(appList []uploaders.Appliocation) (seledtedApp uploaders.Appliocation, err error) {
+	selectionList := []string{}
+
+	for _, app := range appList {
+		selectionList = append(selectionList, app.Title+" ("+app.RepoURL+")")
+	}
+
+	userSelection, err := goinp.SelectFromStringsWithDefault("Select the app which you want to upload the privisioning profiles", 1, selectionList)
+
+	if err != nil {
+		return uploaders.Appliocation{}, fmt.Errorf("failed to read input: %s", err)
+
+	}
+
+	log.Debugf("selected app: %v", userSelection)
+
+	selectedApp, err := getAppFromUserSelection(userSelection, appList)
+
+	if err != nil {
+		return uploaders.Appliocation{}, fmt.Errorf("failed to read input: %s", err)
+	}
+
+	return selectedApp, nil
+
+}
+
+func getAppFromUserSelection(selectedApp string, appList []uploaders.Appliocation) (seledtedApp uploaders.Appliocation, err error) {
+	for _, app := range appList {
+
+		selectedAppRepoURL := strings.Split(strings.Split(selectedApp, `(`)[1], `)`)[0]
+		if app.RepoURL == selectedAppRepoURL {
+			return app, nil
+		}
+	}
+	return uploaders.Appliocation{}, &appSelectionError{"failed to find selected app in appList"}
+}
+
+type appSelectionError struct {
+	s string
+}
+
+func (e *appSelectionError) Error() string {
+	return e.s
+}
+=======
+>>>>>>> c774709...  - cmd/common.go: trimProjectPath -> changed for inline code.

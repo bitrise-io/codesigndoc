@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/bitrise-tools/codesigndoc/uploaders"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 	"github.com/stretchr/testify/require"
 )
@@ -52,5 +54,211 @@ func Test_filterLatestProfiles(t *testing.T) {
 	}
 	for _, found := range desiredProfileExpireMap {
 		require.True(t, found)
+	}
+}
+
+func TestGetAppFromUserSelection(t *testing.T) {
+	tests := []struct {
+		name            string
+		selectedApp     string
+		appList         []uploaders.Appliocation
+		wantSeledtedApp uploaders.Appliocation
+		wantErr         bool
+	}{
+		{
+			name:        "Success",
+			selectedApp: "bitrise-xcodearchivetest (git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git)",
+			appList: []uploaders.Appliocation{
+				uploaders.Appliocation{
+					Slug:        "683dec47f6f7db20",
+					Title:       "bitrise-xcodearchivetest",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+			},
+			wantSeledtedApp: uploaders.Appliocation{
+				Slug:        "683dec47f6f7db20",
+				Title:       "bitrise-xcodearchivetest",
+				ProjectType: "ios",
+				Provider:    "bitbucket",
+				RepoOwner:   "Birmachera",
+				RepoURL:     "git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git",
+				RepoSlug:    "bitrise-xcodearchivetest",
+				IsDisabled:  false,
+				Status:      1,
+				IsPublic:    false,
+				Owner: uploaders.Owner{
+					AccountType: "user",
+					Name:        "BirmacherAkos",
+					Slug:        "f88644b20a74fb29",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "Second",
+			selectedApp: "Second (git@bitbucket.org:Birmachera/second.git)",
+			appList: []uploaders.Appliocation{
+				uploaders.Appliocation{
+					Slug:        "683dec47f6f7db20",
+					Title:       "bitrise-xcodearchivetest",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+				uploaders.Appliocation{
+					Slug:        "68sdsdsdsd3dec47f6f7db20",
+					Title:       "Second",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/second.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+			},
+			wantSeledtedApp: uploaders.Appliocation{
+				Slug:        "68sdsdsdsd3dec47f6f7db20",
+				Title:       "Second",
+				ProjectType: "ios",
+				Provider:    "bitbucket",
+				RepoOwner:   "Birmachera",
+				RepoURL:     "git@bitbucket.org:Birmachera/second.git",
+				RepoSlug:    "bitrise-xcodearchivetest",
+				IsDisabled:  false,
+				Status:      1,
+				IsPublic:    false,
+				Owner: uploaders.Owner{
+					AccountType: "user",
+					Name:        "BirmacherAkos",
+					Slug:        "f88644b20a74fb29",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:        "Failed",
+			selectedApp: " (git@bitbucket.)",
+			appList: []uploaders.Appliocation{
+				uploaders.Appliocation{
+					Slug:        "683dec47f6f7db20",
+					Title:       "bitrise-xcodearchivetest",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+				uploaders.Appliocation{
+					Slug:        "68sdsdsdsd3dec47f6f7db20",
+					Title:       "Second",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/second.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+			},
+			wantSeledtedApp: uploaders.Appliocation{},
+			wantErr:         true,
+		},
+		{
+			name:        "No repo url",
+			selectedApp: "bitrise-xcodearchivetest ()",
+			appList: []uploaders.Appliocation{
+				uploaders.Appliocation{
+					Slug:        "683dec47f6f7db20",
+					Title:       "bitrise-xcodearchivetest",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+				uploaders.Appliocation{
+					Slug:        "68sdsdsdsd3dec47f6f7db20",
+					Title:       "Second",
+					ProjectType: "ios",
+					Provider:    "bitbucket",
+					RepoOwner:   "Birmachera",
+					RepoURL:     "git@bitbucket.org:Birmachera/second.git",
+					RepoSlug:    "bitrise-xcodearchivetest",
+					IsDisabled:  false,
+					Status:      1,
+					IsPublic:    false,
+					Owner: uploaders.Owner{
+						AccountType: "user",
+						Name:        "BirmacherAkos",
+						Slug:        "f88644b20a74fb29",
+					},
+				},
+			},
+			wantSeledtedApp: uploaders.Appliocation{},
+			wantErr:         true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotSeledtedApp, err := getAppFromUserSelection(tt.selectedApp, tt.appList)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getAppFromUserSelection() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotSeledtedApp, tt.wantSeledtedApp) {
+				t.Errorf("getAppFromUserSelection() = %v, want %v", gotSeledtedApp, tt.wantSeledtedApp)
+			}
+		})
 	}
 }
