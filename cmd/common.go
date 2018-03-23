@@ -731,21 +731,15 @@ func selectApp(appList []bitriseclient.Application) (seledtedAppSlug string, err
 
 	log.Debugf("selected app: %v", userSelection)
 
-	selectedApp, err := getAppFromUserSelection(userSelection, appList)
-
-	return selectedApp.Slug, nil
-
-}
-
-func getAppFromUserSelection(selectedApp string, appList []bitriseclient.Application) (seledtedApp bitriseclient.Application, err error) {
-	if index := sort.Search(len(appList), func(i int) bool {
-		selectedAppRepoURL := strings.Split(strings.Split(selectedApp, `(`)[1], `)`)[0]
-		return appList[i].RepoURL == selectedAppRepoURL
+	if index := sort.Search(len(selectionList), func(i int) bool {
+		return selectionList[i] == userSelection
 
 	}); index < len(appList) {
-		return appList[index], nil
+		return appList[index].Slug, nil
 	}
-	return bitriseclient.Application{}, &appSelectionError{"failed to find selected app in appList"}
+
+	return "", &appSelectionError{"failed to find selected app in appList"}
+
 }
 
 type appSelectionError struct {
