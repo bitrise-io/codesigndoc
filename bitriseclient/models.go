@@ -1,4 +1,4 @@
-package uploaders
+package bitriseclient
 
 // Owner ...
 type Owner struct {
@@ -7,8 +7,8 @@ type Owner struct {
 	Slug        string `json:"slug"`
 }
 
-// Appliocation ...
-type Appliocation struct {
+// Application ...
+type Application struct {
 	Slug        string `json:"slug"`
 	Title       string `json:"title"`
 	ProjectType string `json:"project_type"`
@@ -24,19 +24,19 @@ type Appliocation struct {
 
 // FetchMyAppsResponse ...
 type FetchMyAppsResponse struct {
-	Data []Appliocation `json:"data"`
+	Data []Application `json:"data"`
 }
 
 // RegisterProvisioningProfileResponseData ...
 type RegisterProvisioningProfileResponseData struct {
-	Data           []Appliocation `json:"data"`
-	UploadFileName string         `json:"upload_file_name"`
-	UploadFileSize int64          `json:"upload_file_size"`
-	Slug           string         `json:"slug"`
-	Processed      bool           `json:"processed"`
-	IsExpose       bool           `json:"is_expose"`
-	IsProtected    bool           `json:"is_protected"`
-	UploadURL      string         `json:"upload_url"`
+	Data           []Application `json:"data"`
+	UploadFileName string        `json:"upload_file_name"`
+	UploadFileSize int64         `json:"upload_file_size"`
+	Slug           string        `json:"slug"`
+	Processed      bool          `json:"processed"`
+	IsExpose       bool          `json:"is_expose"`
+	IsProtected    bool          `json:"is_protected"`
+	UploadURL      string        `json:"upload_url"`
 }
 
 // RegisterProvisioningProfileResponse ...

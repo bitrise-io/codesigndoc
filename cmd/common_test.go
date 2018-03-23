@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitrise-tools/codesigndoc/uploaders"
+	"github.com/bitrise-tools/codesigndoc/bitriseclient"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 	"github.com/stretchr/testify/require"
 )
@@ -61,15 +61,15 @@ func TestGetAppFromUserSelection(t *testing.T) {
 	tests := []struct {
 		name            string
 		selectedApp     string
-		appList         []uploaders.Appliocation
-		wantSeledtedApp uploaders.Appliocation
+		appList         []bitriseclient.Application
+		wantSeledtedApp bitriseclient.Application
 		wantErr         bool
 	}{
 		{
 			name:        "Success",
 			selectedApp: "bitrise-xcodearchivetest (git@bitbucket.org:Birmachera/bitrise-xcodearchivetest.git)",
-			appList: []uploaders.Appliocation{
-				uploaders.Appliocation{
+			appList: []bitriseclient.Application{
+				bitriseclient.Application{
 					Slug:        "683dec47f6f7db20",
 					Title:       "bitrise-xcodearchivetest",
 					ProjectType: "ios",
@@ -80,14 +80,14 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
 			},
-			wantSeledtedApp: uploaders.Appliocation{
+			wantSeledtedApp: bitriseclient.Application{
 				Slug:        "683dec47f6f7db20",
 				Title:       "bitrise-xcodearchivetest",
 				ProjectType: "ios",
@@ -98,7 +98,7 @@ func TestGetAppFromUserSelection(t *testing.T) {
 				IsDisabled:  false,
 				Status:      1,
 				IsPublic:    false,
-				Owner: uploaders.Owner{
+				Owner: bitriseclient.Owner{
 					AccountType: "user",
 					Name:        "BirmacherAkos",
 					Slug:        "f88644b20a74fb29",
@@ -109,8 +109,8 @@ func TestGetAppFromUserSelection(t *testing.T) {
 		{
 			name:        "Second",
 			selectedApp: "Second (git@bitbucket.org:Birmachera/second.git)",
-			appList: []uploaders.Appliocation{
-				uploaders.Appliocation{
+			appList: []bitriseclient.Application{
+				bitriseclient.Application{
 					Slug:        "683dec47f6f7db20",
 					Title:       "bitrise-xcodearchivetest",
 					ProjectType: "ios",
@@ -121,13 +121,13 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
-				uploaders.Appliocation{
+				bitriseclient.Application{
 					Slug:        "68sdsdsdsd3dec47f6f7db20",
 					Title:       "Second",
 					ProjectType: "ios",
@@ -138,14 +138,14 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
 			},
-			wantSeledtedApp: uploaders.Appliocation{
+			wantSeledtedApp: bitriseclient.Application{
 				Slug:        "68sdsdsdsd3dec47f6f7db20",
 				Title:       "Second",
 				ProjectType: "ios",
@@ -156,7 +156,7 @@ func TestGetAppFromUserSelection(t *testing.T) {
 				IsDisabled:  false,
 				Status:      1,
 				IsPublic:    false,
-				Owner: uploaders.Owner{
+				Owner: bitriseclient.Owner{
 					AccountType: "user",
 					Name:        "BirmacherAkos",
 					Slug:        "f88644b20a74fb29",
@@ -167,8 +167,8 @@ func TestGetAppFromUserSelection(t *testing.T) {
 		{
 			name:        "Failed",
 			selectedApp: " (git@bitbucket.)",
-			appList: []uploaders.Appliocation{
-				uploaders.Appliocation{
+			appList: []bitriseclient.Application{
+				bitriseclient.Application{
 					Slug:        "683dec47f6f7db20",
 					Title:       "bitrise-xcodearchivetest",
 					ProjectType: "ios",
@@ -179,13 +179,13 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
-				uploaders.Appliocation{
+				bitriseclient.Application{
 					Slug:        "68sdsdsdsd3dec47f6f7db20",
 					Title:       "Second",
 					ProjectType: "ios",
@@ -196,21 +196,21 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
 			},
-			wantSeledtedApp: uploaders.Appliocation{},
+			wantSeledtedApp: bitriseclient.Application{},
 			wantErr:         true,
 		},
 		{
 			name:        "No repo url",
 			selectedApp: "bitrise-xcodearchivetest ()",
-			appList: []uploaders.Appliocation{
-				uploaders.Appliocation{
+			appList: []bitriseclient.Application{
+				bitriseclient.Application{
 					Slug:        "683dec47f6f7db20",
 					Title:       "bitrise-xcodearchivetest",
 					ProjectType: "ios",
@@ -221,13 +221,13 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
-				uploaders.Appliocation{
+				bitriseclient.Application{
 					Slug:        "68sdsdsdsd3dec47f6f7db20",
 					Title:       "Second",
 					ProjectType: "ios",
@@ -238,14 +238,14 @@ func TestGetAppFromUserSelection(t *testing.T) {
 					IsDisabled:  false,
 					Status:      1,
 					IsPublic:    false,
-					Owner: uploaders.Owner{
+					Owner: bitriseclient.Owner{
 						AccountType: "user",
 						Name:        "BirmacherAkos",
 						Slug:        "f88644b20a74fb29",
 					},
 				},
 			},
-			wantSeledtedApp: uploaders.Appliocation{},
+			wantSeledtedApp: bitriseclient.Application{},
 			wantErr:         true,
 		},
 	}

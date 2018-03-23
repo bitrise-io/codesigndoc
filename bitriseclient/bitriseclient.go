@@ -1,22 +1,19 @@
-package uploaders
+package bitriseclient
 
 import (
 	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
@@ -27,37 +24,24 @@ const (
 	provisioningProfilesEndPoint string = "/provisioning-profiles"
 )
 
-// AskAccessToken ...
-func AskAccessToken() (token string, err error) {
-	messageToAsk := "Please copy your personal access token to Bitrise.\n" +
-		"(To acquire a Personal Access Token for your user, sign in with that user on bitrise.io, go to your Account Settings page,\nand select the Security tab on the left side.)"
-
-	fmt.Println()
-	accesToken, err := goinp.AskForStringFromReader(messageToAsk, os.Stdin)
-	if err != nil {
-		return accesToken, err
-	}
-
-	fmt.Println()
-	log.Infof("%s %s", colorstring.Green("Given accesToken:"), accesToken)
-	fmt.Println()
-
-	return accesToken, nil
-}
-
-// FetchMyApps ...
-func FetchMyApps(accessToken string) (apps []Appliocation, err error) {
+// New returns all the application of the user on Bitrise
+func New(accessToken string) (apps []Application, err error) {
 	log.Infof("Asking your application list from Bitrise...")
 
-	requestURL := createRequestURLForMyApps()
+	requestURL, err := urlutil.Join(baseURL, myAppsEndPoint)
+	if err != nil {
+		return []Application{}, err
+	}
+
+	log.Debugf("\nRequest URL: %s", requestURL)
 
 	headers := map[string]string{
 		"Authorization": "token " + accessToken,
 	}
 
-	request, err := createRequest(requestURL, map[string]interface{}{}, Get, headers)
+	request, err := createRequest("Get", requestURL, headers, map[string]interface{}{})
 	if err != nil {
-		failWithMessage("Failed to create request, error: %#v", err)
+		return []Application{}, err
 	}
 
 	// Response struct
@@ -87,7 +71,7 @@ func FetchMyApps(accessToken string) (apps []Appliocation, err error) {
 
 	}); err != nil {
 		log.Errorf("Fetching list failed %s", err)
-		return []Appliocation{}, err
+		return []Application{}, err
 	}
 
 	// Success
@@ -101,7 +85,12 @@ func FetchMyApps(accessToken string) (apps []Appliocation, err error) {
 func RegisterProvisioningProfile(accessToken string, appSlug string, provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
 	log.Infof("Register %s on Bitrise...", profile.Name)
 
-	requestURL := createRequestURLForProvProfSlug(appSlug)
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, provisioningProfilesEndPoint)
+	if err != nil {
+		return RegisterProvisioningProfileResponseData{}, err
+	}
+
+	log.Debugf("\nRequest URL: %s", requestURL)
 
 	fields := map[string]interface{}{
 		"upload_file_name": profile.Name,
@@ -112,9 +101,9 @@ func RegisterProvisioningProfile(accessToken string, appSlug string, provisionin
 		"Authorization": "token " + accessToken,
 	}
 
-	request, err := createRequest(requestURL, fields, Post, headers)
+	request, err := createRequest("Post", requestURL, headers, fields)
 	if err != nil {
-		failWithMessage("Failed to create request, error: %#v", err)
+		return RegisterProvisioningProfileResponseData{}, err
 	}
 
 	// Response struct
@@ -155,16 +144,19 @@ func RegisterProvisioningProfile(accessToken string, appSlug string, provisionin
 }
 
 // UploadProvisioningProfile ...
-func UploadProvisioningProfile(responseData RegisterProvisioningProfileResponseData, outputDirPath string, exportFileName string) error {
+func UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
 	log.Infof("Upload %s to Bitrise...", exportFileName)
 
-	requestURL := responseData.UploadURL
+	requestURL := uploadURL
 
 	files := map[string]string{
-		responseData.UploadFileName: (outputDirPath + "/" + exportFileName),
+		uploadFileName: (outputDirPath + "/" + exportFileName),
 	}
 
-	request := createUploadRequest(requestURL, files, Put, map[string]string{})
+	request, err := createUploadRequest("Put", requestURL, map[string]string{}, files)
+	if err != nil {
+		return err
+	}
 
 	// Response struct
 	responseStatusCode := -1
@@ -196,28 +188,28 @@ func UploadProvisioningProfile(responseData RegisterProvisioningProfileResponseD
 	return nil
 }
 
-func createUploadRequest(url string, files map[string]string, requestMethod httpMethod, headers map[string]string) *http.Request {
+func createUploadRequest(requestMethod string, url string, headers map[string]string, files map[string]string) (*http.Request, error) {
 	var fContent []byte
 
 	for _, file := range files {
 		f, err := os.Open(file)
 
 		if err != nil {
-			failWithMessage("Failed to read file, err: %s", err)
+			return nil, err
 		}
 
 		fContent, err = ioutil.ReadAll(f)
 
 		if err != nil {
-			failWithMessage("Failed to read file, err: %s", err)
+			return nil, err
 		}
 
 	}
 
-	req, err := http.NewRequest(Put.String(), url, bytes.NewReader(fContent))
+	req, err := http.NewRequest("Put", url, bytes.NewReader(fContent))
 
 	if err != nil {
-		failWithMessage("Failed to create upload request, err: %s", err)
+		return nil, err
 	}
 
 	for key, value := range headers {
@@ -225,11 +217,11 @@ func createUploadRequest(url string, files map[string]string, requestMethod http
 
 	}
 
-	return req
+	return req, nil
 }
 
-func createRequest(url string, fields map[string]interface{}, requestMethod httpMethod, headers map[string]string) (*http.Request, error) {
-	b := new(bytes.Buffer)
+func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {
+	var b *bytes.Buffer
 
 	if len(fields) > 0 {
 		err := json.NewEncoder(b).Encode(fields)
@@ -241,11 +233,8 @@ func createRequest(url string, fields map[string]interface{}, requestMethod http
 	by := b.Bytes()
 	log.Debugf("Request body: %s", string(by))
 
-	req, err := http.NewRequest(requestMethod.String(), url, bytes.NewReader(by))
+	req, err := http.NewRequest(requestMethod, url, bytes.NewReader(by))
 	if err != nil {
-		return nil, err
-	}
-	if _, err := io.Copy(os.Stdout, req.Body); err != nil {
 		return nil, err
 	}
 
@@ -284,32 +273,10 @@ func performRequest(request *http.Request) ([]byte, int, error) {
 	return body, response.StatusCode, nil
 }
 
-func createRequestURLForMyApps() string {
-	requestURL, err := urlutil.Join(baseURL, myAppsEndPoint)
-	if err != nil {
-		failWithMessage("failed to create request URL, error: %s", err)
-	}
-
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	return requestURL
-}
-
-func createRequestURLForProvProfSlug(appSlug string) string {
-	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, provisioningProfilesEndPoint)
-	if err != nil {
-		failWithMessage("failed to create request URL, error: %s", err)
-	}
-
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	return requestURL
-}
-
-func failWithMessage(format string, v ...interface{}) {
-	log.Errorf(format, v...)
-	os.Exit(1)
-}
+// func failWithMessage(format string, v ...interface{}) {
+// 	log.Errorf(format, v...)
+// 	os.Exit(1)
+// }
 
 func logDebugPretty(v interface{}) {
 	indentedBytes, err := json.MarshalIndent(v, "", "  ")

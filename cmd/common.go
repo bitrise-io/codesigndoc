@@ -8,12 +8,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/bitriseclient"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
-	"github.com/bitrise-tools/codesigndoc/uploaders"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/exportoptions"
@@ -611,7 +612,7 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		}
 
 		if shouldUpload {
-			err := uploadProvisioningProfiles(profilesToExport, outputDirPath) // TODO
+			err := uploadProvisioningProfiles(profilesToExport, outputDirPath)
 			if err != nil {
 				return err
 			}
@@ -646,31 +647,29 @@ func askUploadProvProfiles() (bool, error) {
 // ----------------------------------------------------------------
 // --- Upload methods
 
-// TODO
 func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
-	// Get accesToken from stdin
-	accessToken, err := uploaders.AskAccessToken()
+	accessToken, err := askAccessToken()
 
-	appList, err := uploaders.FetchMyApps(accessToken)
+	appList, err := bitriseclient.New(accessToken)
 	if err != nil {
 		log.Errorf("Failed to ask your app list from Bitrise: %s", err)
 		return err
 	}
 
-	selectedApp, err := selectApp(appList)
+	selectedAppSlug, err := selectApp(appList)
 	if err != nil {
 		return err
 	}
 
 	// Upload provisioning profiles
 	for _, profile := range profilesToUpload {
-
 		exportFileName := provProfileExportFileName(profile, outputDirPath)
 
 		provProfile, err := os.Open(outputDirPath + "/" + exportFileName)
 		if err != nil {
 			return err
 		}
+
 		defer func() {
 			if err := provProfile.Close(); err != nil {
 				log.Warnf("Provisioning profile close failed, err: %s", err)
@@ -686,13 +685,12 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 		bytes := info.Size()
 		log.Debugf("\n%s size: %d", exportFileName, bytes)
 
-		provProfSlugResponseData, err := uploaders.RegisterProvisioningProfile(accessToken, selectedApp.Slug, bytes, profile)
+		provProfSlugResponseData, err := bitriseclient.RegisterProvisioningProfile(accessToken, selectedAppSlug, bytes, profile)
 		if err != nil {
 			return err
 		}
 
-		err = uploaders.UploadProvisioningProfile(provProfSlugResponseData, outputDirPath, exportFileName)
-		if err != nil {
+		if err := bitriseclient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, outputDirPath, exportFileName); err != nil {
 			return err
 		}
 	}
@@ -700,8 +698,25 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 	return nil
 }
 
-func selectApp(appList []uploaders.Appliocation) (seledtedApp uploaders.Appliocation, err error) {
-	selectionList := []string{}
+func askAccessToken() (token string, err error) {
+	messageToAsk := `Please copy your personal access token to Bitrise.\n
+		(To acquire a Personal Access Token for your user, sign in with that user on bitrise.io, go to your Account Settings page,\nand select the Security tab on the left side.)`
+
+	fmt.Println()
+	accesToken, err := goinp.AskForStringFromReader(messageToAsk, os.Stdin)
+	if err != nil {
+		return accesToken, err
+	}
+
+	fmt.Println()
+	log.Infof("%s %s", colorstring.Green("Given accesToken:"), accesToken)
+	fmt.Println()
+
+	return accesToken, nil
+}
+
+func selectApp(appList []bitriseclient.Application) (seledtedAppSlug string, err error) {
+	var selectionList []string
 
 	for _, app := range appList {
 		selectionList = append(selectionList, app.Title+" ("+app.RepoURL+")")
@@ -710,7 +725,7 @@ func selectApp(appList []uploaders.Appliocation) (seledtedApp uploaders.Applioca
 	userSelection, err := goinp.SelectFromStringsWithDefault("Select the app which you want to upload the privisioning profiles", 1, selectionList)
 
 	if err != nil {
-		return uploaders.Appliocation{}, fmt.Errorf("failed to read input: %s", err)
+		return "", fmt.Errorf("failed to read input: %s", err)
 
 	}
 
@@ -718,23 +733,19 @@ func selectApp(appList []uploaders.Appliocation) (seledtedApp uploaders.Applioca
 
 	selectedApp, err := getAppFromUserSelection(userSelection, appList)
 
-	if err != nil {
-		return uploaders.Appliocation{}, fmt.Errorf("failed to read input: %s", err)
-	}
-
-	return selectedApp, nil
+	return selectedApp.Slug, nil
 
 }
 
-func getAppFromUserSelection(selectedApp string, appList []uploaders.Appliocation) (seledtedApp uploaders.Appliocation, err error) {
-	for _, app := range appList {
-
+func getAppFromUserSelection(selectedApp string, appList []bitriseclient.Application) (seledtedApp bitriseclient.Application, err error) {
+	if index := sort.Search(len(appList), func(i int) bool {
 		selectedAppRepoURL := strings.Split(strings.Split(selectedApp, `(`)[1], `)`)[0]
-		if app.RepoURL == selectedAppRepoURL {
-			return app, nil
-		}
+		return appList[i].RepoURL == selectedAppRepoURL
+
+	}); index < len(appList) {
+		return appList[index], nil
 	}
-	return uploaders.Appliocation{}, &appSelectionError{"failed to find selected app in appList"}
+	return bitriseclient.Application{}, &appSelectionError{"failed to find selected app in appList"}
 }
 
 type appSelectionError struct {
