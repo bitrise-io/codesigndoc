@@ -27,7 +27,7 @@ type FetchMyAppsResponse struct {
 	Data []Appliocation `json:"data"`
 }
 
-// GetProvProfSlugResponseData ...
+// RegisterProvisioningProfileResponseData ...
 type RegisterProvisioningProfileResponseData struct {
 	Data           []Appliocation `json:"data"`
 	UploadFileName string         `json:"upload_file_name"`

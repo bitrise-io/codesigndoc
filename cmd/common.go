@@ -631,12 +631,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 
 	return nil
 }
-<<<<<<< HEAD
-
-func trimProjectpath(projpth string) string {
-	projpth = strings.Trim(strings.TrimSpace(projpth), "'\"")
-	return projpth
-}
 
 func askUploadProvProfiles() (bool, error) {
 	messageToAsk := "Do you want to upload the provisioning profiles to Bitrise?"
@@ -677,7 +671,12 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 		if err != nil {
 			return err
 		}
-		defer provProfile.Close()
+		defer func() {
+			if err := provProfile.Close(); err != nil {
+				log.Warnf("Provisioning profile close failed, err: %s", err)
+			}
+
+		}()
 
 		info, err := provProfile.Stat()
 		if err != nil {
@@ -745,5 +744,3 @@ type appSelectionError struct {
 func (e *appSelectionError) Error() string {
 	return e.s
 }
-=======
->>>>>>> c774709...  - cmd/common.go: trimProjectPath -> changed for inline code.

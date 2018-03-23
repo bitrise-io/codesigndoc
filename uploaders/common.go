@@ -245,7 +245,9 @@ func createRequest(url string, fields map[string]interface{}, requestMethod http
 	if err != nil {
 		return nil, err
 	}
-	io.Copy(os.Stdout, req.Body)
+	if _, err := io.Copy(os.Stdout, req.Body); err != nil {
+		return nil, err
+	}
 
 	for key, value := range headers {
 		req.Header.Add(key, value)
