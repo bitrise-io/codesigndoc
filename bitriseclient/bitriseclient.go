@@ -19,7 +19,6 @@ import (
 
 const (
 	baseURL                      string = "https://api.bitrise.io/v0.1/"
-	myAppsEndPoint               string = "/me/apps"
 	appsEndPoint                 string = "/apps"
 	provisioningProfilesEndPoint string = "/provisioning-profiles"
 )
@@ -34,7 +33,7 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 
 	log.Infof("Asking your application list from Bitrise...")
 
-	requestURL, err := urlutil.Join(baseURL, myAppsEndPoint)
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
 	if err != nil {
 		return []Application{}, err
 	}
@@ -89,6 +88,7 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 
 // RegisterProvisioningProfile ...
 func (client *BitriseClient) RegisterProvisioningProfile(appSlug string, provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
+	fmt.Println()
 	log.Infof("Register %s on Bitrise...", profile.Name)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, provisioningProfilesEndPoint)
@@ -192,6 +192,64 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 	log.Donef("Request succeeded with status code: %d", responseStatusCode)
 
 	return nil
+}
+
+// ConfirmProvisioningProfileUpload ...
+func (client *BitriseClient) ConfirmProvisioningProfileUpload(appSlug string, profileSlug string, provUploadName string) error {
+	fmt.Println()
+	log.Infof("Confirm - %s - upload to Bitrise...", provUploadName)
+
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, "provisioning-profiles", profileSlug, "uploaded")
+	if err != nil {
+		return err
+	}
+
+	headers := map[string]string{
+		"Authorization": "token " + client.accessToken,
+	}
+
+	request, err := createRequest("POST", requestURL, headers, map[string]interface{}{})
+	if err != nil {
+		return err
+	}
+
+	// Response struct
+	responseStatusCode := -1
+	requestResponse := ConfirmProvProfileUploadResponse{}
+
+	//
+	// Perform request
+	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		body, statusCode, err := performRequest(request)
+		if err != nil {
+			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+			if !strings.Contains(err.Error(), "failed to perform request") {
+				log.Warnf("Response status: %d", statusCode)
+				log.Warnf("Body: %s", string(body))
+			}
+			return err
+		}
+
+		responseStatusCode = statusCode
+
+		// Parse JSON body
+		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
+			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+		}
+
+		log.Debugf("RequestResponse: %v", requestResponse)
+
+		return nil
+
+	}); err != nil {
+		return err
+	}
+
+	// Success
+	log.Donef("Request succeeded with status code: %d", responseStatusCode)
+
+	return nil
+
 }
 
 func createUploadRequest(requestMethod string, url string, headers map[string]string, files map[string]string) (*http.Request, error) {

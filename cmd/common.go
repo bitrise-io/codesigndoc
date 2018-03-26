@@ -604,6 +604,9 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		return err
 	}
 
+	provProfilesUploaded := map[bool]bool{true: false, false: true}[len(profilesToExport) > 0]
+	certsUploaded := map[bool]bool{true: false, false: true}[len(certificatesToExport) > 0]
+
 	if len(profilesToExport) > 0 {
 		fmt.Println()
 		shouldUpload, err := askUploadProvProfiles()
@@ -616,6 +619,8 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 			if err != nil {
 				return err
 			}
+
+			provProfilesUploaded = true
 		}
 	}
 
@@ -628,7 +633,7 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		fmt.Println("Opened the directory in Finder.")
 	}
 
-	printFinished(certificatesOnly)
+	printFinished(provProfilesUploaded, certsUploaded)
 
 	return nil
 }
@@ -695,14 +700,19 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, outputDirPath, exportFileName); err != nil {
 			return err
 		}
+
+		if err := bitriseClient.ConfirmProvisioningProfileUpload(selectedAppSlug, provProfSlugResponseData.Slug, provProfSlugResponseData.UploadFileName); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func askAccessToken() (token string, err error) {
-	messageToAsk := `Please copy your personal access token to Bitrise.\n
-		(To acquire a Personal Access Token for your user, sign in with that user on bitrise.io, go to your Account Settings page,\nand select the Security tab on the left side.)`
+	messageToAsk := `Please copy your personal access token to Bitrise.
+	(To acquire a Personal Access Token for your user, sign in with that user on bitrise.io, go to your Account Settings page,
+		and select the Security tab on the left side.)`
 
 	fmt.Println()
 	accesToken, err := goinp.AskForStringFromReader(messageToAsk, os.Stdin)

@@ -43,3 +43,19 @@ type RegisterProvisioningProfileResponseData struct {
 type RegisterProvisioningProfileResponse struct {
 	Data RegisterProvisioningProfileResponseData `json:"data"`
 }
+
+// ConfirmProvProfileUploadResponseData ...
+type ConfirmProvProfileUploadResponseData struct {
+	UploadFileName      string `json:"upload_file_name"`
+	UploadFileSize      int    `json:"upload_file_size"`
+	Slug                string `json:"slug"`
+	Processed           bool   `json:"processed"`
+	CertificatePassword string `json:"certificate_password"`
+	IsExpose            bool   `json:"is_expose"`
+	IsProtected         bool   `json:"dais_protectedta"`
+}
+
+// ConfirmProvProfileUploadResponse ...
+type ConfirmProvProfileUploadResponse struct {
+	Data ConfirmProvProfileUploadResponseData `json:"data"`
+}
