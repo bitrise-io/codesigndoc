@@ -648,9 +648,11 @@ func askUploadProvProfiles() (bool, error) {
 // --- Upload methods
 
 func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
+	bitriseClient := bitriseclient.BitriseClient{}
+
 	accessToken, err := askAccessToken()
 
-	appList, err := bitriseclient.New(accessToken)
+	appList, err := bitriseClient.New(accessToken)
 	if err != nil {
 		log.Errorf("Failed to ask your app list from Bitrise: %s", err)
 		return err
@@ -685,12 +687,12 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 		bytes := info.Size()
 		log.Debugf("\n%s size: %d", exportFileName, bytes)
 
-		provProfSlugResponseData, err := bitriseclient.RegisterProvisioningProfile(accessToken, selectedAppSlug, bytes, profile)
+		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(selectedAppSlug, bytes, profile)
 		if err != nil {
 			return err
 		}
 
-		if err := bitriseclient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, outputDirPath, exportFileName); err != nil {
+		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, outputDirPath, exportFileName); err != nil {
 			return err
 		}
 	}
@@ -731,11 +733,10 @@ func selectApp(appList []bitriseclient.Application) (seledtedAppSlug string, err
 
 	log.Debugf("selected app: %v", userSelection)
 
-	if index := sort.Search(len(selectionList), func(i int) bool {
-		return selectionList[i] == userSelection
-
-	}); index < len(appList) {
-		return appList[index].Slug, nil
+	for index, selected := range selectionList {
+		if selected == userSelection {
+			return appList[index].Slug, nil
+		}
 	}
 
 	return "", &appSelectionError{"failed to find selected app in appList"}

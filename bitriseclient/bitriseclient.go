@@ -24,8 +24,14 @@ const (
 	provisioningProfilesEndPoint string = "/provisioning-profiles"
 )
 
+type BitriseClient struct {
+	accessToken string
+}
+
 // New returns all the application of the user on Bitrise
-func New(accessToken string) (apps []Application, err error) {
+func (client *BitriseClient) New(accessToken string) (apps []Application, err error) {
+	client.accessToken = accessToken
+
 	log.Infof("Asking your application list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, myAppsEndPoint)
@@ -36,10 +42,10 @@ func New(accessToken string) (apps []Application, err error) {
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	headers := map[string]string{
-		"Authorization": "token " + accessToken,
+		"Authorization": "token " + client.accessToken,
 	}
 
-	request, err := createRequest("Get", requestURL, headers, map[string]interface{}{})
+	request, err := createRequest("GET", requestURL, headers, map[string]interface{}{})
 	if err != nil {
 		return []Application{}, err
 	}
@@ -82,7 +88,7 @@ func New(accessToken string) (apps []Application, err error) {
 }
 
 // RegisterProvisioningProfile ...
-func RegisterProvisioningProfile(accessToken string, appSlug string, provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
+func (client *BitriseClient) RegisterProvisioningProfile(appSlug string, provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
 	log.Infof("Register %s on Bitrise...", profile.Name)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, provisioningProfilesEndPoint)
@@ -98,10 +104,10 @@ func RegisterProvisioningProfile(accessToken string, appSlug string, provisionin
 	}
 
 	headers := map[string]string{
-		"Authorization": "token " + accessToken,
+		"Authorization": "token " + client.accessToken,
 	}
 
-	request, err := createRequest("Post", requestURL, headers, fields)
+	request, err := createRequest(http.MethodPost, requestURL, headers, fields)
 	if err != nil {
 		return RegisterProvisioningProfileResponseData{}, err
 	}
@@ -144,7 +150,7 @@ func RegisterProvisioningProfile(accessToken string, appSlug string, provisionin
 }
 
 // UploadProvisioningProfile ...
-func UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
+func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
 	log.Infof("Upload %s to Bitrise...", exportFileName)
 
 	requestURL := uploadURL
@@ -153,7 +159,7 @@ func UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDi
 		uploadFileName: (outputDirPath + "/" + exportFileName),
 	}
 
-	request, err := createUploadRequest("Put", requestURL, map[string]string{}, files)
+	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
 	if err != nil {
 		return err
 	}
@@ -206,7 +212,7 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 
 	}
 
-	req, err := http.NewRequest("Put", url, bytes.NewReader(fContent))
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(fContent))
 
 	if err != nil {
 		return nil, err
@@ -221,7 +227,7 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 }
 
 func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {
-	var b *bytes.Buffer
+	b := new(bytes.Buffer)
 
 	if len(fields) > 0 {
 		err := json.NewEncoder(b).Encode(fields)
