@@ -607,20 +607,56 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 	provProfilesUploaded := map[bool]bool{true: false, false: true}[len(profilesToExport) > 0]
 	certsUploaded := map[bool]bool{true: false, false: true}[len(certificatesToExport) > 0]
 
-	if len(profilesToExport) > 0 {
+	var bitriseClient *bitriseclient.BitriseClient
+	var accessToken string
+
+	if len(profilesToExport) > 0 || len(certificatesToExport) > 0 {
 		fmt.Println()
-		shouldUpload, err := askUploadProvProfiles()
+		shouldUpload, err := askUploadGeneratedField()
 		if err != nil {
 			return err
 		}
 
 		if shouldUpload {
-			err := uploadProvisioningProfiles(profilesToExport, outputDirPath)
+			if bitriseClient == nil {
+				bitriseClient = &bitriseclient.BitriseClient{}
+				accessToken, err = askAccessToken()
+				if err != nil {
+					return err
+				}
+			}
+
+			appList, err := bitriseClient.New(accessToken)
 			if err != nil {
+				log.Errorf("Failed to ask your app list from Bitrise: %s", err)
 				return err
 			}
 
-			provProfilesUploaded = true
+			selectedAppSlug, err := selectApp(appList)
+			if err != nil {
+				return err
+			}
+			bitriseClient.AppSelected(selectedAppSlug)
+
+			if len(profilesToExport) > 0 {
+				err := uploadProvisioningProfiles(bitriseClient, profilesToExport, outputDirPath)
+				if err != nil {
+					return err
+				}
+
+				provProfilesUploaded = true
+
+			}
+
+			if len(certificatesToExport) > 0 {
+				fmt.Println()
+
+				if err := uploadCertificates(bitriseClient, certificatesToExport, outputDirPath); err != nil {
+					return err
+				}
+
+				provProfilesUploaded = true
+			}
 		}
 	}
 
@@ -638,8 +674,19 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 	return nil
 }
 
-func askUploadProvProfiles() (bool, error) {
-	messageToAsk := "Do you want to upload the provisioning profiles to Bitrise?"
+func askUploadGeneratedField() (bool, error) {
+	messageToAsk := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
+
+	answer, err := goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
+	if err != nil {
+		return answer, err
+	}
+
+	return answer, nil
+}
+
+func askUploadCertificates() (bool, error) {
+	messageToAsk := "Do you want to upload the certificates to Bitrise?"
 
 	answer, err := goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
 	if err != nil {
@@ -652,23 +699,7 @@ func askUploadProvProfiles() (bool, error) {
 // ----------------------------------------------------------------
 // --- Upload methods
 
-func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
-	bitriseClient := bitriseclient.BitriseClient{}
-
-	accessToken, err := askAccessToken()
-
-	appList, err := bitriseClient.New(accessToken)
-	if err != nil {
-		log.Errorf("Failed to ask your app list from Bitrise: %s", err)
-		return err
-	}
-
-	selectedAppSlug, err := selectApp(appList)
-	if err != nil {
-		return err
-	}
-
-	// Upload provisioning profiles
+func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
 	for _, profile := range profilesToUpload {
 		exportFileName := provProfileExportFileName(profile, outputDirPath)
 
@@ -692,7 +723,7 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 		bytes := info.Size()
 		log.Debugf("\n%s size: %d", exportFileName, bytes)
 
-		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(selectedAppSlug, bytes, profile)
+		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(bytes, profile)
 		if err != nil {
 			return err
 		}
@@ -701,7 +732,46 @@ func uploadProvisioningProfiles(profilesToUpload []profileutil.ProvisioningProfi
 			return err
 		}
 
-		if err := bitriseClient.ConfirmProvisioningProfileUpload(selectedAppSlug, provProfSlugResponseData.Slug, provProfSlugResponseData.UploadFileName); err != nil {
+		if err := bitriseClient.ConfirmProvisioningProfileUpload(provProfSlugResponseData.Slug, provProfSlugResponseData.UploadFileName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func uploadCertificates(bitriseClient *bitriseclient.BitriseClient, certificatesToUpload []certificateutil.CertificateInfoModel, outputDirPath string) error {
+	for _, certificate := range certificatesToUpload {
+		provProfile, err := os.Open(outputDirPath + "/" + "Identities.p12")
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if err := provProfile.Close(); err != nil {
+				log.Warnf("Provisioning profile close failed, err: %s", err)
+			}
+
+		}()
+
+		info, err := provProfile.Stat()
+		if err != nil {
+			return err
+		}
+
+		bytes := info.Size()
+		log.Debugf("\n%s size: %d", "Identities.p12", bytes)
+
+		certificateResponseData, err := bitriseClient.RegisterCertificate(bytes, certificate)
+		if err != nil {
+			return err
+		}
+
+		if err := bitriseClient.UploadCertificate(certificateResponseData.UploadURL, certificateResponseData.UploadFileName, outputDirPath, "Identities.p12"); err != nil {
+			return err
+		}
+
+		if err := bitriseClient.ConfirmCertificateUpload(certificateResponseData.Slug, certificateResponseData.UploadFileName); err != nil {
 			return err
 		}
 	}

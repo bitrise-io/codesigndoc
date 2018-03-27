@@ -14,6 +14,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/urlutil"
+	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
@@ -21,10 +22,13 @@ const (
 	baseURL                      string = "https://api.bitrise.io/v0.1/"
 	appsEndPoint                 string = "/apps"
 	provisioningProfilesEndPoint string = "/provisioning-profiles"
+	certificatesEndPoint         string = "/build-certificates"
 )
 
+// BitriseClient ...
 type BitriseClient struct {
-	accessToken string
+	accessToken     string
+	selectedAppSlug string
 }
 
 // New returns all the application of the user on Bitrise
@@ -86,12 +90,20 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 	return appListResponse.Data, nil
 }
 
+// AppSelected ...
+func (client *BitriseClient) AppSelected(selectedAppSlug string) {
+	client.selectedAppSlug = selectedAppSlug
+}
+
+// -------------------------------------------------
+// -- Provisioning profiles
+
 // RegisterProvisioningProfile ...
-func (client *BitriseClient) RegisterProvisioningProfile(appSlug string, provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
+func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
 	fmt.Println()
 	log.Infof("Register %s on Bitrise...", profile.Name)
 
-	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, provisioningProfilesEndPoint)
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
 	if err != nil {
 		return RegisterProvisioningProfileResponseData{}, err
 	}
@@ -151,6 +163,7 @@ func (client *BitriseClient) RegisterProvisioningProfile(appSlug string, provisi
 
 // UploadProvisioningProfile ...
 func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
+	fmt.Println()
 	log.Infof("Upload %s to Bitrise...", exportFileName)
 
 	requestURL := uploadURL
@@ -195,11 +208,11 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 }
 
 // ConfirmProvisioningProfileUpload ...
-func (client *BitriseClient) ConfirmProvisioningProfileUpload(appSlug string, profileSlug string, provUploadName string) error {
+func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string, provUploadName string) error {
 	fmt.Println()
 	log.Infof("Confirm - %s - upload to Bitrise...", provUploadName)
 
-	requestURL, err := urlutil.Join(baseURL, appsEndPoint, appSlug, "provisioning-profiles", profileSlug, "uploaded")
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, "provisioning-profiles", profileSlug, "uploaded")
 	if err != nil {
 		return err
 	}
@@ -237,7 +250,119 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(appSlug string, pr
 			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
 		}
 
-		log.Debugf("RequestResponse: %v", requestResponse)
+		logDebugPretty(requestResponse)
+		return nil
+
+	}); err != nil {
+		return err
+	}
+
+	// Success
+	log.Donef("Request succeeded with status code: %d", responseStatusCode)
+
+	return nil
+}
+
+// -------------------------------------------------
+// -- Certificates
+
+// RegisterCertificate ...
+func (client *BitriseClient) RegisterCertificate(certificateSize int64, certificate certificateutil.CertificateInfoModel) (RegisterCertificateResponseData, error) {
+	log.Infof("Register %s on Bitrise...", certificate.CommonName)
+
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
+	if err != nil {
+		return RegisterCertificateResponseData{}, err
+	}
+
+	log.Debugf("\nRequest URL: %s", requestURL)
+
+	fields := map[string]interface{}{
+		"upload_file_name": certificate.CommonName,
+		"upload_file_size": certificateSize,
+	}
+
+	headers := map[string]string{
+		"Authorization": "token " + client.accessToken,
+	}
+
+	request, err := createRequest(http.MethodPost, requestURL, headers, fields)
+	if err != nil {
+		return RegisterCertificateResponseData{}, err
+	}
+
+	// Response struct
+	requestResponse := RegisterCertificateResponse{}
+	responseStatusCode := -1
+
+	//
+	// Perform request
+	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		body, statusCode, err := performRequest(request)
+		if err != nil {
+			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+			if !strings.Contains(err.Error(), "failed to perform request") {
+				log.Warnf("Response status: %d", statusCode)
+				log.Warnf("Body: %s", string(body))
+			}
+			return err
+		}
+
+		responseStatusCode = statusCode
+
+		// Parse JSON body
+		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
+			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+		}
+
+		logDebugPretty(requestResponse)
+
+		return nil
+
+	}); err != nil {
+		log.Errorf("Fetching list failed %s", err)
+		return RegisterCertificateResponseData{}, err
+	}
+
+	// Success
+	log.Donef("Request succeeded with status code: %d", responseStatusCode)
+
+	return requestResponse.Data, nil
+}
+
+// UploadCertificate ...
+func (client *BitriseClient) UploadCertificate(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
+	fmt.Println()
+	log.Infof("Upload %s to Bitrise...", exportFileName)
+
+	requestURL := uploadURL
+
+	files := map[string]string{
+		uploadFileName: (outputDirPath + "/" + exportFileName),
+	}
+
+	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
+	if err != nil {
+		return err
+	}
+
+	// Response struct
+	responseStatusCode := -1
+
+	//
+	// Perform request
+	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		body, statusCode, err := performRequest(request)
+		if err != nil {
+			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+			if !strings.Contains(err.Error(), "failed to perform request") {
+				log.Warnf("Response status: %d", statusCode)
+				log.Warnf("Body: %s", string(body))
+			}
+			return err
+		}
+
+		responseStatusCode = statusCode
 
 		return nil
 
@@ -249,8 +374,67 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(appSlug string, pr
 	log.Donef("Request succeeded with status code: %d", responseStatusCode)
 
 	return nil
-
 }
+
+// ConfirmCertificateUpload ...
+func (client *BitriseClient) ConfirmCertificateUpload(certificateSlug string, certificateUploadName string) error {
+	fmt.Println()
+	log.Infof("Confirm - %s - upload to Bitrise...", certificateUploadName)
+
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, "build-certificates", certificateSlug, "uploaded")
+	if err != nil {
+		return err
+	}
+
+	headers := map[string]string{
+		"Authorization": "token " + client.accessToken,
+	}
+
+	request, err := createRequest("POST", requestURL, headers, map[string]interface{}{})
+	if err != nil {
+		return err
+	}
+
+	// Response struct
+	responseStatusCode := -1
+	requestResponse := ConfirmProvProfileUploadResponse{}
+
+	//
+	// Perform request
+	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		body, statusCode, err := performRequest(request)
+		if err != nil {
+			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+			if !strings.Contains(err.Error(), "failed to perform request") {
+				log.Warnf("Response status: %d", statusCode)
+				log.Warnf("Body: %s", string(body))
+			}
+			return err
+		}
+
+		responseStatusCode = statusCode
+
+		// Parse JSON body
+		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
+			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+		}
+
+		logDebugPretty(requestResponse)
+
+		return nil
+
+	}); err != nil {
+		return err
+	}
+
+	// Success
+	log.Donef("Request succeeded with status code: %d", responseStatusCode)
+
+	return nil
+}
+
+// -------------------------------------------------
+// -- Commons
 
 func createUploadRequest(requestMethod string, url string, headers map[string]string, files map[string]string) (*http.Request, error) {
 	var fContent []byte
@@ -337,17 +521,11 @@ func performRequest(request *http.Request) ([]byte, int, error) {
 	return body, response.StatusCode, nil
 }
 
-// func failWithMessage(format string, v ...interface{}) {
-// 	log.Errorf(format, v...)
-// 	os.Exit(1)
-// }
-
 func logDebugPretty(v interface{}) {
 	indentedBytes, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		fmt.Println("error:", err)
 	}
 
-	fmt.Println()
 	log.Debugf("Response: %+v\n", string(indentedBytes))
 }

@@ -29,14 +29,13 @@ type FetchMyAppsResponse struct {
 
 // RegisterProvisioningProfileResponseData ...
 type RegisterProvisioningProfileResponseData struct {
-	Data           []Application `json:"data"`
-	UploadFileName string        `json:"upload_file_name"`
-	UploadFileSize int64         `json:"upload_file_size"`
-	Slug           string        `json:"slug"`
-	Processed      bool          `json:"processed"`
-	IsExpose       bool          `json:"is_expose"`
-	IsProtected    bool          `json:"is_protected"`
-	UploadURL      string        `json:"upload_url"`
+	UploadFileName string `json:"upload_file_name"`
+	UploadFileSize int64  `json:"upload_file_size"`
+	Slug           string `json:"slug"`
+	Processed      bool   `json:"processed"`
+	IsExpose       bool   `json:"is_expose"`
+	IsProtected    bool   `json:"is_protected"`
+	UploadURL      string `json:"upload_url"`
 }
 
 // RegisterProvisioningProfileResponse ...
@@ -46,6 +45,37 @@ type RegisterProvisioningProfileResponse struct {
 
 // ConfirmProvProfileUploadResponseData ...
 type ConfirmProvProfileUploadResponseData struct {
+	UploadFileName string `json:"upload_file_name"`
+	UploadFileSize int    `json:"upload_file_size"`
+	Slug           string `json:"slug"`
+	Processed      bool   `json:"processed"`
+	IsExpose       bool   `json:"is_expose"`
+	IsProtected    bool   `json:"dais_protectedta"`
+}
+
+// ConfirmProvProfileUploadResponse ...
+type ConfirmProvProfileUploadResponse struct {
+	Data ConfirmProvProfileUploadResponseData `json:"data"`
+}
+
+// RegisterCertificateResponseData ...
+type RegisterCertificateResponseData struct {
+	UploadFileName string `json:"upload_file_name"`
+	UploadFileSize int64  `json:"upload_file_size"`
+	Slug           string `json:"slug"`
+	Processed      bool   `json:"processed"`
+	IsExpose       bool   `json:"is_expose"`
+	IsProtected    bool   `json:"is_protected"`
+	UploadURL      string `json:"upload_url"`
+}
+
+// RegisterCertificateResponse ...
+type RegisterCertificateResponse struct {
+	Data RegisterCertificateResponseData `json:"data"`
+}
+
+// ConfirmCertificateUploadResponseData ...
+type ConfirmCertificateUploadResponseData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -55,7 +85,7 @@ type ConfirmProvProfileUploadResponseData struct {
 	IsProtected         bool   `json:"dais_protectedta"`
 }
 
-// ConfirmProvProfileUploadResponse ...
-type ConfirmProvProfileUploadResponse struct {
-	Data ConfirmProvProfileUploadResponseData `json:"data"`
+// ConfirmCertificateUploadResponse ...
+type ConfirmCertificateUploadResponse struct {
+	Data ConfirmCertificateUploadResponseData `json:"data"`
 }
