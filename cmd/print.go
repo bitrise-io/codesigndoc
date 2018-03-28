@@ -13,20 +13,10 @@ func printFinished(provProfilesUploaded bool, certsUploaded bool) {
 	fmt.Println()
 	log.Successf("That's all.")
 
-	if provProfilesUploaded && certsUploaded {
-		fmt.Println()
-		return
-	}
-
-	if !provProfilesUploaded && certsUploaded {
-		log.Warnf("You just have to upload the found provisioning profiles (.mobileprovision) and you'll be good to go!")
-	} else if !provProfilesUploaded && !certsUploaded {
-		log.Warnf("You just have to upload the found certificates (.p12) and you'll be good to go!")
-	} else if !provProfilesUploaded && !certsUploaded {
+	if !provProfilesUploaded && !certsUploaded {
 		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
-
+		fmt.Println()
 	}
-	fmt.Println()
 }
 
 func printCodesignGroup(group export.IosCodeSignGroup) {

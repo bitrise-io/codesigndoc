@@ -58,8 +58,8 @@ type ConfirmProvProfileUploadResponse struct {
 	Data ConfirmProvProfileUploadResponseData `json:"data"`
 }
 
-// RegisterCertificateResponseData ...
-type RegisterCertificateResponseData struct {
+// RegisterIdentityResponseData ...
+type RegisterIdentityResponseData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int64  `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -69,13 +69,13 @@ type RegisterCertificateResponseData struct {
 	UploadURL      string `json:"upload_url"`
 }
 
-// RegisterCertificateResponse ...
-type RegisterCertificateResponse struct {
-	Data RegisterCertificateResponseData `json:"data"`
+// RegisterIdentityResponse ...
+type RegisterIdentityResponse struct {
+	Data RegisterIdentityResponseData `json:"data"`
 }
 
-// ConfirmCertificateUploadResponseData ...
-type ConfirmCertificateUploadResponseData struct {
+// ConfirmIdentityUploadResponseData ...
+type ConfirmIdentityUploadResponseData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -85,7 +85,71 @@ type ConfirmCertificateUploadResponseData struct {
 	IsProtected         bool   `json:"dais_protectedta"`
 }
 
-// ConfirmCertificateUploadResponse ...
-type ConfirmCertificateUploadResponse struct {
-	Data ConfirmCertificateUploadResponseData `json:"data"`
+// ConfirmIdentityUploadResponse ...
+type ConfirmIdentityUploadResponse struct {
+	Data ConfirmIdentityUploadResponseData `json:"data"`
+}
+
+// FetchUploadedProvisioningProfileListResponseData ...
+type FetchUploadedProvisioningProfileListResponseData struct {
+	UploadFileName string `json:"upload_file_name"`
+	UploadFileSize int    `json:"upload_file_size"`
+	Slug           string `json:"slug"`
+	Processed      bool   `json:"processed"`
+	IsExpose       bool   `json:"is_expose"`
+	IsProtected    bool   `json:"dais_protectedta"`
+}
+
+// FetchUploadedProvisioningProfileListResponse ...
+type FetchUploadedProvisioningProfileListResponse struct {
+	Data []FetchUploadedProvisioningProfileListResponseData `json:"data"`
+}
+
+// FetchUploadedProvisioningProfileResponseData ...
+type FetchUploadedProvisioningProfileResponseData struct {
+	UploadFileName string `json:"upload_file_name"`
+	UploadFileSize int    `json:"upload_file_size"`
+	Slug           string `json:"slug"`
+	Processed      bool   `json:"processed"`
+	IsExpose       bool   `json:"is_expose"`
+	IsProtected    bool   `json:"dais_protectedta"`
+	DownloadURL    string `json:"download_url"`
+}
+
+// FetchUploadedProvisioningProfileResponse ...
+type FetchUploadedProvisioningProfileResponse struct {
+	Data FetchUploadedProvisioningProfileResponseData `json:"data"`
+}
+
+// FetchUploadedIdentityListResponseData ...
+type FetchUploadedIdentityListResponseData struct {
+	UploadFileName      string `json:"upload_file_name"`
+	UploadFileSize      int    `json:"upload_file_size"`
+	Slug                string `json:"slug"`
+	Processed           bool   `json:"processed"`
+	CertificatePassword string `json:"certificate_password"`
+	IsExpose            bool   `json:"is_expose"`
+	IsProtected         bool   `json:"dais_protectedta"`
+}
+
+// FetchUploadedIdentityListResponse ...
+type FetchUploadedIdentityListResponse struct {
+	Data []FetchUploadedIdentityListResponseData `json:"data"`
+}
+
+// FetchUploadedIdentityResponseData ...
+type FetchUploadedIdentityResponseData struct {
+	UploadFileName      string `json:"upload_file_name"`
+	UploadFileSize      int    `json:"upload_file_size"`
+	Slug                string `json:"slug"`
+	Processed           bool   `json:"processed"`
+	CertificatePassword string `json:"certificate_password"`
+	IsExpose            bool   `json:"is_expose"`
+	IsProtected         bool   `json:"dais_protectedta"`
+	DownloadURL         string `json:"download_url"`
+}
+
+// FetchUploadedIdentityResponse ...
+type FetchUploadedIdentityResponse struct {
+	Data FetchUploadedIdentityResponseData `json:"data"`
 }
