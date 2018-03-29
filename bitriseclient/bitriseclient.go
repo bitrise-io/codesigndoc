@@ -29,8 +29,6 @@ const (
 
 // Protocol ...
 type Protocol interface {
-	New(accessToken string) (apps []Application, err error)
-
 	SetSelectedAppSlug(slug string)
 
 	FetchProvisioningProfiles() ([]FetchProvisioningProfileListResponseData, error)
@@ -69,23 +67,24 @@ type BitriseClient struct {
 	headers         map[string]string
 }
 
-// New returns all the application of the user on Bitrise
-func (client *BitriseClient) New(accessToken string) (apps []Application, err error) {
-	client.accessToken = accessToken
-	client.headers = map[string]string{"Authorization": "token " + client.accessToken}
+// NewBitriseClient ...
+func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Application, err error) {
+	client = &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}}
 
 	log.Infof("Asking your application list from Bitrise...")
 
-	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
-	if err != nil {
-		return []Application{}, err
+	requestURL, cerr := urlutil.Join(baseURL, appsEndPoint)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
-	if err != nil {
-		return []Application{}, err
+	request, cerr := createRequest(http.MethodGet, requestURL, client.headers, nil)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
 	// Response struct
@@ -94,7 +93,7 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+	if cerr := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
 		body, statusCode, err := performRequest(request)
 		if err != nil {
 			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
@@ -113,15 +112,18 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 		}
 		return nil
 
-	}); err != nil {
-		return []Application{}, err
+	}); cerr != nil {
+		err = cerr
+		return
+
 	}
 
 	// Success
 	log.Donef("Request succeeded with status code: %d", responseStatusCode)
 	logDebugPretty(appListResponse)
 
-	return appListResponse.Data, nil
+	apps = appListResponse.Data
+	return
 }
 
 // SetSelectedAppSlug ...

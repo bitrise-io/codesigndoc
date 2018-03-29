@@ -616,6 +616,7 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		}
 
 		if shouldUpload {
+			var err error
 			provProfilesUploaded, certsUploaded, err = uploadExportedFiles(profilesToExport, certificatesToExport, outputDirPath)
 			if err != nil {
 				return err
@@ -642,15 +643,13 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 func uploadExportedFiles(profilesToExport []profileutil.ProvisioningProfileInfoModel, certificatesToExport []certificateutil.CertificateInfoModel,
 	outputDirPath string) (provProfilesUploaded bool, certsUploaded bool, err error) {
 
-	bitriseClient := &bitriseclient.BitriseClient{}
-
 	accessToken, cerr := askAccessToken()
 	if cerr != nil {
 		err = cerr
 		return
 	}
 
-	appList, cerr := bitriseClient.New(accessToken)
+	bitriseClient, appList, cerr := bitriseclient.NewBitriseClient(accessToken)
 	if cerr != nil {
 		err = cerr
 		return
