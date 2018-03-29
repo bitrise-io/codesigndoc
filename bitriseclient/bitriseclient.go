@@ -25,6 +25,13 @@ const (
 	certificatesEndPoint         = "/build-certificates"
 )
 
+// Paging ...
+type Paging struct {
+	TotalItemCount int    `json:"total_item_count"`
+	PageItemLimit  int    `json:"page_item_limit"`
+	Next           string `json:"next"`
+}
+
 // Owner ...
 type Owner struct {
 	AccountType string `json:"account_type"`
@@ -49,7 +56,8 @@ type Application struct {
 
 // FetchMyAppsResponse ...
 type FetchMyAppsResponse struct {
-	Data []Application `json:"data"`
+	Data   []Application `json:"data"`
+	Paging Paging        `json:"paging"`
 }
 
 // Protocol ...
@@ -106,45 +114,67 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	request, cerr := createRequest(http.MethodGet, requestURL, client.headers, nil)
-	if cerr != nil {
-		err = cerr
-		return
-	}
-
 	// Response struct
 	var appListResponse FetchMyAppsResponse
 	responseStatusCode := -1
 
-	//
-	// Perform request
-	if cerr := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
+	stillPaging := true
+	var next string
+	for stillPaging {
+
+		headers := client.headers
+
+		request, cerr := createRequest(http.MethodGet, requestURL, headers, nil)
+		if cerr != nil {
+			err = cerr
+			return
+		}
+
+		if len(next) > 0 {
+			quearryValues := request.URL.Query()
+			quearryValues.Add("next", next)
+			request.URL.RawQuery = quearryValues.Encode()
+		}
+
+		//
+		// Perform request
+		if cerr := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+			body, statusCode, err := performRequest(request)
+			if err != nil {
+				log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+				if !strings.Contains(err.Error(), "failed to perform request") {
+					log.Warnf("Response status: %d", statusCode)
+					log.Warnf("Body: %s", string(body))
+				}
+				return err
 			}
-			return err
+
+			responseStatusCode = statusCode
+
+			// Parse JSON body
+			if err := json.Unmarshal([]byte(body), &appListResponse); err != nil {
+				return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+			}
+			return nil
+
+		}); cerr != nil {
+			err = cerr
+			return
+
 		}
 
-		responseStatusCode = statusCode
+		logDebugPretty(appListResponse)
 
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &appListResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+		apps = append(apps, appListResponse.Data...)
+
+		if len(appListResponse.Paging.Next) > 0 {
+			next = appListResponse.Paging.Next
+			appListResponse = FetchMyAppsResponse{}
+		} else {
+			stillPaging = false
 		}
-		return nil
-
-	}); cerr != nil {
-		err = cerr
-		return
 
 	}
-
-	logDebugPretty(appListResponse)
-	apps = appListResponse.Data
 
 	return
 }
