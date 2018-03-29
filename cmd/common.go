@@ -8,12 +8,11 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bitrise-io/go-utils/sliceutil"
-
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/bitriseclient"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
@@ -606,8 +605,8 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		return err
 	}
 
-	provProfilesUploaded := map[bool]bool{true: false, false: true}[len(profilesToExport) > 0]
-	certsUploaded := map[bool]bool{true: false, false: true}[len(certificatesToExport) > 0]
+	provProfilesUploaded := (len(profilesToExport) == 0)
+	certsUploaded := (len(certificatesToExport) == 0)
 
 	if len(profilesToExport) > 0 || len(certificatesToExport) > 0 {
 		fmt.Println()
@@ -617,7 +616,8 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		}
 
 		if shouldUpload {
-			if err = uploadExportedFiles(profilesToExport, certificatesToExport, outputDirPath, &provProfilesUploaded, &certsUploaded); err != nil {
+			provProfilesUploaded, certsUploaded, err = uploadExportedFiles(profilesToExport, certificatesToExport, outputDirPath)
+			if err != nil {
 				return err
 			}
 
@@ -640,64 +640,71 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 }
 
 func uploadExportedFiles(profilesToExport []profileutil.ProvisioningProfileInfoModel, certificatesToExport []certificateutil.CertificateInfoModel,
-	outputDirPath string, provProfilesUploaded *bool, certsUploaded *bool) error {
+	outputDirPath string) (provProfilesUploaded bool, certsUploaded bool, err error) {
 
 	bitriseClient := &bitriseclient.BitriseClient{}
 
-	accessToken, err := askAccessToken()
-	if err != nil {
-		return err
+	accessToken, cerr := askAccessToken()
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
-	appList, err := bitriseClient.New(accessToken)
-	if err != nil {
-		log.Errorf("Failed to ask your app list from Bitrise: %s", err)
-		return err
+	appList, cerr := bitriseClient.New(accessToken)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
-	selectedAppSlug, err := selectApp(appList)
-	if err != nil {
-		return err
+	selectedAppSlug, cerr := selectApp(appList)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
 	bitriseClient.SetSelectedAppSlug(selectedAppSlug)
 
-	profilesToUpload, err := filterAlreadyUploadedProvProfiles(bitriseClient, profilesToExport)
-	if err != nil {
-		return err
+	profilesToUpload, cerr := filterAlreadyUploadedProvProfiles(bitriseClient, profilesToExport)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
 	if len(profilesToUpload) > 0 {
 		fmt.Println()
 		log.Infof("Uploading provisioning profiles...")
 
-		err = uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath)
-		if err != nil {
-			return err
+		cerr := uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath)
+		if cerr != nil {
+			err = cerr
+			return
 		}
 	}
 
-	*provProfilesUploaded = true
+	provProfilesUploaded = true
 
-	shouldUploadIdentities, err := shouldUploadCertificates(bitriseClient, certificatesToExport)
-	if err != nil {
-		return err
+	shouldUploadIdentities, cerr := shouldUploadCertificates(bitriseClient, certificatesToExport)
+	if cerr != nil {
+		err = cerr
+		return
 	}
 
 	if shouldUploadIdentities {
 		fmt.Println()
 		log.Infof("Uploading certificate...")
-		if err := UploadIdentity(bitriseClient, outputDirPath); err != nil {
-			return err
+
+		if cerr := UploadIdentity(bitriseClient, outputDirPath); err != nil {
+			err = cerr
+			return
+
 		}
 
 	} else {
 		log.Warnf("There is no new certificate to upload...")
 	}
 
-	*certsUploaded = true
-
-	return nil
+	certsUploaded = true
+	return
 }
 
 func askUploadGeneratedFiles() (bool, error) {

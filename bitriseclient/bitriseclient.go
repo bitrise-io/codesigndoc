@@ -366,13 +366,9 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 	fmt.Println()
 	log.Infof("Upload %s to Bitrise...", exportFileName)
 
-	requestURL := uploadURL
+	filePth := filepath.Join(outputDirPath, exportFileName)
 
-	files := map[string]string{
-		uploadFileName: filepath.Join(outputDirPath, exportFileName),
-	}
-
-	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
+	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
 	if err != nil {
 		return err
 	}
@@ -698,13 +694,9 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 	fmt.Println()
 	log.Infof("Upload %s to Bitrise...", exportFileName)
 
-	requestURL := uploadURL
+	filePth := filepath.Join(outputDirPath, exportFileName)
 
-	files := map[string]string{
-		uploadFileName: filepath.Join(outputDirPath, exportFileName),
-	}
-
-	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
+	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
 	if err != nil {
 		return err
 	}
@@ -795,20 +787,18 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 // -------------------------------------------------
 // -- Commons
 
-func createUploadRequest(requestMethod string, url string, headers map[string]string, files map[string]string) (*http.Request, error) {
+func createUploadRequest(requestMethod string, url string, headers map[string]string, filePth string) (*http.Request, error) {
 	var fContent []byte
 
-	for _, file := range files {
-		f, err := os.Open(file)
-		if err != nil {
-			return nil, err
-		}
+	f, err := os.Open(filePth)
+	if err != nil {
+		return nil, err
 
-		fContent, err = ioutil.ReadAll(f)
-		if err != nil {
-			return nil, err
-		}
+	}
 
+	fContent, err = ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
 	}
 
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(fContent))
