@@ -90,8 +90,8 @@ type ConfirmIdentityUploadResponse struct {
 	Data ConfirmIdentityUploadResponseData `json:"data"`
 }
 
-// FetchUploadedProvisioningProfileListResponseData ...
-type FetchUploadedProvisioningProfileListResponseData struct {
+// FetchProvisioningProfileListResponseData ...
+type FetchProvisioningProfileListResponseData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int    `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -100,9 +100,9 @@ type FetchUploadedProvisioningProfileListResponseData struct {
 	IsProtected    bool   `json:"dais_protectedta"`
 }
 
-// FetchUploadedProvisioningProfileListResponse ...
-type FetchUploadedProvisioningProfileListResponse struct {
-	Data []FetchUploadedProvisioningProfileListResponseData `json:"data"`
+// FetchProvisioningProfileListResponse ...
+type FetchProvisioningProfileListResponse struct {
+	Data []FetchProvisioningProfileListResponseData `json:"data"`
 }
 
 // FetchUploadedProvisioningProfileResponseData ...

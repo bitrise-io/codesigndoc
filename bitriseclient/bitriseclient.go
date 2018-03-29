@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,19 +21,19 @@ import (
 )
 
 const (
-	baseURL                      string = "https://api.bitrise.io/v0.1/"
-	appsEndPoint                 string = "/apps"
-	provisioningProfilesEndPoint string = "/provisioning-profiles"
-	certificatesEndPoint         string = "/build-certificates"
+	baseURL                      = "https://api.bitrise.io/v0.1/"
+	appsEndPoint                 = "/apps"
+	provisioningProfilesEndPoint = "/provisioning-profiles"
+	certificatesEndPoint         = "/build-certificates"
 )
 
 // Protocol ...
 type Protocol interface {
 	New(accessToken string) (apps []Application, err error)
 
-	SetSelectedAppSlug(selectedAppSlug string)
+	SetSelectedAppSlug(slug string)
 
-	FetchUploadedProvisioningProfiles() ([]FetchUploadedProvisioningProfileListResponseData, error)
+	FetchProvisioningProfiles() ([]FetchProvisioningProfileListResponseData, error)
 
 	getUploadedProvisioningProfileDownloadURLBy(profileSlug string) (downloadURL string, err error)
 
@@ -65,11 +66,13 @@ type Protocol interface {
 type BitriseClient struct {
 	accessToken     string
 	selectedAppSlug string
+	headers         map[string]string
 }
 
 // New returns all the application of the user on Bitrise
 func (client *BitriseClient) New(accessToken string) (apps []Application, err error) {
 	client.accessToken = accessToken
+	client.headers = map[string]string{"Authorization": "token " + client.accessToken}
 
 	log.Infof("Asking your application list from Bitrise...")
 
@@ -80,11 +83,7 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest("GET", requestURL, headers, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
 		return []Application{}, err
 	}
@@ -115,7 +114,6 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return []Application{}, err
 	}
 
@@ -127,35 +125,31 @@ func (client *BitriseClient) New(accessToken string) (apps []Application, err er
 }
 
 // SetSelectedAppSlug ...
-func (client *BitriseClient) SetSelectedAppSlug(selectedAppSlug string) {
-	client.selectedAppSlug = selectedAppSlug
+func (client *BitriseClient) SetSelectedAppSlug(slug string) {
+	client.selectedAppSlug = slug
 }
 
 // -------------------------------------------------
 // -- Provisioning profiles
 
-// FetchUploadedProvisioningProfiles ...
-func (client *BitriseClient) FetchUploadedProvisioningProfiles() ([]FetchUploadedProvisioningProfileListResponseData, error) {
+// FetchProvisioningProfiles ...
+func (client *BitriseClient) FetchProvisioningProfiles() ([]FetchProvisioningProfileListResponseData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
 	if err != nil {
-		return []FetchUploadedProvisioningProfileListResponseData{}, err
+		return nil, err
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodGet, requestURL, headers, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
-		return []FetchUploadedProvisioningProfileListResponseData{}, err
+		return nil, err
 	}
 
 	// Response struct
-	requestResponse := FetchUploadedProvisioningProfileListResponse{}
+	var requestResponse FetchProvisioningProfileListResponse
 	responseStatusCode := -1
 
 	//
@@ -180,8 +174,7 @@ func (client *BitriseClient) FetchUploadedProvisioningProfiles() ([]FetchUploade
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
-		return []FetchUploadedProvisioningProfileListResponseData{}, err
+		return nil, err
 	}
 
 	// Success
@@ -226,11 +219,7 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodGet, requestURL, headers, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
 		return "", err
 	}
@@ -262,7 +251,6 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return "", err
 	}
 
@@ -275,12 +263,9 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 
 func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL string) (content string, err error) {
 	log.Debugf("\nDownloading provisioning profile from Bitrise...")
+	log.Debugf("\nRequest URL: %s", downloadURL)
 
-	requestURL := downloadURL
-
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	request, err := createRequest(http.MethodGet, requestURL, map[string]string{}, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, downloadURL, nil, nil)
 	if err != nil {
 		return "", err
 	}
@@ -308,7 +293,6 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return "", err
 	}
 
@@ -336,11 +320,7 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 		"upload_file_size": provisioningProfSize,
 	}
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodPost, requestURL, headers, fields)
+	request, err := createRequest(http.MethodPost, requestURL, client.headers, fields)
 	if err != nil {
 		return RegisterProvisioningProfileResponseData{}, err
 	}
@@ -371,7 +351,6 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return RegisterProvisioningProfileResponseData{}, err
 	}
 
@@ -390,7 +369,7 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 	requestURL := uploadURL
 
 	files := map[string]string{
-		uploadFileName: (outputDirPath + "/" + exportFileName),
+		uploadFileName: filepath.Join(outputDirPath, exportFileName),
 	}
 
 	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
@@ -438,11 +417,7 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 		return err
 	}
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest("POST", requestURL, headers, map[string]interface{}{})
+	request, err := createRequest("POST", requestURL, client.headers, nil)
 	if err != nil {
 		return err
 	}
@@ -471,7 +446,6 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
 		}
 
-		logDebugPretty(requestResponse)
 		return nil
 
 	}); err != nil {
@@ -480,6 +454,7 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 
 	// Success
 	log.Donef("Request succeeded with status code: %d", responseStatusCode)
+	logDebugPretty(requestResponse)
 
 	return nil
 }
@@ -496,16 +471,11 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityL
 		return []FetchUploadedIdentityListResponseData{}, err
 	}
 
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodGet, requestURL, headers, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
 		return []FetchUploadedIdentityListResponseData{}, err
 	}
+	log.Debugf("\nRequest URL: %s", requestURL)
 
 	// Response struct
 	requestResponse := FetchUploadedIdentityListResponse{}
@@ -533,7 +503,6 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityL
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return []FetchUploadedIdentityListResponseData{}, err
 	}
 
@@ -548,20 +517,20 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityL
 func (client *BitriseClient) GetUploadedCertificatesSerialby(identitySlug string) (certificateSerialList []big.Int, err error) {
 	downloadURL, certificatePassword, err := client.getUploadedIdentityDownloadURLBy(identitySlug)
 	if err != nil {
-		return []big.Int{}, err
+		return nil, err
 	}
 
 	content, err := client.downloadUploadedIdentity(downloadURL)
 	if err != nil {
-		return []big.Int{}, err
+		return nil, err
 	}
 
 	certificates, err := certificateutil.CertificatesFromPKCS12Content([]byte(content), certificatePassword)
 	if err != nil {
-		return []big.Int{}, err
+		return nil, err
 	}
 
-	serialList := []big.Int{}
+	var serialList []big.Int
 
 	for _, certificate := range certificates {
 		serialList = append(serialList, *certificate.SerialNumber)
@@ -580,11 +549,7 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodGet, requestURL, headers, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -616,7 +581,6 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return "", "", err
 	}
 
@@ -629,12 +593,9 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 
 func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (content string, err error) {
 	log.Debugf("\nDownloading identities from Bitrise...")
+	log.Debugf("\nRequest URL: %s", downloadURL)
 
-	requestURL := downloadURL
-
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	request, err := createRequest(http.MethodGet, requestURL, map[string]string{}, map[string]interface{}{})
+	request, err := createRequest(http.MethodGet, downloadURL, nil, nil)
 	if err != nil {
 		return "", err
 	}
@@ -662,7 +623,6 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return "", err
 	}
 
@@ -690,11 +650,7 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 		"upload_file_size": certificateSize,
 	}
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest(http.MethodPost, requestURL, headers, fields)
+	request, err := createRequest(http.MethodPost, requestURL, client.headers, fields)
 	if err != nil {
 		return RegisterIdentityResponseData{}, err
 	}
@@ -728,7 +684,6 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 		return nil
 
 	}); err != nil {
-		log.Errorf("Fetching list failed %s", err)
 		return RegisterIdentityResponseData{}, err
 	}
 
@@ -746,7 +701,7 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 	requestURL := uploadURL
 
 	files := map[string]string{
-		uploadFileName: (outputDirPath + "/" + exportFileName),
+		uploadFileName: filepath.Join(outputDirPath, exportFileName),
 	}
 
 	request, err := createUploadRequest("PUT", requestURL, map[string]string{}, files)
@@ -794,11 +749,7 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 		return err
 	}
 
-	headers := map[string]string{
-		"Authorization": "token " + client.accessToken,
-	}
-
-	request, err := createRequest("POST", requestURL, headers, map[string]interface{}{})
+	request, err := createRequest("POST", requestURL, client.headers, nil)
 	if err != nil {
 		return err
 	}
@@ -849,13 +800,11 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 
 	for _, file := range files {
 		f, err := os.Open(file)
-
 		if err != nil {
 			return nil, err
 		}
 
 		fContent, err = ioutil.ReadAll(f)
-
 		if err != nil {
 			return nil, err
 		}
@@ -863,7 +812,6 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 	}
 
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(fContent))
-
 	if err != nil {
 		return nil, err
 	}
@@ -886,10 +834,9 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 		}
 	}
 
-	by := b.Bytes()
-	log.Debugf("Request body: %s", string(by))
+	log.Debugf("Request body: %s", string(b.Bytes()))
 
-	req, err := http.NewRequest(requestMethod, url, bytes.NewReader(by))
+	req, err := http.NewRequest(requestMethod, url, bytes.NewReader(b.Bytes()))
 	if err != nil {
 		return nil, err
 	}

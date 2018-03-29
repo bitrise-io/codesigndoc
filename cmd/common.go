@@ -729,7 +729,7 @@ func filterAlreadyUploadedProvProfiles(client bitriseclient.Protocol, localProfi
 	uploadedProfileUUIDList := []string{}
 	profilesToUpload := []profileutil.ProvisioningProfileInfoModel{}
 
-	uploadedProfInfoList, err := client.FetchUploadedProvisioningProfiles()
+	uploadedProfInfoList, err := client.FetchProvisioningProfiles()
 	if err != nil {
 		return nil, err
 	}
