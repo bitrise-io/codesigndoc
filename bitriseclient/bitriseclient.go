@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 	"os"
 	"strings"
@@ -15,7 +14,6 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
 const (
@@ -58,39 +56,6 @@ type Application struct {
 type FetchMyAppsResponse struct {
 	Data   []Application `json:"data"`
 	Paging Paging        `json:"paging"`
-}
-
-// Protocol ...
-type Protocol interface {
-	SetSelectedAppSlug(slug string)
-
-	FetchProvisioningProfiles() ([]FetchProvisioningProfileListResponseData, error)
-
-	getUploadedProvisioningProfileDownloadURLBy(profileSlug string) (downloadURL string, err error)
-
-	downloadUploadedProvisioningProfile(downloadURL string) (content string, err error)
-
-	GetUploadedProvisioningProfileUUIDby(profileSlug string) (UUID string, err error)
-
-	RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error)
-
-	UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error
-
-	ConfirmProvisioningProfileUpload(profileSlug string, provUploadName string) error
-
-	FetchUploadedIdentities() ([]FetchUploadedIdentityListResponseData, error)
-
-	getUploadedIdentityDownloadURLBy(certificateSlug string) (downloadURL string, password string, err error)
-
-	downloadUploadedIdentity(downloadURL string) (content string, err error)
-
-	GetUploadedCertificatesSerialby(identitySlug string) (certificateSerialList []big.Int, err error)
-
-	RegisterIdentity(certificateSize int64) (RegisterIdentityResponseData, error)
-
-	UploadIdentity(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error
-
-	ConfirmIdentityUpload(certificateSlug string, certificateUploadName string) error
 }
 
 // BitriseClient ...
@@ -160,7 +125,6 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 		}); cerr != nil {
 			err = cerr
 			return
-
 		}
 
 		logDebugPretty(appListResponse)

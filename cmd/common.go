@@ -728,7 +728,7 @@ func askUploadIdentities() (bool, error) {
 	return answer, nil
 }
 
-func filterAlreadyUploadedProvProfiles(client bitriseclient.Protocol, localProfiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
+func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, localProfiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
 	fmt.Println()
 	log.Infof("Looking for provisioning profile duplicates on Bitrise...")
 
@@ -760,7 +760,7 @@ func filterAlreadyUploadedProvProfiles(client bitriseclient.Protocol, localProfi
 	return profilesToUpload, nil
 }
 
-func shouldUploadCertificates(client bitriseclient.Protocol, certificatesToExport []certificateutil.CertificateInfoModel) (bool, error) {
+func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesToExport []certificateutil.CertificateInfoModel) (bool, error) {
 	fmt.Println()
 	log.Infof("Looking for certificate duplicates on Bitrise...")
 
@@ -808,7 +808,7 @@ func shouldUploadCertificates(client bitriseclient.Protocol, certificatesToExpor
 // ----------------------------------------------------------------
 // --- Upload methods
 
-func uploadProvisioningProfiles(bitriseClient bitriseclient.Protocol, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
+func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
 	for _, profile := range profilesToUpload {
 		exportFileName := provProfileExportFileName(profile, outputDirPath)
 
@@ -850,7 +850,7 @@ func uploadProvisioningProfiles(bitriseClient bitriseclient.Protocol, profilesTo
 }
 
 // UploadIdentity ...
-func UploadIdentity(bitriseClient bitriseclient.Protocol, outputDirPath string) error {
+func UploadIdentity(bitriseClient *bitriseclient.BitriseClient, outputDirPath string) error {
 	identities, err := os.Open(outputDirPath + "/" + "Identities.p12")
 	if err != nil {
 		return err
