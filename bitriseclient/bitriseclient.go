@@ -66,22 +66,21 @@ type BitriseClient struct {
 }
 
 // NewBitriseClient ...
-func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Application, err error) {
-	client = &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}}
+func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error) {
+	client := &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}}
+	var apps []Application
 
 	log.Infof("Asking your application list from Bitrise...")
 
-	requestURL, cerr := urlutil.Join(baseURL, appsEndPoint)
-	if cerr != nil {
-		err = cerr
-		return
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	// Response struct
 	var appListResponse FetchMyAppsResponse
-	responseStatusCode := -1
 
 	stillPaging := true
 	var next string
@@ -89,10 +88,9 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 
 		headers := client.headers
 
-		request, cerr := createRequest(http.MethodGet, requestURL, headers, nil)
-		if cerr != nil {
-			err = cerr
-			return
+		request, err := createRequest(http.MethodGet, requestURL, headers, nil)
+		if err != nil {
+			return nil, nil, err
 		}
 
 		if len(next) > 0 {
@@ -103,7 +101,7 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 
 		//
 		// Perform request
-		if cerr := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
 			body, statusCode, err := performRequest(request)
 			if err != nil {
 				log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
@@ -114,17 +112,14 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 				return err
 			}
 
-			responseStatusCode = statusCode
-
 			// Parse JSON body
 			if err := json.Unmarshal([]byte(body), &appListResponse); err != nil {
 				return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
 			}
 			return nil
 
-		}); cerr != nil {
-			err = cerr
-			return
+		}); err != nil {
+			return nil, nil, err
 		}
 
 		logDebugPretty(appListResponse)
@@ -140,7 +135,7 @@ func NewBitriseClient(accessToken string) (client *BitriseClient, apps []Applica
 
 	}
 
-	return
+	return client, apps, nil
 }
 
 // SetSelectedAppSlug ...
@@ -149,7 +144,7 @@ func (client *BitriseClient) SetSelectedAppSlug(slug string) {
 }
 
 func createUploadRequest(requestMethod string, url string, headers map[string]string, filePth string) (*http.Request, error) {
-	var fContent []byte
+	var content []byte
 
 	f, err := os.Open(filePth)
 	if err != nil {
@@ -157,12 +152,12 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 
 	}
 
-	fContent, err = ioutil.ReadAll(f)
+	content, err = ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
 
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(fContent))
+	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(content))
 	if err != nil {
 		return nil, err
 	}
@@ -176,10 +171,11 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 }
 
 func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {
-	b := new(bytes.Buffer)
+	var b bytes.Buffer
 
+	// b := new(bytes.Buffer)
 	if len(fields) > 0 {
-		err := json.NewEncoder(b).Encode(fields)
+		err := json.NewEncoder(&b).Encode(fields)
 		if err != nil {
 			return nil, err
 		}
@@ -200,22 +196,22 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 	return req, nil
 }
 
-func performRequest(request *http.Request) ([]byte, int, error) {
+func performRequest(request *http.Request) (body []byte, statusCode int, err error) {
 	client := http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
 		// On error, any Response can be ignored
-		return []byte{}, -1, fmt.Errorf("failed to perform request, error: %s", err)
+		return nil, -1, fmt.Errorf("failed to perform request, error: %s", err)
 	}
 
 	// The client must close the response body when finished with it
 	defer func() {
-		if err := response.Body.Close(); err != nil {
-			log.Errorf("Failed to close response body, error: %s", err)
+		if cerr := response.Body.Close(); err != nil {
+			cerr = fmt.Errorf("Failed to close response body, error: %s", cerr)
 		}
 	}()
 
-	body, err := ioutil.ReadAll(response.Body)
+	body, err = ioutil.ReadAll(response.Body)
 	if err != nil {
 		return []byte{}, response.StatusCode, fmt.Errorf("failed to read response body, error: %s", err)
 	}

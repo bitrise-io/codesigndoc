@@ -94,7 +94,6 @@ func (client *BitriseClient) FetchProvisioningProfiles() ([]FetchProvisioningPro
 
 	// Response struct
 	var requestResponse FetchProvisioningProfileListResponse
-	responseStatusCode := -1
 
 	//
 	// Perform request
@@ -108,8 +107,6 @@ func (client *BitriseClient) FetchProvisioningProfiles() ([]FetchProvisioningPro
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
@@ -168,7 +165,6 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 
 	// Response struct
 	requestResponse := FetchUploadedProvisioningProfileResponse{}
-	responseStatusCode := -1
 
 	//
 	// Perform request
@@ -182,8 +178,6 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
@@ -211,8 +205,7 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 	}
 
 	// Response struct
-	responseStatusCode := -1
-	requestResponse := ""
+	var requestResponse string
 
 	//
 	// Perform request
@@ -227,7 +220,6 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 			return err
 		}
 
-		responseStatusCode = statusCode
 		requestResponse = string(body)
 
 		return nil
@@ -264,7 +256,6 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 
 	// Response struct
 	requestResponse := RegisterProvisioningProfileResponse{}
-	responseStatusCode := -1
 
 	//
 	// Perform request
@@ -278,8 +269,6 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
@@ -309,9 +298,6 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 		return err
 	}
 
-	// Response struct
-	responseStatusCode := -1
-
 	//
 	// Perform request
 	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
@@ -324,8 +310,6 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		return nil
 
@@ -352,7 +336,6 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 	}
 
 	// Response struct
-	responseStatusCode := -1
 	requestResponse := ConfirmProvProfileUploadResponse{}
 
 	//
@@ -367,8 +350,6 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {

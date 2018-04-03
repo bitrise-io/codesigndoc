@@ -47,8 +47,8 @@ type ConfirmIdentityUploadResponse struct {
 	Data ConfirmIdentityUploadResponseData `json:"data"`
 }
 
-// FetchUploadedIdentityListResponseData ...
-type FetchUploadedIdentityListResponseData struct {
+// FetchIdentityListResponseData ...
+type FetchIdentityListResponseData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -58,13 +58,13 @@ type FetchUploadedIdentityListResponseData struct {
 	IsProtected         bool   `json:"dais_protectedta"`
 }
 
-// FetchUploadedIdentityListResponse ...
-type FetchUploadedIdentityListResponse struct {
-	Data []FetchUploadedIdentityListResponseData `json:"data"`
+// FetchIdentityListResponse ...
+type FetchIdentityListResponse struct {
+	Data []FetchIdentityListResponseData `json:"data"`
 }
 
-// FetchUploadedIdentityResponseData ...
-type FetchUploadedIdentityResponseData struct {
+// FetchIdentityResponseData ...
+type FetchIdentityResponseData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -75,29 +75,28 @@ type FetchUploadedIdentityResponseData struct {
 	DownloadURL         string `json:"download_url"`
 }
 
-// FetchUploadedIdentityResponse ...
-type FetchUploadedIdentityResponse struct {
-	Data FetchUploadedIdentityResponseData `json:"data"`
+// FetchIdentityResponse ...
+type FetchIdentityResponse struct {
+	Data FetchIdentityResponseData `json:"data"`
 }
 
 // FetchUploadedIdentities ...
-func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityListResponseData, error) {
+func (client *BitriseClient) FetchUploadedIdentities() ([]FetchIdentityListResponseData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
 	if err != nil {
-		return []FetchUploadedIdentityListResponseData{}, err
+		return []FetchIdentityListResponseData{}, err
 	}
 
 	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
-		return []FetchUploadedIdentityListResponseData{}, err
+		return []FetchIdentityListResponseData{}, err
 	}
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	// Response struct
-	requestResponse := FetchUploadedIdentityListResponse{}
-	responseStatusCode := -1
+	var requestResponse FetchIdentityListResponse
 
 	//
 	// Perform request
@@ -112,8 +111,6 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityL
 			return err
 		}
 
-		responseStatusCode = statusCode
-
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
 			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
@@ -121,7 +118,7 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]FetchUploadedIdentityL
 		return nil
 
 	}); err != nil {
-		return []FetchUploadedIdentityListResponseData{}, err
+		return []FetchIdentityListResponseData{}, err
 	}
 
 	logDebugPretty(requestResponse)
@@ -171,8 +168,7 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 	}
 
 	// Response struct
-	requestResponse := FetchUploadedIdentityResponse{}
-	responseStatusCode := -1
+	var requestResponse FetchIdentityResponse
 
 	//
 	// Perform request
@@ -186,8 +182,6 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
@@ -215,8 +209,7 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 	}
 
 	// Response struct
-	responseStatusCode := -1
-	requestResponse := ""
+	var requestResponse string
 
 	//
 	// Perform request
@@ -231,7 +224,6 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 			return err
 		}
 
-		responseStatusCode = statusCode
 		requestResponse = string(body)
 
 		return nil
@@ -267,8 +259,7 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 	}
 
 	// Response struct
-	requestResponse := RegisterIdentityResponse{}
-	responseStatusCode := -1
+	var requestResponse RegisterIdentityResponse
 
 	//
 	// Perform request
@@ -282,8 +273,6 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
@@ -313,9 +302,6 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 		return err
 	}
 
-	// Response struct
-	responseStatusCode := -1
-
 	//
 	// Perform request
 	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
@@ -328,8 +314,6 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		return nil
 
@@ -356,7 +340,6 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 	}
 
 	// Response struct
-	responseStatusCode := -1
 	requestResponse := ConfirmProvProfileUploadResponse{}
 
 	//
@@ -371,8 +354,6 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 			}
 			return err
 		}
-
-		responseStatusCode = statusCode
 
 		// Parse JSON body
 		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {

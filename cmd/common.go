@@ -708,31 +708,19 @@ func uploadExportedFiles(profilesToExport []profileutil.ProvisioningProfileInfoM
 
 func askUploadGeneratedFiles() (bool, error) {
 	messageToAsk := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
-
-	answer, err := goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
-	if err != nil {
-		return answer, err
-	}
-
-	return answer, nil
+	return goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
 }
 
 func askUploadIdentities() (bool, error) {
 	messageToAsk := "Do you want to upload the certificates to Bitrise?"
-
-	answer, err := goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
-	if err != nil {
-		return answer, err
-	}
-
-	return answer, nil
+	return goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
 }
 
 func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, localProfiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
 	fmt.Println()
 	log.Infof("Looking for provisioning profile duplicates on Bitrise...")
 
-	uploadedProfileUUIDList := []string{}
+	uploadedProfileUUIDList := map[string]bool{}
 	profilesToUpload := []profileutil.ProvisioningProfileInfoModel{}
 
 	uploadedProfInfoList, err := client.FetchProvisioningProfiles()
@@ -746,14 +734,15 @@ func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, loca
 			return nil, err
 		}
 
-		uploadedProfileUUIDList = append(uploadedProfileUUIDList, uploadedProfileUUID)
+		uploadedProfileUUIDList[uploadedProfileUUID] = true
 	}
 
 	for _, localProfile := range localProfiles {
-		if !sliceutil.IsStringInSlice(localProfile.UUID, uploadedProfileUUIDList) {
-			profilesToUpload = append(profilesToUpload, localProfile)
-		} else {
+		contains, _ := uploadedProfileUUIDList[localProfile.UUID]
+		if contains {
 			log.Warnf("Already on Bitrise: - %s - (UUID: %s) ", localProfile.Name, localProfile.UUID)
+		} else {
+			profilesToUpload = append(profilesToUpload, localProfile)
 		}
 	}
 
@@ -764,7 +753,7 @@ func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesT
 	fmt.Println()
 	log.Infof("Looking for certificate duplicates on Bitrise...")
 
-	uploadedCertificatesSerialList := []string{}
+	var uploadedCertificatesSerialList []string
 	localCertificatesSerialList := []string{}
 
 	uploadedItentityList, err := client.FetchUploadedIdentities()
@@ -774,7 +763,7 @@ func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesT
 
 	// Get uploaded certificates' serials
 	for _, uploadedIdentity := range uploadedItentityList {
-		serialListAsString := []string{}
+		var serialListAsString []string
 
 		serialList, err := client.GetUploadedCertificatesSerialby(uploadedIdentity.Slug)
 		if err != nil {
@@ -829,10 +818,9 @@ func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, prof
 			return err
 		}
 
-		bytes := info.Size()
-		log.Debugf("\n%s size: %d", exportFileName, bytes)
+		log.Debugf("\n%s size: %d", exportFileName, info.Size())
 
-		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(bytes, profile)
+		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(info.Size(), profile)
 		if err != nil {
 			return err
 		}
@@ -868,10 +856,9 @@ func UploadIdentity(bitriseClient *bitriseclient.BitriseClient, outputDirPath st
 		return err
 	}
 
-	bytes := info.Size()
-	log.Debugf("\n%s size: %d", "Identities.p12", bytes)
+	log.Debugf("\n%s size: %d", "Identities.p12", info.Size())
 
-	certificateResponseData, err := bitriseClient.RegisterIdentity(bytes)
+	certificateResponseData, err := bitriseClient.RegisterIdentity(info.Size())
 	if err != nil {
 		return err
 	}
