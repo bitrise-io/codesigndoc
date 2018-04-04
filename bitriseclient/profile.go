@@ -1,21 +1,17 @@
 package bitriseclient
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/urlutil"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
-// RegisterProvisioningProfileResponseData ...
-type RegisterProvisioningProfileResponseData struct {
+// RegisterProvisioningProfileData ...
+type RegisterProvisioningProfileData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int64  `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -27,11 +23,11 @@ type RegisterProvisioningProfileResponseData struct {
 
 // RegisterProvisioningProfileResponse ...
 type RegisterProvisioningProfileResponse struct {
-	Data RegisterProvisioningProfileResponseData `json:"data"`
+	Data RegisterProvisioningProfileData `json:"data"`
 }
 
-// ConfirmProvProfileUploadResponseData ...
-type ConfirmProvProfileUploadResponseData struct {
+// ConfirmProvProfileUploadData ...
+type ConfirmProvProfileUploadData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int    `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -42,11 +38,11 @@ type ConfirmProvProfileUploadResponseData struct {
 
 // ConfirmProvProfileUploadResponse ...
 type ConfirmProvProfileUploadResponse struct {
-	Data ConfirmProvProfileUploadResponseData `json:"data"`
+	Data ConfirmProvProfileUploadData `json:"data"`
 }
 
-// FetchProvisioningProfileListResponseData ...
-type FetchProvisioningProfileListResponseData struct {
+// ProvisioningProfileListData ...
+type ProvisioningProfileListData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int    `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -55,13 +51,13 @@ type FetchProvisioningProfileListResponseData struct {
 	IsProtected    bool   `json:"dais_protectedta"`
 }
 
-// FetchProvisioningProfileListResponse ...
-type FetchProvisioningProfileListResponse struct {
-	Data []FetchProvisioningProfileListResponseData `json:"data"`
+// ProvisioningProfileListResponse ...
+type ProvisioningProfileListResponse struct {
+	Data []ProvisioningProfileListData `json:"data"`
 }
 
-// FetchUploadedProvisioningProfileResponseData ...
-type FetchUploadedProvisioningProfileResponseData struct {
+// UploadedProvisioningProfileData ...
+type UploadedProvisioningProfileData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int    `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -71,13 +67,13 @@ type FetchUploadedProvisioningProfileResponseData struct {
 	DownloadURL    string `json:"download_url"`
 }
 
-// FetchUploadedProvisioningProfileResponse ...
-type FetchUploadedProvisioningProfileResponse struct {
-	Data FetchUploadedProvisioningProfileResponseData `json:"data"`
+// UploadedProvisioningProfileResponse ...
+type UploadedProvisioningProfileResponse struct {
+	Data UploadedProvisioningProfileData `json:"data"`
 }
 
 // FetchProvisioningProfiles ...
-func (client *BitriseClient) FetchProvisioningProfiles() ([]FetchProvisioningProfileListResponseData, error) {
+func (client *BitriseClient) FetchProvisioningProfiles() ([]ProvisioningProfileListData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
@@ -93,32 +89,16 @@ func (client *BitriseClient) FetchProvisioningProfiles() ([]FetchProvisioningPro
 	}
 
 	// Response struct
-	var requestResponse FetchProvisioningProfileListResponse
+	var requestResponse ProvisioningProfileListResponse
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-		return nil
-
-	}); err != nil {
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
 		return nil, err
 	}
 
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*ProvisioningProfileListResponse)
 
 	return requestResponse.Data, nil
 }
@@ -164,33 +144,16 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 	}
 
 	// Response struct
-	requestResponse := FetchUploadedProvisioningProfileResponse{}
+	requestResponse := UploadedProvisioningProfileResponse{}
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-
-		return nil
-
-	}); err != nil {
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
 		return "", err
 	}
 
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*UploadedProvisioningProfileResponse)
 
 	return requestResponse.Data.DownloadURL, nil
 }
@@ -209,37 +172,25 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		requestResponse = string(body)
-
-		return nil
-
-	}); err != nil {
+	_, body, err := RunRequest(client, request, nil)
+	if err != nil {
 		return "", err
 	}
+
+	requestResponse = string(body)
 
 	return requestResponse, nil
 
 }
 
 // RegisterProvisioningProfile ...
-func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileResponseData, error) {
+func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileData, error) {
 	fmt.Println()
 	log.Infof("Register %s on Bitrise...", profile.Name)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
 	if err != nil {
-		return RegisterProvisioningProfileResponseData{}, err
+		return RegisterProvisioningProfileData{}, err
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
@@ -251,7 +202,7 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 
 	request, err := createRequest(http.MethodPost, requestURL, client.headers, fields)
 	if err != nil {
-		return RegisterProvisioningProfileResponseData{}, err
+		return RegisterProvisioningProfileData{}, err
 	}
 
 	// Response struct
@@ -259,29 +210,12 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-		return nil
-
-	}); err != nil {
-		return RegisterProvisioningProfileResponseData{}, err
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
+		return RegisterProvisioningProfileData{}, err
 	}
 
-	// Success
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*RegisterProvisioningProfileResponse)
 
 	return requestResponse.Data, nil
 }
@@ -300,20 +234,8 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		return nil
-
-	}); err != nil {
+	_, _, err = RunRequest(client, request, nil)
+	if err != nil {
 		return err
 	}
 
@@ -340,29 +262,12 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-
-		return nil
-
-	}); err != nil {
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
 		return err
 	}
 
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*ConfirmProvProfileUploadResponse)
 
 	return nil
 }

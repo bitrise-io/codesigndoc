@@ -1,22 +1,18 @@
 package bitriseclient
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/retry"
 	"github.com/bitrise-io/go-utils/urlutil"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 )
 
-// RegisterIdentityResponseData ...
-type RegisterIdentityResponseData struct {
+// RegisterIdentityData ...
+type RegisterIdentityData struct {
 	UploadFileName string `json:"upload_file_name"`
 	UploadFileSize int64  `json:"upload_file_size"`
 	Slug           string `json:"slug"`
@@ -28,11 +24,11 @@ type RegisterIdentityResponseData struct {
 
 // RegisterIdentityResponse ...
 type RegisterIdentityResponse struct {
-	Data RegisterIdentityResponseData `json:"data"`
+	Data RegisterIdentityData `json:"data"`
 }
 
-// ConfirmIdentityUploadResponseData ...
-type ConfirmIdentityUploadResponseData struct {
+// ConfirmIdentityUploadData ...
+type ConfirmIdentityUploadData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -44,11 +40,11 @@ type ConfirmIdentityUploadResponseData struct {
 
 // ConfirmIdentityUploadResponse ...
 type ConfirmIdentityUploadResponse struct {
-	Data ConfirmIdentityUploadResponseData `json:"data"`
+	Data ConfirmIdentityUploadData `json:"data"`
 }
 
-// FetchIdentityListResponseData ...
-type FetchIdentityListResponseData struct {
+// IdentityListData ...
+type IdentityListData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -58,13 +54,13 @@ type FetchIdentityListResponseData struct {
 	IsProtected         bool   `json:"dais_protectedta"`
 }
 
-// FetchIdentityListResponse ...
-type FetchIdentityListResponse struct {
-	Data []FetchIdentityListResponseData `json:"data"`
+// IdentityListResponse ...
+type IdentityListResponse struct {
+	Data []IdentityListData `json:"data"`
 }
 
-// FetchIdentityResponseData ...
-type FetchIdentityResponseData struct {
+// IdentityData ...
+type IdentityData struct {
 	UploadFileName      string `json:"upload_file_name"`
 	UploadFileSize      int    `json:"upload_file_size"`
 	Slug                string `json:"slug"`
@@ -75,53 +71,36 @@ type FetchIdentityResponseData struct {
 	DownloadURL         string `json:"download_url"`
 }
 
-// FetchIdentityResponse ...
-type FetchIdentityResponse struct {
-	Data FetchIdentityResponseData `json:"data"`
+// IdentityResponse ...
+type IdentityResponse struct {
+	Data IdentityData `json:"data"`
 }
 
 // FetchUploadedIdentities ...
-func (client *BitriseClient) FetchUploadedIdentities() ([]FetchIdentityListResponseData, error) {
+func (client *BitriseClient) FetchUploadedIdentities() ([]IdentityListData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
 	if err != nil {
-		return []FetchIdentityListResponseData{}, err
+		return []IdentityListData{}, err
 	}
 
 	request, err := createRequest(http.MethodGet, requestURL, client.headers, nil)
 	if err != nil {
-		return []FetchIdentityListResponseData{}, err
+		return []IdentityListData{}, err
 	}
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	// Response struct
-	var requestResponse FetchIdentityListResponse
-
+	var requestResponse IdentityListResponse
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-		return nil
-
-	}); err != nil {
-		return []FetchIdentityListResponseData{}, err
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
+		return nil, err
 	}
 
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*IdentityListResponse)
 
 	return requestResponse.Data, nil
 }
@@ -168,33 +147,16 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 	}
 
 	// Response struct
-	var requestResponse FetchIdentityResponse
+	var requestResponse IdentityResponse
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-
-		return nil
-
-	}); err != nil {
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
 		return "", "", err
 	}
 
-	logDebugPretty(requestResponse)
+	requestResponse = *response.(*IdentityResponse)
 
 	return requestResponse.Data.DownloadURL, requestResponse.Data.CertificatePassword, nil
 }
@@ -213,37 +175,25 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		requestResponse = string(body)
-
-		return nil
-
-	}); err != nil {
+	_, body, err := RunRequest(client, request, nil)
+	if err != nil {
 		return "", err
 	}
+
+	requestResponse = string(body)
 
 	return requestResponse, nil
 
 }
 
 // RegisterIdentity ...
-func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterIdentityResponseData, error) {
+func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterIdentityData, error) {
 	fmt.Println()
 	log.Infof("Register %s on Bitrise...", "Identities.p12")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
 	if err != nil {
-		return RegisterIdentityResponseData{}, err
+		return RegisterIdentityData{}, err
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
@@ -255,7 +205,7 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 
 	request, err := createRequest(http.MethodPost, requestURL, client.headers, fields)
 	if err != nil {
-		return RegisterIdentityResponseData{}, err
+		return RegisterIdentityData{}, err
 	}
 
 	// Response struct
@@ -263,29 +213,12 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 
 	//
 	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-
-		logDebugPretty(requestResponse)
-
-		return nil
-
-	}); err != nil {
-		return RegisterIdentityResponseData{}, err
+	response, _, err := RunRequest(client, request, &requestResponse)
+	if err != nil {
+		return RegisterIdentityData{}, err
 	}
+
+	requestResponse = *response.(*RegisterIdentityResponse)
 
 	return requestResponse.Data, nil
 }
@@ -302,22 +235,8 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 		return err
 	}
 
-	//
-	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		return nil
-
-	}); err != nil {
+	_, _, err = RunRequest(client, request, nil)
+	if err != nil {
 		return err
 	}
 
@@ -342,29 +261,8 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 	// Response struct
 	requestResponse := ConfirmProvProfileUploadResponse{}
 
-	//
-	// Perform request
-	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-		body, statusCode, err := performRequest(request)
-		if err != nil {
-			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-			if !strings.Contains(err.Error(), "failed to perform request") {
-				log.Warnf("Response status: %d", statusCode)
-				log.Warnf("Body: %s", string(body))
-			}
-			return err
-		}
-
-		// Parse JSON body
-		if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
-			return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-		}
-
-		logDebugPretty(requestResponse)
-
-		return nil
-
-	}); err != nil {
+	_, _, err = RunRequest(client, request, &requestResponse)
+	if err != nil {
 		return err
 	}
 

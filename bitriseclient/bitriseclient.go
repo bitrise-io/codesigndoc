@@ -52,8 +52,8 @@ type Application struct {
 	Owner       Owner  `json:"owner"`
 }
 
-// FetchMyAppsResponse ...
-type FetchMyAppsResponse struct {
+// MyAppsResponse ...
+type MyAppsResponse struct {
 	Data   []Application `json:"data"`
 	Paging Paging        `json:"paging"`
 }
@@ -63,14 +63,15 @@ type BitriseClient struct {
 	accessToken     string
 	selectedAppSlug string
 	headers         map[string]string
+	client          http.Client
 }
 
 // NewBitriseClient ...
 func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error) {
-	client := &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}}
+	client := &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
 	var apps []Application
 
-	log.Infof("Asking your application list from Bitrise...")
+	log.Infof("Fetching your application list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
 	if err != nil {
@@ -80,7 +81,7 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	// Response struct
-	var appListResponse FetchMyAppsResponse
+	var appListResponse MyAppsResponse
 
 	stillPaging := true
 	var next string
@@ -99,36 +100,18 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 			request.URL.RawQuery = quearryValues.Encode()
 		}
 
-		//
 		// Perform request
-		if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
-			body, statusCode, err := performRequest(request)
-			if err != nil {
-				log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
-				if !strings.Contains(err.Error(), "failed to perform request") {
-					log.Warnf("Response status: %d", statusCode)
-					log.Warnf("Body: %s", string(body))
-				}
-				return err
-			}
-
-			// Parse JSON body
-			if err := json.Unmarshal([]byte(body), &appListResponse); err != nil {
-				return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
-			}
-			return nil
-
-		}); err != nil {
+		response, _, err := RunRequest(client, request, &appListResponse)
+		if err != nil {
 			return nil, nil, err
 		}
 
-		logDebugPretty(appListResponse)
-
+		appListResponse = *response.(*MyAppsResponse)
 		apps = append(apps, appListResponse.Data...)
 
 		if len(appListResponse.Paging.Next) > 0 {
 			next = appListResponse.Paging.Next
-			appListResponse = FetchMyAppsResponse{}
+			appListResponse = MyAppsResponse{}
 		} else {
 			stillPaging = false
 		}
@@ -141,6 +124,41 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 // SetSelectedAppSlug ...
 func (client *BitriseClient) SetSelectedAppSlug(slug string) {
 	client.selectedAppSlug = slug
+}
+
+// RunRequest ...
+func RunRequest(client *BitriseClient, req *http.Request, requestResponse interface{}) (interface{}, []byte, error) {
+	var responseBody []byte
+
+	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
+		body, statusCode, err := performRequest(client, req)
+		if err != nil {
+			log.Warnf("Attempt (%d) failed, error: %s", attempt+1, err)
+			if !strings.Contains(err.Error(), "failed to perform request") {
+				log.Warnf("Response status: %d", statusCode)
+				log.Warnf("Body: %s", string(body))
+			}
+			return err
+		}
+
+		// Parse JSON body
+		if requestResponse != nil {
+			if err := json.Unmarshal([]byte(body), &requestResponse); err != nil {
+				return fmt.Errorf("failed to unmarshal response (%s), error: %s", body, err)
+			}
+
+			logDebugPretty(&requestResponse)
+		}
+
+		responseBody = body
+
+		return nil
+
+	}); err != nil {
+		return nil, nil, err
+	}
+
+	return requestResponse, responseBody, nil
 }
 
 func createUploadRequest(requestMethod string, url string, headers map[string]string, filePth string) (*http.Request, error) {
@@ -162,10 +180,7 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 		return nil, err
 	}
 
-	for key, value := range headers {
-		req.Header.Add(key, value)
-
-	}
+	addHeaders(req, headers)
 
 	return req, nil
 }
@@ -173,7 +188,6 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {
 	var b bytes.Buffer
 
-	// b := new(bytes.Buffer)
 	if len(fields) > 0 {
 		err := json.NewEncoder(&b).Encode(fields)
 		if err != nil {
@@ -188,17 +202,13 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 		return nil, err
 	}
 
-	for key, value := range headers {
-		req.Header.Add(key, value)
-
-	}
+	addHeaders(req, headers)
 
 	return req, nil
 }
 
-func performRequest(request *http.Request) (body []byte, statusCode int, err error) {
-	client := http.Client{}
-	response, err := client.Do(request)
+func performRequest(bitriseClient *BitriseClient, request *http.Request) (body []byte, statusCode int, err error) {
+	response, err := bitriseClient.client.Do(request)
 	if err != nil {
 		// On error, any Response can be ignored
 		return nil, -1, fmt.Errorf("failed to perform request, error: %s", err)
@@ -221,6 +231,12 @@ func performRequest(request *http.Request) (body []byte, statusCode int, err err
 	}
 
 	return body, response.StatusCode, nil
+}
+
+func addHeaders(req *http.Request, headers map[string]string) {
+	for key, value := range headers {
+		req.Header.Add(key, value)
+	}
 }
 
 func logDebugPretty(v interface{}) {
