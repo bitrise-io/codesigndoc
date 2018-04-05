@@ -863,11 +863,7 @@ func UploadIdentity(bitriseClient *bitriseclient.BitriseClient, outputDirPath st
 		return err
 	}
 
-	if err := bitriseClient.ConfirmIdentityUpload(certificateResponseData.Slug, certificateResponseData.UploadFileName); err != nil {
-		return err
-	}
-
-	return nil
+	return bitriseClient.ConfirmIdentityUpload(certificateResponseData.Slug, certificateResponseData.UploadFileName)
 }
 
 func askAccessToken() (token string, err error) {
