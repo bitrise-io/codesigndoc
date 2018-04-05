@@ -99,7 +99,6 @@ func (client *BitriseClient) FetchProvisioningProfiles() ([]ProvisioningProfileL
 	}
 
 	requestResponse = *response.(*ProvisioningProfileListResponse)
-
 	return requestResponse.Data, nil
 }
 
@@ -154,7 +153,6 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 	}
 
 	requestResponse = *response.(*UploadedProvisioningProfileResponse)
-
 	return requestResponse.Data.DownloadURL, nil
 }
 
@@ -178,7 +176,6 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 	}
 
 	requestResponse = string(body)
-
 	return requestResponse, nil
 
 }
@@ -216,7 +213,6 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 	}
 
 	requestResponse = *response.(*RegisterProvisioningProfileResponse)
-
 	return requestResponse.Data, nil
 }
 
@@ -268,6 +264,5 @@ func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string
 	}
 
 	requestResponse = *response.(*ConfirmProvProfileUploadResponse)
-
 	return nil
 }

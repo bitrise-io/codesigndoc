@@ -101,7 +101,6 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]IdentityListData, erro
 	}
 
 	requestResponse = *response.(*IdentityListResponse)
-
 	return requestResponse.Data, nil
 }
 
@@ -127,7 +126,6 @@ func (client *BitriseClient) GetUploadedCertificatesSerialby(identitySlug string
 	for _, certificate := range certificates {
 		serialList = append(serialList, *certificate.SerialNumber)
 	}
-
 	return serialList, nil
 }
 
@@ -157,7 +155,6 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 	}
 
 	requestResponse = *response.(*IdentityResponse)
-
 	return requestResponse.Data.DownloadURL, requestResponse.Data.CertificatePassword, nil
 }
 
@@ -181,7 +178,6 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 	}
 
 	requestResponse = string(body)
-
 	return requestResponse, nil
 
 }
@@ -219,7 +215,6 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 	}
 
 	requestResponse = *response.(*RegisterIdentityResponse)
-
 	return requestResponse.Data, nil
 }
 
@@ -239,7 +234,6 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -265,6 +259,5 @@ func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certi
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

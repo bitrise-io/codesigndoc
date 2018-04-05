@@ -82,11 +82,10 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 
 	// Response struct
 	var appListResponse MyAppsResponse
-
 	stillPaging := true
 	var next string
-	for stillPaging {
 
+	for stillPaging {
 		headers := client.headers
 
 		request, err := createRequest(http.MethodGet, requestURL, headers, nil)
@@ -115,7 +114,6 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 		} else {
 			stillPaging = false
 		}
-
 	}
 
 	return client, apps, nil
@@ -149,11 +147,9 @@ func RunRequest(client *BitriseClient, req *http.Request, requestResponse interf
 
 			logDebugPretty(&requestResponse)
 		}
-
 		responseBody = body
 
 		return nil
-
 	}); err != nil {
 		return nil, nil, err
 	}
@@ -179,7 +175,6 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 	if err != nil {
 		return nil, err
 	}
-
 	addHeaders(req, headers)
 
 	return req, nil
@@ -201,7 +196,6 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 	if err != nil {
 		return nil, err
 	}
-
 	addHeaders(req, headers)
 
 	return req, nil

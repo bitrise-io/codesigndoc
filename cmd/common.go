@@ -592,7 +592,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 
 		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
 		certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
-
 		certificatesToExport = append(certificatesToExport, certificates...)
 		profilesToExport = append(profilesToExport, profiles...)
 	}
@@ -642,9 +641,7 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 			if err != nil {
 				return err
 			}
-
 		}
-
 	}
 
 	fmt.Println()
@@ -655,7 +652,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 	} else {
 		fmt.Println("Opened the directory in Finder.")
 	}
-
 	printFinished(provProfilesUploaded, certsUploaded)
 
 	return nil
@@ -701,7 +697,6 @@ func uploadExportedIdentity(bitriseClient *bitriseclient.BitriseClient, certific
 		if err := UploadIdentity(bitriseClient, outputDirPath); err != nil {
 			return false, err
 		}
-
 	} else {
 		log.Warnf("There is no new certificate to upload...")
 	}
@@ -776,7 +771,6 @@ func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesT
 		for _, serial := range serialList {
 			serialListAsString = append(serialListAsString, serial.String())
 		}
-
 		uploadedCertificatesSerialList = append(uploadedCertificatesSerialList, serialListAsString...)
 	}
 
@@ -799,7 +793,6 @@ func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesT
 
 // ----------------------------------------------------------------
 // --- Upload methods
-
 func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
 	for _, profile := range profilesToUpload {
 		exportFileName := provProfileExportFileName(profile, outputDirPath)
