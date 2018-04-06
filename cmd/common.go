@@ -8,10 +8,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/bitriseclient"
 	"github.com/bitrise-tools/codesigndoc/osxkeychain"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
@@ -589,7 +592,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 
 		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
 		certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
-
 		certificatesToExport = append(certificatesToExport, certificates...)
 		profilesToExport = append(profilesToExport, profiles...)
 	}
@@ -602,15 +604,314 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		return err
 	}
 
+	provProfilesUploaded := (len(profilesToExport) == 0)
+	certsUploaded := (len(certificatesToExport) == 0)
+
+	if len(profilesToExport) > 0 || len(certificatesToExport) > 0 {
+		fmt.Println()
+		shouldUpload, err := askUploadGeneratedFiles()
+		if err != nil {
+			return err
+		}
+
+		if shouldUpload {
+			accessToken, err := getAccessToken()
+			if err != nil {
+				return err
+			}
+
+			bitriseClient, appList, err := bitriseclient.NewBitriseClient(accessToken)
+			if err != nil {
+				return err
+			}
+
+			selectedAppSlug, err := selectApp(appList)
+			if err != nil {
+				return err
+			}
+
+			bitriseClient.SetSelectedAppSlug(selectedAppSlug)
+
+			provProfilesUploaded, err = uploadExportedProvProfiles(bitriseClient, profilesToExport, outputDirPath)
+			if err != nil {
+				return err
+			}
+
+			certsUploaded, err = uploadExportedIdentity(bitriseClient, certificatesToExport, outputDirPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	fmt.Println()
 	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+
 	if err := command.RunCommand("open", outputDirPath); err != nil {
 		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
 	} else {
 		fmt.Println("Opened the directory in Finder.")
 	}
-
-	printFinished(certificatesOnly)
+	printFinished(provProfilesUploaded, certsUploaded)
 
 	return nil
+}
+
+func getAccessToken() (string, error) {
+	accessToken, err := askAccessToken()
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
+}
+
+func uploadExportedProvProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToExport []profileutil.ProvisioningProfileInfoModel, outputDirPath string) (bool, error) {
+	profilesToUpload, err := filterAlreadyUploadedProvProfiles(bitriseClient, profilesToExport)
+	if err != nil {
+		return false, err
+	}
+
+	if len(profilesToUpload) > 0 {
+		fmt.Println()
+		log.Infof("Uploading provisioning profiles...")
+
+		if err := uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath); err != nil {
+			return false, err
+		}
+	}
+
+	return true, nil
+}
+
+func uploadExportedIdentity(bitriseClient *bitriseclient.BitriseClient, certificatesToExport []certificateutil.CertificateInfoModel, outputDirPath string) (bool, error) {
+	shouldUploadIdentities, err := shouldUploadCertificates(bitriseClient, certificatesToExport)
+	if err != nil {
+		return false, err
+	}
+
+	if shouldUploadIdentities {
+		fmt.Println()
+		log.Infof("Uploading certificate...")
+
+		if err := UploadIdentity(bitriseClient, outputDirPath); err != nil {
+			return false, err
+		}
+	} else {
+		log.Warnf("There is no new certificate to upload...")
+	}
+
+	return true, err
+}
+
+func askUploadGeneratedFiles() (bool, error) {
+	messageToAsk := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
+	return goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
+}
+
+func askUploadIdentities() (bool, error) {
+	messageToAsk := "Do you want to upload the certificates to Bitrise?"
+	return goinp.AskForBoolFromReader(messageToAsk, os.Stdin)
+}
+
+func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, localProfiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
+	fmt.Println()
+	log.Infof("Looking for provisioning profile duplicates on Bitrise...")
+
+	uploadedProfileUUIDList := map[string]bool{}
+	profilesToUpload := []profileutil.ProvisioningProfileInfoModel{}
+
+	uploadedProfInfoList, err := client.FetchProvisioningProfiles()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, uploadedProfileInfo := range uploadedProfInfoList {
+		uploadedProfileUUID, err := client.GetUploadedProvisioningProfileUUIDby(uploadedProfileInfo.Slug)
+		if err != nil {
+			return nil, err
+		}
+
+		uploadedProfileUUIDList[uploadedProfileUUID] = true
+	}
+
+	for _, localProfile := range localProfiles {
+		contains, _ := uploadedProfileUUIDList[localProfile.UUID]
+		if contains {
+			log.Warnf("Already on Bitrise: - %s - (UUID: %s) ", localProfile.Name, localProfile.UUID)
+		} else {
+			profilesToUpload = append(profilesToUpload, localProfile)
+		}
+	}
+
+	return profilesToUpload, nil
+}
+
+func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesToExport []certificateutil.CertificateInfoModel) (bool, error) {
+	fmt.Println()
+	log.Infof("Looking for certificate duplicates on Bitrise...")
+
+	var uploadedCertificatesSerialList []string
+	localCertificatesSerialList := []string{}
+
+	uploadedItentityList, err := client.FetchUploadedIdentities()
+	if err != nil {
+		return false, err
+	}
+
+	// Get uploaded certificates' serials
+	for _, uploadedIdentity := range uploadedItentityList {
+		var serialListAsString []string
+
+		serialList, err := client.GetUploadedCertificatesSerialby(uploadedIdentity.Slug)
+		if err != nil {
+			return false, err
+		}
+
+		for _, serial := range serialList {
+			serialListAsString = append(serialListAsString, serial.String())
+		}
+		uploadedCertificatesSerialList = append(uploadedCertificatesSerialList, serialListAsString...)
+	}
+
+	for _, certificateToExport := range certificatesToExport {
+		localCertificatesSerialList = append(localCertificatesSerialList, certificateToExport.Serial)
+	}
+
+	log.Debugf("Uploaded certificates' serial list: \n\t%v", uploadedCertificatesSerialList)
+	log.Debugf("Local certificates' serial list: \n\t%v", localCertificatesSerialList)
+
+	// Search for a new certificate
+	for _, localCertificateSerial := range localCertificatesSerialList {
+		if !sliceutil.IsStringInSlice(localCertificateSerial, uploadedCertificatesSerialList) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// ----------------------------------------------------------------
+// --- Upload methods
+func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
+	for _, profile := range profilesToUpload {
+		exportFileName := provProfileExportFileName(profile, outputDirPath)
+
+		provProfile, err := os.Open(outputDirPath + "/" + exportFileName)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if err := provProfile.Close(); err != nil {
+				log.Warnf("Provisioning profile close failed, err: %s", err)
+			}
+
+		}()
+
+		info, err := provProfile.Stat()
+		if err != nil {
+			return err
+		}
+
+		log.Debugf("\n%s size: %d", exportFileName, info.Size())
+
+		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(info.Size(), profile)
+		if err != nil {
+			return err
+		}
+
+		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, outputDirPath, exportFileName); err != nil {
+			return err
+		}
+
+		if err := bitriseClient.ConfirmProvisioningProfileUpload(provProfSlugResponseData.Slug, provProfSlugResponseData.UploadFileName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// UploadIdentity ...
+func UploadIdentity(bitriseClient *bitriseclient.BitriseClient, outputDirPath string) error {
+	identities, err := os.Open(outputDirPath + "/" + "Identities.p12")
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := identities.Close(); err != nil {
+			log.Warnf("Identities failed, err: %s", err)
+		}
+
+	}()
+
+	info, err := identities.Stat()
+	if err != nil {
+		return err
+	}
+
+	log.Debugf("\n%s size: %d", "Identities.p12", info.Size())
+
+	certificateResponseData, err := bitriseClient.RegisterIdentity(info.Size())
+	if err != nil {
+		return err
+	}
+
+	if err := bitriseClient.UploadIdentity(certificateResponseData.UploadURL, certificateResponseData.UploadFileName, outputDirPath, "Identities.p12"); err != nil {
+		return err
+	}
+
+	return bitriseClient.ConfirmIdentityUpload(certificateResponseData.Slug, certificateResponseData.UploadFileName)
+}
+
+func askAccessToken() (token string, err error) {
+	messageToAsk := `Please copy your personal access token to Bitrise.
+(To acquire a Personal Access Token for your user, sign in with that user on bitrise.io, go to your Account Settings page,
+and select the Security tab on the left side.)`
+	fmt.Println()
+
+	accesToken, err := goinp.AskForStringFromReader(messageToAsk, os.Stdin)
+	if err != nil {
+		return accesToken, err
+	}
+
+	fmt.Println()
+	log.Infof("%s %s", colorstring.Green("Given accesToken:"), accesToken)
+	fmt.Println()
+
+	return accesToken, nil
+}
+
+func selectApp(appList []bitriseclient.Application) (seledtedAppSlug string, err error) {
+	var selectionList []string
+
+	for _, app := range appList {
+		selectionList = append(selectionList, app.Title+" ("+app.RepoURL+")")
+	}
+	userSelection, err := goinp.SelectFromStringsWithDefault("Select the app which you want to upload the privisioning profiles", 1, selectionList)
+
+	if err != nil {
+		return "", fmt.Errorf("failed to read input: %s", err)
+
+	}
+
+	log.Debugf("selected app: %v", userSelection)
+
+	for index, selected := range selectionList {
+		if selected == userSelection {
+			return appList[index].Slug, nil
+		}
+	}
+
+	return "", &appSelectionError{"failed to find selected app in appList"}
+}
+
+type appSelectionError struct {
+	s string
+}
+
+func (e *appSelectionError) Error() string {
+	return e.s
 }
