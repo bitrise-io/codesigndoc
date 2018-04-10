@@ -1,7 +1,6 @@
 package bitriseclient
 
 import (
-	"fmt"
 	"math/big"
 	"net/http"
 	"path/filepath"
@@ -184,8 +183,7 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 
 // RegisterIdentity ...
 func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterIdentityData, error) {
-	fmt.Println()
-	log.Infof("Register %s on Bitrise...", "Identities.p12")
+	log.Printf("Register %s on Bitrise...", "Identities.p12")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
 	if err != nil {
@@ -220,8 +218,7 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 
 // UploadIdentity ...
 func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
-	fmt.Println()
-	log.Infof("Upload %s to Bitrise...", exportFileName)
+	log.Printf("Upload %s to Bitrise...", exportFileName)
 
 	filePth := filepath.Join(outputDirPath, exportFileName)
 
@@ -239,8 +236,7 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 
 // ConfirmIdentityUpload ...
 func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certificateUploadName string) error {
-	fmt.Println()
-	log.Infof("Confirm - %s - upload to Bitrise...", certificateUploadName)
+	log.Printf("Confirm - %s - upload to Bitrise...", certificateUploadName)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, "build-certificates", certificateSlug, "uploaded")
 	if err != nil {
