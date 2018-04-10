@@ -1,7 +1,6 @@
 package bitriseclient
 
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 
@@ -182,8 +181,7 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 
 // RegisterProvisioningProfile ...
 func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileData, error) {
-	fmt.Println()
-	log.Infof("Register %s on Bitrise...", profile.Name)
+	log.Printf("Register %s on Bitrise...", profile.Name)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
 	if err != nil {
@@ -218,8 +216,7 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 
 // UploadProvisioningProfile ...
 func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
-	fmt.Println()
-	log.Infof("Upload %s to Bitrise...", exportFileName)
+	log.Printf("Upload %s to Bitrise...", exportFileName)
 
 	filePth := filepath.Join(outputDirPath, exportFileName)
 
@@ -240,8 +237,7 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 
 // ConfirmProvisioningProfileUpload ...
 func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string, provUploadName string) error {
-	fmt.Println()
-	log.Infof("Confirm - %s - upload to Bitrise...", provUploadName)
+	log.Printf("Confirm - %s - upload to Bitrise...", provUploadName)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint, profileSlug, "uploaded")
 	if err != nil {

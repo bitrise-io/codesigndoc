@@ -667,32 +667,35 @@ func getAccessToken() (string, error) {
 }
 
 func uploadExportedProvProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToExport []profileutil.ProvisioningProfileInfoModel, outputDirPath string) (bool, error) {
+	fmt.Println()
+	log.Infof("Uploading provisioning profiles...")
+
 	profilesToUpload, err := filterAlreadyUploadedProvProfiles(bitriseClient, profilesToExport)
 	if err != nil {
 		return false, err
 	}
 
 	if len(profilesToUpload) > 0 {
-		fmt.Println()
-		log.Infof("Uploading provisioning profiles...")
-
 		if err := uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath); err != nil {
 			return false, err
 		}
+	} else {
+		log.Warnf("There is no new provisioning profile to upload...")
 	}
 
 	return true, nil
 }
 
 func uploadExportedIdentity(bitriseClient *bitriseclient.BitriseClient, certificatesToExport []certificateutil.CertificateInfoModel, outputDirPath string) (bool, error) {
+	fmt.Println()
+	log.Infof("Uploading certificate...")
+
 	shouldUploadIdentities, err := shouldUploadCertificates(bitriseClient, certificatesToExport)
 	if err != nil {
 		return false, err
 	}
 
 	if shouldUploadIdentities {
-		fmt.Println()
-		log.Infof("Uploading certificate...")
 
 		if err := UploadIdentity(bitriseClient, outputDirPath); err != nil {
 			return false, err
@@ -715,8 +718,7 @@ func askUploadIdentities() (bool, error) {
 }
 
 func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, localProfiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
-	fmt.Println()
-	log.Infof("Looking for provisioning profile duplicates on Bitrise...")
+	log.Printf("Looking for provisioning profile duplicates on Bitrise...")
 
 	uploadedProfileUUIDList := map[string]bool{}
 	profilesToUpload := []profileutil.ProvisioningProfileInfoModel{}
@@ -748,8 +750,7 @@ func filterAlreadyUploadedProvProfiles(client *bitriseclient.BitriseClient, loca
 }
 
 func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesToExport []certificateutil.CertificateInfoModel) (bool, error) {
-	fmt.Println()
-	log.Infof("Looking for certificate duplicates on Bitrise...")
+	log.Printf("Looking for certificate duplicates on Bitrise...")
 
 	var uploadedCertificatesSerialList []string
 	localCertificatesSerialList := []string{}
