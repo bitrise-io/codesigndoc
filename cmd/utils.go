@@ -34,7 +34,38 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) (
 	return certificates, profiles
 }
 
+func extractMacOsCertificatesAndProfiles(codeSignGroups ...export.MacCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
+	certificateMap := map[string]certificateutil.CertificateInfoModel{}
+	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
+	for _, group := range codeSignGroups {
+		certificate := group.Certificate
+
+		certificateMap[certificate.Serial] = certificate
+
+		for _, profile := range group.BundleIDProfileMap {
+			profilesMap[profile.UUID] = profile
+		}
+	}
+
+	certificates := []certificateutil.CertificateInfoModel{}
+	profiles := []profileutil.ProvisioningProfileInfoModel{}
+	for _, certificate := range certificateMap {
+		certificates = append(certificates, certificate)
+	}
+	for _, profile := range profilesMap {
+		profiles = append(profiles, profile)
+	}
+	return certificates, profiles
+}
+
 func exportMethod(group export.IosCodeSignGroup) string {
+	for _, profile := range group.BundleIDProfileMap {
+		return string(profile.ExportType)
+	}
+	return ""
+}
+
+func exportMacOsMethod(group export.MacCodeSignGroup) string {
 	for _, profile := range group.BundleIDProfileMap {
 		return string(profile.ExportType)
 	}
