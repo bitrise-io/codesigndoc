@@ -39,7 +39,7 @@ func printMacOsCodesignGroup(group export.MacCodeSignGroup) {
 	printCodesignGroup(group.BundleIDProfileMap, group.Certificate.TeamName, group.Certificate.TeamID, group.Certificate.CommonName, group.Certificate.Serial)
 }
 
-func printCodesignGroup(bundleIDProfileMap map[string]profileutil.ProvisioningProfileInfoModel, teamName string, TeamID string, commonName string, serial string) {
+func printCodesignGroup(bundleIDProfileMap map[string]profileutil.ProvisioningProfileInfoModel, teamName string, teamID string, commonName string, serial string) {
 	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), teamName, teamID)
 	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), commonName, serial)
 	idx := -1
