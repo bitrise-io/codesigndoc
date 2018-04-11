@@ -359,7 +359,7 @@ func collectIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, ins
 		fmt.Println()
 		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(iosCodeSignGroup))
 		fmt.Println()
-		printCodesignGroup(iosCodeSignGroup)
+		printIOSCodesignGroup(iosCodeSignGroup)
 
 		iosCodeSignGroups = append(iosCodeSignGroups, iosCodeSignGroup)
 
@@ -1189,7 +1189,7 @@ func getIOSCodeSignGroup(archivePath string, installedCertificates []certificate
 	fmt.Println()
 	log.Infof("Codesign settings used for archive:")
 	fmt.Println()
-	printCodesignGroup(archiveCodeSignGroup)
+	printIOSCodesignGroup(archiveCodeSignGroup)
 
 	return archive, archiveCodeSignGroup, nil
 }
