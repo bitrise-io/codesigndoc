@@ -217,7 +217,7 @@ func collectIOSIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, 
 
 		fmt.Println()
 		fmt.Println()
-		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(iosCodeSignGroup))
+		log.Infof("Codesign settings will be used for %s ipa export:", exportIOSMethod(iosCodeSignGroup))
 		fmt.Println()
 		printIOSCodesignGroup(iosCodeSignGroup)
 
@@ -746,7 +746,7 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 			}
 
 			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-			certificates, profiles := extractMacOsCertificatesAndProfiles(codeSignGroups...)
+			certificates, profiles := extractMacOSCertificatesAndProfiles(codeSignGroups...)
 			certificatesToExport = append(certificatesToExport, certificates...)
 			profilesToExport = append(profilesToExport, profiles...)
 		}
@@ -775,7 +775,7 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 			}
 
 			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-			certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
+			certificates, profiles := extractIOSCertificatesAndProfiles(codeSignGroups...)
 			certificatesToExport = append(certificatesToExport, certificates...)
 			profilesToExport = append(profilesToExport, profiles...)
 		}

@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
+func extractIOSCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
 	certificateMap := map[string]certificateutil.CertificateInfoModel{}
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 	for _, group := range codeSignGroups {
@@ -36,7 +36,7 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) (
 	return certificates, profiles
 }
 
-func extractMacOsCertificatesAndProfiles(codeSignGroups ...export.MacCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
+func extractMacOSCertificatesAndProfiles(codeSignGroups ...export.MacCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
 	certificateMap := map[string]certificateutil.CertificateInfoModel{}
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 	for _, group := range codeSignGroups {
@@ -60,14 +60,14 @@ func extractMacOsCertificatesAndProfiles(codeSignGroups ...export.MacCodeSignGro
 	return certificates, profiles
 }
 
-func exportMethod(group export.IosCodeSignGroup) string {
+func exportIOSMethod(group export.IosCodeSignGroup) string {
 	for _, profile := range group.BundleIDProfileMap {
 		return string(profile.ExportType)
 	}
 	return ""
 }
 
-func exportMacOsMethod(group export.MacCodeSignGroup) string {
+func exportMacOSMethod(group export.MacCodeSignGroup) string {
 	for _, profile := range group.BundleIDProfileMap {
 		return string(profile.ExportType)
 	}
