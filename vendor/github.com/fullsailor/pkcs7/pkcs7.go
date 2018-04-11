@@ -222,14 +222,14 @@ func (p7 *PKCS7) Verify() (err error) {
 
 func verifySignature(p7 *PKCS7, signer signerInfo) error {
 	signedData := p7.Content
-	hash, err := getHashForOID(signer.DigestAlgorithm.Algorithm)
-	if err != nil {
-		return err
-	}
 	if len(signer.AuthenticatedAttributes) > 0 {
 		// TODO(fullsailor): First check the content type match
 		var digest []byte
 		err := unmarshalAttribute(signer.AuthenticatedAttributes, oidAttributeMessageDigest, &digest)
+		if err != nil {
+			return err
+		}
+		hash, err := getHashForOID(signer.DigestAlgorithm.Algorithm)
 		if err != nil {
 			return err
 		}
@@ -254,18 +254,7 @@ func verifySignature(p7 *PKCS7, signer signerInfo) error {
 		return errors.New("pkcs7: No certificate for signer")
 	}
 
-	algo := getSignatureAlgorithmFromAI(signer.DigestEncryptionAlgorithm)
-	if algo == x509.UnknownSignatureAlgorithm {
-		// I'm not sure what the spec here is, and the openssl sources were not
-		// helpful. But, this is what App Store receipts appear to do.
-		// The DigestEncryptionAlgorithm is just "rsaEncryption (PKCS #1)"
-		// But we're expecting a digest + encryption algorithm. So... we're going
-		// to determine an algorithm based on the DigestAlgorithm and this
-		// encryption algorithm.
-		if signer.DigestEncryptionAlgorithm.Algorithm.Equal(oidEncryptionAlgorithmRSA) {
-			algo = getRSASignatureAlgorithmForDigestAlgorithm(hash)
-		}
-	}
+	algo := x509.SHA1WithRSA
 	return cert.CheckSignature(algo, signedData, signer.EncryptedDigest)
 }
 
@@ -303,15 +292,6 @@ func getHashForOID(oid asn1.ObjectIdentifier) (crypto.Hash, error) {
 		return crypto.SHA1, nil
 	}
 	return crypto.Hash(0), ErrUnsupportedAlgorithm
-}
-
-func getRSASignatureAlgorithmForDigestAlgorithm(hash crypto.Hash) x509.SignatureAlgorithm {
-	for _, details := range signatureAlgorithmDetails {
-		if details.pubKeyAlgo == x509.RSA && details.hash == hash {
-			return details.algo
-		}
-	}
-	return x509.UnknownSignatureAlgorithm
 }
 
 // GetOnlySigner returns an x509.Certificate for the first signer of the signed
@@ -653,7 +633,7 @@ func (sd *SignedData) AddSigner(cert *x509.Certificate, pkey crypto.PrivateKey, 
 	signer := signerInfo{
 		AuthenticatedAttributes:   finalAttrs,
 		DigestAlgorithm:           pkix.AlgorithmIdentifier{Algorithm: oidDigestAlgorithmSHA1},
-		DigestEncryptionAlgorithm: pkix.AlgorithmIdentifier{Algorithm: oidSignatureSHA1WithRSA},
+		DigestEncryptionAlgorithm: pkix.AlgorithmIdentifier{Algorithm: oidEncryptionAlgorithmRSA},
 		IssuerAndSerialNumber:     ias,
 		EncryptedDigest:           signature,
 		Version:                   1,

@@ -210,13 +210,13 @@ while(<>) {
 	# Determine which form to use; pad args with zeros.
 	my $asm = "Syscall";
 	if ($nonblock) {
-		if ($errvar eq "" && $ENV{'GOOS'} eq "linux") {
-			$asm = "RawSyscallNoError";
-		} else {
+		if ($errvar ne "") {
 			$asm = "RawSyscall";
+		} else {
+			$asm = "RawSyscallNoError";
 		}
 	} else {
-		if ($errvar eq "" && $ENV{'GOOS'} eq "linux") {
+		if ($errvar eq "") {
 			$asm = "SyscallNoError";
 		}
 	}
@@ -292,11 +292,10 @@ while(<>) {
 	if ($ret[0] eq "_" && $ret[1] eq "_" && $ret[2] eq "_") {
 		$text .= "\t$call\n";
 	} else {
-		if ($errvar eq "" && $ENV{'GOOS'} eq "linux") {
-			# raw syscall without error on Linux, see golang.org/issue/22924
-			$text .= "\t$ret[0], $ret[1] := $call\n";
-		} else {
+		if ($errvar ne "") {
 			$text .= "\t$ret[0], $ret[1], $ret[2] := $call\n";
+		} else {
+			$text .= "\t$ret[0], $ret[1] := $call\n";
 		}
 	}
 	$text .= $body;

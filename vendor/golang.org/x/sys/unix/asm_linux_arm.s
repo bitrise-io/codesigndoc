@@ -35,6 +35,7 @@ TEXT ·SyscallNoError(SB),NOSPLIT,$0-24
 	BL	runtime·exitsyscall(SB)
 	RET
 
+
 TEXT ·RawSyscall(SB),NOSPLIT,$0-28
 	B	syscall·RawSyscall(SB)
 
@@ -52,5 +53,5 @@ TEXT ·RawSyscallNoError(SB),NOSPLIT,$0-24
 	MOVW	R0, r2+20(FP)
 	RET
 
-TEXT ·seek(SB),NOSPLIT,$0-28
+TEXT ·seek(SB),NOSPLIT,$0-32
 	B	syscall·seek(SB)

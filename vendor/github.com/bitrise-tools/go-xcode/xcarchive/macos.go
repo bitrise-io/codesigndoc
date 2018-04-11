@@ -60,13 +60,15 @@ func newMacosBaseApplication(path string) (macosBaseApplication, error) {
 		entitlementsPath := filepath.Join(path, "Contents/Resources/archived-expanded-entitlements.xcent")
 		if exist, err := pathutil.IsPathExists(entitlementsPath); err != nil {
 			return macosBaseApplication{}, fmt.Errorf("failed to check if entitlements exists at: %s, error: %s", entitlementsPath, err)
-		} else if exist {
-			plist, err := plistutil.NewPlistDataFromFile(entitlementsPath)
-			if err != nil {
-				return macosBaseApplication{}, err
-			}
-			entitlements = plist
+		} else if !exist {
+			return macosBaseApplication{}, fmt.Errorf("entitlements not exists at: %s", entitlementsPath)
 		}
+
+		plist, err := plistutil.NewPlistDataFromFile(entitlementsPath)
+		if err != nil {
+			return macosBaseApplication{}, err
+		}
+		entitlements = plist
 	}
 
 	return macosBaseApplication{
