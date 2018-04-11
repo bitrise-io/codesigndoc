@@ -50,146 +50,6 @@ func initExportOutputDir() (string, error) {
 	return absExportOutputDirPath, nil
 }
 
-func analyzeArchive(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel) (export.IosCodeSignGroup, error) {
-	signingIdentity := archive.SigningIdentity()
-	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
-
-	if signingIdentity == "" {
-		return export.IosCodeSignGroup{}, fmt.Errorf("no signing identity found")
-	}
-
-	certificate, err := findCertificate(signingIdentity, installedCertificates)
-	if err != nil {
-		return export.IosCodeSignGroup{}, err
-	}
-
-	return export.IosCodeSignGroup{
-		Certificate:        certificate,
-		BundleIDProfileMap: bundleIDProfileInfoMap,
-	}, nil
-}
-
-func analyzeMacOsArchive(archive xcarchive.MacosArchive, installedCertificates []certificateutil.CertificateInfoModel) (export.MacCodeSignGroup, error) {
-	signingIdentity := archive.SigningIdentity()
-	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
-
-	if signingIdentity == "" {
-		return export.MacCodeSignGroup{}, fmt.Errorf("no signing identity found")
-	}
-
-	certificate, err := findCertificate(signingIdentity, installedCertificates)
-	if err != nil {
-		return export.MacCodeSignGroup{}, err
-	}
-
-	return export.MacCodeSignGroup{
-		Certificate:        certificate,
-		BundleIDProfileMap: bundleIDProfileInfoMap,
-	}, nil
-}
-
-func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
-	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
-
-	fmt.Println()
-	fmt.Println()
-	log.Infof("Targets to sign:")
-	fmt.Println()
-	for bundleID, entitlements := range bundleIDEntitlemenstMap {
-		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
-	}
-	fmt.Println()
-
-	bundleIDs := []string{}
-	for bundleID := range bundleIDEntitlemenstMap {
-		bundleIDs = append(bundleIDs, bundleID)
-	}
-	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
-
-	log.Debugf("Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	if len(codeSignGroups) == 0 {
-		return []export.SelectableCodeSignGroup{}
-	}
-
-	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
-	)
-
-	// Handle if archive used NON xcode managed profile
-	if len(codeSignGroups) > 0 && !archive.IsXcodeManaged() {
-		log.Warnf("App was signed with NON xcode managed profile when archiving,")
-		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
-		log.Warnf("Removing xcode managed CodeSignInfo groups")
-
-		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
-		)
-	}
-
-	log.Debugf("\n")
-	log.Debugf("Filtered Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	return codeSignGroups
-}
-
-func collectMacOsIpaExportSelectableCodeSignGroups(archive xcarchive.MacosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
-	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
-
-	fmt.Println()
-	fmt.Println()
-	log.Infof("Targets to sign:")
-	fmt.Println()
-	for bundleID, entitlements := range bundleIDEntitlemenstMap {
-		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
-	}
-	fmt.Println()
-
-	bundleIDs := []string{}
-	for bundleID := range bundleIDEntitlemenstMap {
-		bundleIDs = append(bundleIDs, bundleID)
-	}
-	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
-
-	log.Debugf("Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	if len(codeSignGroups) == 0 {
-		return []export.SelectableCodeSignGroup{}
-	}
-
-	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
-	)
-
-	// Handle if archive used NON xcode managed profile
-	if len(codeSignGroups) > 0 && !archive.IsXcodeManaged() {
-		log.Warnf("App was signed with NON xcode managed profile when archiving,")
-		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
-		log.Warnf("Removing xcode managed CodeSignInfo groups")
-
-		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
-		)
-	}
-
-	log.Debugf("\n")
-	log.Debugf("Filtered Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	return codeSignGroups
-}
-
 func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) []profileutil.ProvisioningProfileInfoModel {
 	profilesByBundleIDAndName := map[string][]profileutil.ProvisioningProfileInfoModel{}
 	for _, profile := range profiles {
@@ -217,10 +77,10 @@ func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) [
 	return filteredProfiles
 }
 
-func collectIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
+func collectIOSIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
 	iosCodeSignGroups := []export.IosCodeSignGroup{}
 
-	codeSignGroups := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
+	codeSignGroups := collectIOSIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
 		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
 	}
@@ -382,7 +242,7 @@ func collectIpaExportCodeSignGroups(tool Tool, archive xcarchive.IosArchive, ins
 func collectMacOsIpaExportCodeSignGroups(tool Tool, archive xcarchive.MacosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.MacCodeSignGroup, error) {
 	macCodeSignGroups := []export.MacCodeSignGroup{}
 
-	codeSignGroups := collectMacOsIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
+	codeSignGroups := collectMacOSIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
 		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
 	}
@@ -782,71 +642,9 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		log.Debugf(profileInfo.String(installedCertificates...))
 	}
 
-	macOS, err := xcarchive.IsMacOS(archivePath)
+	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, installedCertificates, installedProfiles, tool)
 	if err != nil {
 		return err
-	}
-
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
-
-	if macOS {
-		archive, archiveCodeSignGroup, err := getMacOsCodeSignGroup(archivePath, installedCertificates)
-		if err != nil {
-			return err
-		}
-
-		if certificatesOnly {
-			ipaExportCertificate, err := collectIpaExportCertificate(tool, archiveCodeSignGroup.Certificate, installedCertificates)
-			if err != nil {
-				return err
-			}
-
-			certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
-		} else {
-			ipaExportCodeSignGroups, err := collectMacOsIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
-			if err != nil {
-				return err
-			}
-
-			if len(ipaExportCodeSignGroups) == 0 {
-				return errors.New("no ipa export code sign groups collected")
-			}
-
-			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-			certificates, profiles := extractMacOsCertificatesAndProfiles(codeSignGroups...)
-			certificatesToExport = append(certificatesToExport, certificates...)
-			profilesToExport = append(profilesToExport, profiles...)
-		}
-
-	} else {
-		archive, archiveCodeSignGroup, err := getIOSCodeSignGroup(archivePath, installedCertificates)
-		if err != nil {
-			return err
-		}
-
-		if certificatesOnly {
-			ipaExportCertificate, err := collectIpaExportCertificate(tool, archiveCodeSignGroup.Certificate, installedCertificates)
-			if err != nil {
-				return err
-			}
-
-			certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
-		} else {
-			ipaExportCodeSignGroups, err := collectIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
-			if err != nil {
-				return err
-			}
-
-			if len(ipaExportCodeSignGroups) == 0 {
-				return errors.New("no ipa export code sign groups collected")
-			}
-
-			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
-			certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
-			certificatesToExport = append(certificatesToExport, certificates...)
-			profilesToExport = append(profilesToExport, profiles...)
-		}
 	}
 
 	// ipa export code sign settings
@@ -913,6 +711,76 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 	printFinished(provProfilesUploaded, certsUploaded)
 
 	return nil
+}
+
+func getFilesToExport(archivePath string, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, tool Tool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+	certificatesToExport := []certificateutil.CertificateInfoModel{}
+	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
+
+	macOS, err := xcarchive.IsMacOS(archivePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if macOS {
+		archive, archiveCodeSignGroup, err := getMacOSCodeSignGroup(archivePath, installedCertificates)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if certificatesOnly {
+			ipaExportCertificate, err := collectIpaExportCertificate(tool, archiveCodeSignGroup.Certificate, installedCertificates)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
+		} else {
+			ipaExportCodeSignGroups, err := collectMacOsIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if len(ipaExportCodeSignGroups) == 0 {
+				return nil, nil, errors.New("no ipa export code sign groups collected")
+			}
+
+			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
+			certificates, profiles := extractMacOsCertificatesAndProfiles(codeSignGroups...)
+			certificatesToExport = append(certificatesToExport, certificates...)
+			profilesToExport = append(profilesToExport, profiles...)
+		}
+
+	} else {
+		archive, archiveCodeSignGroup, err := getIOSCodeSignGroup(archivePath, installedCertificates)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if certificatesOnly {
+			ipaExportCertificate, err := collectIpaExportCertificate(tool, archiveCodeSignGroup.Certificate, installedCertificates)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			certificatesToExport = append(certificatesToExport, archiveCodeSignGroup.Certificate, ipaExportCertificate)
+		} else {
+			ipaExportCodeSignGroups, err := collectIOSIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			if len(ipaExportCodeSignGroups) == 0 {
+				return nil, nil, errors.New("no ipa export code sign groups collected")
+			}
+
+			codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)
+			certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
+			certificatesToExport = append(certificatesToExport, certificates...)
+			profilesToExport = append(profilesToExport, profiles...)
+		}
+	}
+	return certificatesToExport, profilesToExport, nil
 }
 
 func getAccessToken() (string, error) {
@@ -1173,42 +1041,4 @@ type appSelectionError struct {
 
 func (e *appSelectionError) Error() string {
 	return e.s
-}
-
-func getIOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.IosArchive, export.IosCodeSignGroup, error) {
-	archive, err := xcarchive.NewIosArchive(archivePath)
-	if err != nil {
-		return xcarchive.IosArchive{}, export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
-	}
-
-	archiveCodeSignGroup, err := analyzeArchive(archive, installedCertificates)
-	if err != nil {
-		return xcarchive.IosArchive{}, export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("Codesign settings used for archive:")
-	fmt.Println()
-	printIOSCodesignGroup(archiveCodeSignGroup)
-
-	return archive, archiveCodeSignGroup, nil
-}
-
-func getMacOsCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.MacosArchive, export.MacCodeSignGroup, error) {
-	archive, err := xcarchive.NewMacosArchive(archivePath)
-	if err != nil {
-		return xcarchive.MacosArchive{}, export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
-	}
-
-	archiveCodeSignGroup, err := analyzeMacOsArchive(archive, installedCertificates)
-	if err != nil {
-		return xcarchive.MacosArchive{}, export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
-	}
-
-	fmt.Println()
-	log.Infof("Codesign settings used for archive:")
-	fmt.Println()
-	printMacOsCodesignGroup(archiveCodeSignGroup)
-
-	return archive, archiveCodeSignGroup, nil
 }
