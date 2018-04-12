@@ -110,7 +110,11 @@ func getIOSCodeSignGroup(archivePath string, installedCertificates []certificate
 		return xcarchive.IosArchive{}, export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
 	}
 
-	archiveCodeSignGroup, err := analyzeIOSArchive(archive, installedCertificates)
+	certificate, bundleIDProfileInfoMap, err := analyzeArchive(archive.SigningIdentity(), archive.BundleIDProfileInfoMap(), installedCertificates)
+	archiveCodeSignGroup := export.IosCodeSignGroup{
+		Certificate:        certificate,
+		BundleIDProfileMap: bundleIDProfileInfoMap,
+	}
 	if err != nil {
 		return xcarchive.IosArchive{}, export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
 	}
@@ -129,7 +133,11 @@ func getMacOSCodeSignGroup(archivePath string, installedCertificates []certifica
 		return xcarchive.MacosArchive{}, export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
 	}
 
-	archiveCodeSignGroup, err := analyzeMacOSArchive(archive, installedCertificates)
+	certificate, bundleIDProfileInfoMap, err := analyzeArchive(archive.SigningIdentity(), archive.BundleIDProfileInfoMap(), installedCertificates)
+	archiveCodeSignGroup := export.MacCodeSignGroup{
+		Certificate:        certificate,
+		BundleIDProfileMap: bundleIDProfileInfoMap,
+	}
 	if err != nil {
 		return xcarchive.MacosArchive{}, export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
 	}
@@ -142,7 +150,7 @@ func getMacOSCodeSignGroup(archivePath string, installedCertificates []certifica
 	return archive, archiveCodeSignGroup, nil
 }
 
-func collectIOSIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
+func collectIpaExportSelectableCodeSignGroups(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
 	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
 
 	fmt.Println()
@@ -193,91 +201,15 @@ func collectIOSIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, i
 	return codeSignGroups
 }
 
-func collectMacOSIpaExportSelectableCodeSignGroups(archive xcarchive.MacosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
-	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
-
-	fmt.Println()
-	fmt.Println()
-	log.Infof("Targets to sign:")
-	fmt.Println()
-	for bundleID, entitlements := range bundleIDEntitlemenstMap {
-		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
-	}
-	fmt.Println()
-
-	bundleIDs := []string{}
-	for bundleID := range bundleIDEntitlemenstMap {
-		bundleIDs = append(bundleIDs, bundleID)
-	}
-	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
-
-	log.Debugf("Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	if len(codeSignGroups) == 0 {
-		return []export.SelectableCodeSignGroup{}
-	}
-
-	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
-	)
-
-	// Handle if archive used NON xcode managed profile
-	if len(codeSignGroups) > 0 && !archive.IsXcodeManaged() {
-		log.Warnf("App was signed with NON xcode managed profile when archiving,")
-		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
-		log.Warnf("Removing xcode managed CodeSignInfo groups")
-
-		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
-		)
-	}
-
-	log.Debugf("\n")
-	log.Debugf("Filtered Codesign Groups:")
-	for _, group := range codeSignGroups {
-		log.Debugf(group.String())
-	}
-
-	return codeSignGroups
-}
-
-func analyzeIOSArchive(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel) (export.IosCodeSignGroup, error) {
-	signingIdentity := archive.SigningIdentity()
-	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
-
+func analyzeArchive(signingIdentity string, bundleIDProfileInfoMap map[string]profileutil.ProvisioningProfileInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, map[string]profileutil.ProvisioningProfileInfoModel, error) {
 	if signingIdentity == "" {
-		return export.IosCodeSignGroup{}, fmt.Errorf("no signing identity found")
+		return certificateutil.CertificateInfoModel{}, nil, fmt.Errorf("no signing identity found")
 	}
 
 	certificate, err := findCertificate(signingIdentity, installedCertificates)
 	if err != nil {
-		return export.IosCodeSignGroup{}, err
+		return certificateutil.CertificateInfoModel{}, nil, err
 	}
 
-	return export.IosCodeSignGroup{
-		Certificate:        certificate,
-		BundleIDProfileMap: bundleIDProfileInfoMap,
-	}, nil
-}
-
-func analyzeMacOSArchive(archive xcarchive.MacosArchive, installedCertificates []certificateutil.CertificateInfoModel) (export.MacCodeSignGroup, error) {
-	signingIdentity := archive.SigningIdentity()
-	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
-
-	if signingIdentity == "" {
-		return export.MacCodeSignGroup{}, fmt.Errorf("no signing identity found")
-	}
-
-	certificate, err := findCertificate(signingIdentity, installedCertificates)
-	if err != nil {
-		return export.MacCodeSignGroup{}, err
-	}
-
-	return export.MacCodeSignGroup{
-		Certificate:        certificate,
-		BundleIDProfileMap: bundleIDProfileInfoMap,
-	}, nil
+	return certificate, bundleIDProfileInfoMap, nil
 }
