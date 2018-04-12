@@ -571,9 +571,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 }
 
 func getFilesToExport(archivePath string, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, tool Tool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
-
 	macOS, err := xcarchive.IsMacOS(archivePath)
 	if err != nil {
 		return nil, nil, err
@@ -598,58 +595,78 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 		certificate = iosArchiveCodeSignGroup.Certificate
 	}
 
+	certificatesToExport := []certificateutil.CertificateInfoModel{}
+	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
+
 	if certificatesOnly {
-		ipaExportCertificate, err := collectIpaExportCertificate(tool, certificate, installedCertificates)
+		certificatesToExport, err = exportCertificatesOnly(tool, certificate, installedCertificates, certificatesToExport)
 		if err != nil {
 			return nil, nil, err
 		}
-
-		certificatesToExport = append(certificatesToExport, certificate, ipaExportCertificate)
 	} else {
-		groups, err := collectIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if macOS {
-			var ipaExportCodeSignGroups []export.MacCodeSignGroup
-			for _, group := range groups {
-				ipaExportCodeSignGroup, ok := group.(export.MacCodeSignGroup)
-				if ok {
-					ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
-				}
-			}
-
-			if len(ipaExportCodeSignGroups) == 0 {
-				return nil, nil, errors.New("no ipa export code sign groups collected")
-			}
-
-			codeSignGroups := append(ipaExportCodeSignGroups, macArchiveCodeSignGroup)
-			certificates, profiles := extractMacOSCertificatesAndProfiles(codeSignGroups...)
-			certificatesToExport = append(certificatesToExport, certificates...)
-			profilesToExport = append(profilesToExport, profiles...)
-
-		} else {
-			var ipaExportCodeSignGroups []export.IosCodeSignGroup
-			for _, group := range groups {
-				ipaExportCodeSignGroup, ok := group.(export.IosCodeSignGroup)
-				if ok {
-					ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
-				}
-			}
-
-			if len(ipaExportCodeSignGroups) == 0 {
-				return nil, nil, errors.New("no ipa export code sign groups collected")
-			}
-
-			codeSignGroups := append(ipaExportCodeSignGroups, iosArchiveCodeSignGroup)
-			certificates, profiles := extractIOSCertificatesAndProfiles(codeSignGroups...)
-			certificatesToExport = append(certificatesToExport, certificates...)
-			profilesToExport = append(profilesToExport, profiles...)
-		}
+		certificatesToExport, profilesToExport, err = exportCertificatesAndProfiles(macOS, archive, tool, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, macArchiveCodeSignGroup, iosArchiveCodeSignGroup)
 	}
 
 	return certificatesToExport, profilesToExport, nil
+}
+
+func exportCertificatesAndProfiles(macOS bool, archive Archive, tool Tool, certificate certificateutil.CertificateInfoModel,
+	installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel,
+	certificatesToExport []certificateutil.CertificateInfoModel, profilesToExport []profileutil.ProvisioningProfileInfoModel,
+	macArchiveCodeSignGroup export.MacCodeSignGroup, iosArchiveCodeSignGroup export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+
+	groups, err := collectIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if macOS {
+		var ipaExportCodeSignGroups []export.MacCodeSignGroup
+		for _, group := range groups {
+			ipaExportCodeSignGroup, ok := group.(export.MacCodeSignGroup)
+			if ok {
+				ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
+			}
+		}
+
+		if len(ipaExportCodeSignGroups) == 0 {
+			return nil, nil, errors.New("no ipa export code sign groups collected")
+		}
+
+		codeSignGroups := append(ipaExportCodeSignGroups, macArchiveCodeSignGroup)
+		certificates, profiles := extractMacOSCertificatesAndProfiles(codeSignGroups...)
+		certificatesToExport = append(certificatesToExport, certificates...)
+		profilesToExport = append(profilesToExport, profiles...)
+
+	} else {
+		var ipaExportCodeSignGroups []export.IosCodeSignGroup
+		for _, group := range groups {
+			ipaExportCodeSignGroup, ok := group.(export.IosCodeSignGroup)
+			if ok {
+				ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
+			}
+		}
+
+		if len(ipaExportCodeSignGroups) == 0 {
+			return nil, nil, errors.New("no ipa export code sign groups collected")
+		}
+
+		codeSignGroups := append(ipaExportCodeSignGroups, iosArchiveCodeSignGroup)
+		certificates, profiles := extractIOSCertificatesAndProfiles(codeSignGroups...)
+		certificatesToExport = append(certificatesToExport, certificates...)
+		profilesToExport = append(profilesToExport, profiles...)
+	}
+	return certificatesToExport, profilesToExport, nil
+}
+
+func exportCertificatesOnly(tool Tool, certificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel, certificatesToExport []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
+	ipaExportCertificate, err := collectIpaExportCertificate(tool, certificate, installedCertificates)
+	if err != nil {
+		return nil, err
+	}
+
+	certificatesToExport = append(certificatesToExport, certificate, ipaExportCertificate)
+	return certificatesToExport, nil
 }
 
 func getAccessToken() (string, error) {
