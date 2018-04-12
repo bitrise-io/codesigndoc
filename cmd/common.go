@@ -605,6 +605,9 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 		}
 	} else {
 		certificatesToExport, profilesToExport, err = exportCertificatesAndProfiles(macOS, archive, tool, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, macArchiveCodeSignGroup, iosArchiveCodeSignGroup)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return certificatesToExport, profilesToExport, nil
