@@ -7,7 +7,6 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-tools/go-xcode/export"
-	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
 func printFinished(provProfilesUploaded bool, certsUploaded bool) {
@@ -20,20 +19,11 @@ func printFinished(provProfilesUploaded bool, certsUploaded bool) {
 	}
 }
 
-// PrintIOSCodesignGroup ...
-func printIOSCodesignGroup(group export.IosCodeSignGroup) {
-	printCodesignGroup(group.BundleIDProfileMap, group.Certificate.TeamName, group.Certificate.TeamID, group.Certificate.CommonName, group.Certificate.Serial)
-}
-
-func printMacOsCodesignGroup(group export.MacCodeSignGroup) {
-	printCodesignGroup(group.BundleIDProfileMap, group.Certificate.TeamName, group.Certificate.TeamID, group.Certificate.CommonName, group.Certificate.Serial)
-}
-
-func printCodesignGroup(bundleIDProfileMap map[string]profileutil.ProvisioningProfileInfoModel, teamName string, teamID string, commonName string, serial string) {
-	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), teamName, teamID)
-	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), commonName, serial)
+func printCodesignGroup(group export.CodeSignGroup) {
+	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
+	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
 	idx := -1
-	for bundleID, profile := range bundleIDProfileMap {
+	for bundleID, profile := range group.BundleIDProfileMap() {
 		idx++
 		if idx == 0 {
 			fmt.Printf("%s %s -> %s\n", colorstring.Greenf("provisioning profiles:"), profile.Name, bundleID)
