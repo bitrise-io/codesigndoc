@@ -78,7 +78,7 @@ func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) [
 }
 
 func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.CodeSignGroup, error) {
-	collectedSCodeignGroups := []export.CodeSignGroup{}
+	collectedCodeSignGroups := []export.CodeSignGroup{}
 	_, isMacArchive := archive.(xcarchive.MacosArchive)
 
 	codeSignGroups := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
@@ -211,20 +211,20 @@ func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertifi
 			return nil, fmt.Errorf("failed to find Provisioning Profiles for ipa export")
 		}
 
-		var collectedSCodeignGroup export.CodeSignGroup
+		var collectedCodeSignGroup export.CodeSignGroup
 		if isMacArchive {
-			collectedSCodeignGroup = export.NewMacGroup(*selectedCertificate, nil, selectedBundleIDProfileMap)
+			collectedCodeSignGroup = export.NewMacGroup(*selectedCertificate, nil, selectedBundleIDProfileMap)
 		} else {
-			collectedSCodeignGroup = export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
+			collectedCodeSignGroup = export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
 		}
 
 		fmt.Println()
 		fmt.Println()
-		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(collectedSCodeignGroup))
+		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(collectedCodeSignGroup))
 		fmt.Println()
-		printCodesignGroup(collectedSCodeignGroup)
+		printCodesignGroup(collectedCodeSignGroup)
 
-		collectedSCodeignGroups = append(collectedSCodeignGroups, collectedSCodeignGroup)
+		collectedCodeSignGroups = append(collectedCodeSignGroups, collectedCodeSignGroup)
 
 		fmt.Println()
 		fmt.Println()
@@ -239,7 +239,7 @@ func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertifi
 		}
 	}
 
-	return collectedSCodeignGroups, nil
+	return collectedCodeSignGroups, nil
 }
 
 func collectIpaExportCertificate(tool Tool, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
