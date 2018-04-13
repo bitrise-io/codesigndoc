@@ -79,7 +79,6 @@ func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) [
 
 func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.CodeSignGroup, error) {
 	collectedSCodeignGroups := []export.CodeSignGroup{}
-
 	_, isMacArchive := archive.(xcarchive.MacosArchive)
 
 	codeSignGroups := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
