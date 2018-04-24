@@ -213,7 +213,35 @@ func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertifi
 
 		var collectedCodeSignGroup export.CodeSignGroup
 		if isMacArchive {
-			collectedCodeSignGroup = export.NewMacGroup(*selectedCertificate, nil, selectedBundleIDProfileMap)
+			installedInstallerCertificates := []certificateutil.CertificateInfoModel{}
+
+			var selectedInstallerCetrificate certificateutil.CertificateInfoModel
+			if selectedExportMethod == string(exportoptions.MethodAppStore) {
+				installedInstallerCertificates, err = certificateutil.InstalledInstallerCertificateInfos()
+				if err != nil {
+					log.Errorf("Failed to read installed Installer certificates, error: %s", err)
+				}
+
+				installedInstallerCertificates = certificateutil.FilterValidCertificateInfos(installedInstallerCertificates)
+
+				log.Debugf("\n")
+				log.Debugf("Installed installer certificates:")
+				for _, certInfo := range installedInstallerCertificates {
+					log.Debugf(certInfo.String())
+				}
+
+				for _, installerCetrificate := range installedInstallerCertificates {
+					log.Warnf("installerCetrificate.TeamID -- selectedCertificate.TeamID: %s -- %s", installerCetrificate.TeamID, selectedCertificate.TeamID)
+					if installerCetrificate.TeamID == selectedCertificate.TeamID {
+						selectedInstallerCetrificate = installerCetrificate
+						break
+					}
+
+				}
+
+			}
+
+			collectedCodeSignGroup = export.NewMacGroup(*selectedCertificate, &selectedInstallerCetrificate, selectedBundleIDProfileMap)
 		} else {
 			collectedCodeSignGroup = export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
 		}
