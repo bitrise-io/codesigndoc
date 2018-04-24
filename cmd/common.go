@@ -489,11 +489,18 @@ func provProfileExportFileName(info profileutil.ProvisioningProfileInfoModel, pa
 }
 
 func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
+	macOS, err := xcarchive.IsMacOS(archivePath)
+	if err != nil {
+		return err
+	}
+
 	// archive code sign settings
-	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos()
+	installedCertificates, err := certificateutil.InstalledCodesigningCertificateInfos(macOS)
 	if err != nil {
 		return fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
+
+	log.Warnf("installedCertificates before filter: %v", installedCertificates)
 	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
 
 	log.Debugf("Installed certificates:")
@@ -501,7 +508,12 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		log.Debugf(installedCertificate.String())
 	}
 
-	installedProfiles, err := profileutil.InstalledProvisioningProfileInfos(profileutil.ProfileTypeIos)
+	profileType := profileutil.ProfileTypeIos
+	if macOS {
+		profileType = profileutil.ProfileTypeMacOs
+	}
+
+	installedProfiles, err := profileutil.InstalledProvisioningProfileInfos(profileType)
 	if err != nil {
 		return fmt.Errorf("failed to list installed provisioning profiles, error: %s", err)
 	}
