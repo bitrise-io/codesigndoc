@@ -231,14 +231,11 @@ func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertifi
 				}
 
 				for _, installerCetrificate := range installedInstallerCertificates {
-					log.Warnf("installerCetrificate.TeamID -- selectedCertificate.TeamID: %s -- %s", installerCetrificate.TeamID, selectedCertificate.TeamID)
 					if installerCetrificate.TeamID == selectedCertificate.TeamID {
 						selectedInstallerCetrificate = installerCetrificate
 						break
 					}
-
 				}
-
 			}
 
 			collectedCodeSignGroup = export.NewMacGroup(*selectedCertificate, &selectedInstallerCetrificate, selectedBundleIDProfileMap)
@@ -248,7 +245,7 @@ func collectIpaExportCodeSignGroups(tool Tool, archive Archive, installedCertifi
 
 		fmt.Println()
 		fmt.Println()
-		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(collectedCodeSignGroup))
+		log.Infof("Codesign settings will be used for %s .ipa/.app export:", exportMethod(collectedCodeSignGroup))
 		fmt.Println()
 		printCodesignGroup(collectedCodeSignGroup)
 
@@ -500,7 +497,6 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 		return fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
-	log.Warnf("installedCertificates before filter: %v", installedCertificates)
 	installedCertificates = certificateutil.FilterValidCertificateInfos(installedCertificates)
 
 	log.Debugf("Installed certificates:")
@@ -569,7 +565,7 @@ func exportCodesignFiles(tool Tool, archivePath, outputDirPath string) error {
 
 			bitriseClient.SetSelectedAppSlug(selectedAppSlug)
 
-			provProfilesUploaded, err = uploadExportedProvProfiles(bitriseClient, profilesToExport, outputDirPath)
+			provProfilesUploaded, err = uploadExportedProvProfiles(bitriseClient, profilesToExport, outputDirPath, macOS)
 			if err != nil {
 				return err
 			}
@@ -622,12 +618,14 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
 
 	if certificatesOnly {
-		certificatesToExport, err = exportCertificatesOnly(tool, certificate, installedCertificates, certificatesToExport)
+		ipaExportCertificate, err := collectIpaExportCertificate(tool, certificate, installedCertificates)
 		if err != nil {
 			return nil, nil, err
 		}
+
+		certificatesToExport = append(certificatesToExport, certificate, ipaExportCertificate)
 	} else {
-		certificatesToExport, profilesToExport, err = exportCertificatesAndProfiles(macOS, archive, tool, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, achiveCodeSignGroup)
+		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(archive, tool, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, achiveCodeSignGroup)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -636,51 +634,43 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 	return certificatesToExport, profilesToExport, nil
 }
 
-func exportCertificatesAndProfiles(macOS bool, archive Archive, tool Tool, certificate certificateutil.CertificateInfoModel,
+func collectCertificatesAndProfiles(archive Archive, tool Tool, certificate certificateutil.CertificateInfoModel,
 	installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel,
 	certificatesToExport []certificateutil.CertificateInfoModel, profilesToExport []profileutil.ProvisioningProfileInfoModel,
 	achiveCodeSignGroup export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+
+	_, macOS := archive.(xcarchive.MacosArchive)
 
 	groups, err := collectIpaExportCodeSignGroups(tool, archive, installedCertificates, installedProfiles)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var ipaExportCodeSignGroups []export.CodeSignGroup
+	var exportCodeSignGroups []export.CodeSignGroup
 	for _, group := range groups {
 		if macOS {
-			ipaExportCodeSignGroup, ok := group.(*export.MacCodeSignGroup)
+			exportCodeSignGroup, ok := group.(*export.MacCodeSignGroup)
 			if ok {
-				ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
+				exportCodeSignGroups = append(exportCodeSignGroups, exportCodeSignGroup)
 			}
 		} else {
-			ipaExportCodeSignGroup, ok := group.(*export.IosCodeSignGroup)
+			exportCodeSignGroup, ok := group.(*export.IosCodeSignGroup)
 			if ok {
-				ipaExportCodeSignGroups = append(ipaExportCodeSignGroups, ipaExportCodeSignGroup)
+				exportCodeSignGroups = append(exportCodeSignGroups, exportCodeSignGroup)
 			}
 		}
 	}
 
-	if len(ipaExportCodeSignGroups) == 0 {
+	if len(exportCodeSignGroups) == 0 {
 		return nil, nil, errors.New("no ipa export code sign groups collected")
 	}
 
-	codeSignGroups := append(ipaExportCodeSignGroups, achiveCodeSignGroup)
+	codeSignGroups := append(exportCodeSignGroups, achiveCodeSignGroup)
 	certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
 	certificatesToExport = append(certificatesToExport, certificates...)
 	profilesToExport = append(profilesToExport, profiles...)
 
 	return certificatesToExport, profilesToExport, nil
-}
-
-func exportCertificatesOnly(tool Tool, certificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel, certificatesToExport []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
-	ipaExportCertificate, err := collectIpaExportCertificate(tool, certificate, installedCertificates)
-	if err != nil {
-		return nil, err
-	}
-
-	certificatesToExport = append(certificatesToExport, certificate, ipaExportCertificate)
-	return certificatesToExport, nil
 }
 
 func getAccessToken() (string, error) {
@@ -692,7 +682,7 @@ func getAccessToken() (string, error) {
 	return accessToken, nil
 }
 
-func uploadExportedProvProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToExport []profileutil.ProvisioningProfileInfoModel, outputDirPath string) (bool, error) {
+func uploadExportedProvProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToExport []profileutil.ProvisioningProfileInfoModel, outputDirPath string, isMacOS bool) (bool, error) {
 	fmt.Println()
 	log.Infof("Uploading provisioning profiles...")
 
@@ -702,7 +692,7 @@ func uploadExportedProvProfiles(bitriseClient *bitriseclient.BitriseClient, prof
 	}
 
 	if len(profilesToUpload) > 0 {
-		if err := uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath); err != nil {
+		if err := uploadProvisioningProfiles(bitriseClient, profilesToUpload, outputDirPath, isMacOS); err != nil {
 			return false, err
 		}
 	} else {
@@ -820,9 +810,13 @@ func shouldUploadCertificates(client *bitriseclient.BitriseClient, certificatesT
 
 // ----------------------------------------------------------------
 // --- Upload methods
-func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string) error {
+func uploadProvisioningProfiles(bitriseClient *bitriseclient.BitriseClient, profilesToUpload []profileutil.ProvisioningProfileInfoModel, outputDirPath string, isMacOS bool) error {
 	for _, profile := range profilesToUpload {
 		exportFileName := provProfileExportFileName(profile, outputDirPath)
+
+		if isMacOS {
+			exportFileName = strings.Replace(exportFileName, ".mobileprovision", ".provisionprofile", -1)
+		}
 
 		provProfile, err := os.Open(outputDirPath + "/" + exportFileName)
 		if err != nil {

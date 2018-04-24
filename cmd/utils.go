@@ -112,17 +112,24 @@ func getMacOSCodeSignGroup(archivePath string, installedCertificates []certifica
 }
 
 func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, isMacArchive bool) (export.CodeSignGroup, error) {
-	certificate, bundleIDProfileInfoMap, err := analyzeArchive(archive.SigningIdentity(), archive.BundleIDProfileInfoMap(), installedCertificates)
+	if archive.SigningIdentity() == "" {
+		return nil, fmt.Errorf("no signing identity found")
+	}
+
+	certificate, err := findCertificate(archive.SigningIdentity(), installedCertificates)
+	if err != nil {
+		return nil, err
+	}
 
 	var archiveCodeSignGroup export.CodeSignGroup
 	if isMacArchive {
-		archiveCodeSignGroup = export.NewMacGroup(certificate, nil, bundleIDProfileInfoMap)
+		archiveCodeSignGroup = export.NewMacGroup(certificate, nil, archive.BundleIDProfileInfoMap())
 		if err != nil {
 			return &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
 		}
 
 	} else {
-		archiveCodeSignGroup = export.NewIOSGroup(certificate, bundleIDProfileInfoMap)
+		archiveCodeSignGroup = export.NewIOSGroup(certificate, archive.BundleIDProfileInfoMap())
 		if err != nil {
 			return &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
 		}
@@ -185,17 +192,4 @@ func collectIpaExportSelectableCodeSignGroups(archive Archive, installedCertific
 	}
 
 	return codeSignGroups
-}
-
-func analyzeArchive(signingIdentity string, bundleIDProfileInfoMap map[string]profileutil.ProvisioningProfileInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, map[string]profileutil.ProvisioningProfileInfoModel, error) {
-	if signingIdentity == "" {
-		return certificateutil.CertificateInfoModel{}, nil, fmt.Errorf("no signing identity found")
-	}
-
-	certificate, err := findCertificate(signingIdentity, installedCertificates)
-	if err != nil {
-		return certificateutil.CertificateInfoModel{}, nil, err
-	}
-
-	return certificate, bundleIDProfileInfoMap, nil
 }
