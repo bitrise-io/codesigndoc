@@ -117,8 +117,8 @@ func normalizeFindCertificateOut(out string) ([]string, error) {
 	return certificateContents, nil
 }
 
-// InstalledCodesigningCertificates ...
-func InstalledCodesigningCertificates() ([]*x509.Certificate, error) {
+// InstalledIOSCodesigningCertificates ...
+func InstalledIOSCodesigningCertificates() ([]*x509.Certificate, error) {
 	certificateNames, err := InstalledCodesigningCertificateNames()
 	if err != nil {
 		return nil, err

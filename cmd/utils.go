@@ -4,21 +4,23 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-tools/go-xcode/xcarchive"
 	"github.com/pkg/errors"
 )
 
-func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
+func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
 	certificateMap := map[string]certificateutil.CertificateInfoModel{}
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 	for _, group := range codeSignGroups {
-		certificate := group.Certificate
+		certificate := group.Certificate()
 
 		certificateMap[certificate.Serial] = certificate
 
-		for _, profile := range group.BundleIDProfileMap {
+		for _, profile := range group.BundleIDProfileMap() {
 			profilesMap[profile.UUID] = profile
 		}
 	}
@@ -34,8 +36,8 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) (
 	return certificates, profiles
 }
 
-func exportMethod(group export.IosCodeSignGroup) string {
-	for _, profile := range group.BundleIDProfileMap {
+func exportMethod(group export.CodeSignGroup) string {
+	for _, profile := range group.BundleIDProfileMap() {
 		return string(profile.ExportType)
 	}
 	return ""
@@ -69,4 +71,125 @@ func mapCertificatesByTeam(certificates []certificateutil.CertificateInfoModel) 
 		certificatesByTeam[team] = certs
 	}
 	return certificatesByTeam
+}
+
+func getIOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.IosArchive, *export.IosCodeSignGroup, error) {
+	archive, err := xcarchive.NewIosArchive(archivePath)
+	if err != nil {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, false)
+	if err != nil {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	archiveCodeSignGroup, ok := codeSignGroup.(*export.IosCodeSignGroup)
+	if !ok {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	return archive, archiveCodeSignGroup, nil
+}
+
+func getMacOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.MacosArchive, *export.MacCodeSignGroup, error) {
+	archive, err := xcarchive.NewMacosArchive(archivePath)
+	if err != nil {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, true)
+	if err != nil {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	archiveCodeSignGroup, ok := codeSignGroup.(*export.MacCodeSignGroup)
+	if !ok {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	return archive, archiveCodeSignGroup, nil
+}
+
+func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, isMacArchive bool) (export.CodeSignGroup, error) {
+	if archive.SigningIdentity() == "" {
+		return nil, fmt.Errorf("no signing identity found")
+	}
+
+	certificate, err := findCertificate(archive.SigningIdentity(), installedCertificates)
+	if err != nil {
+		return nil, err
+	}
+
+	var archiveCodeSignGroup export.CodeSignGroup
+	if isMacArchive {
+		archiveCodeSignGroup = export.NewMacGroup(certificate, nil, archive.BundleIDProfileInfoMap())
+		if err != nil {
+			return &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
+		}
+
+	} else {
+		archiveCodeSignGroup = export.NewIOSGroup(certificate, archive.BundleIDProfileInfoMap())
+		if err != nil {
+			return &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
+		}
+	}
+
+	fmt.Println()
+	log.Infof("Codesign settings used for archive:")
+	fmt.Println()
+	printCodesignGroup(archiveCodeSignGroup)
+
+	return archiveCodeSignGroup, nil
+}
+
+func collectIpaExportSelectableCodeSignGroups(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
+	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
+
+	fmt.Println()
+	fmt.Println()
+	log.Infof("Targets to sign:")
+	fmt.Println()
+	for bundleID, entitlements := range bundleIDEntitlemenstMap {
+		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
+	}
+	fmt.Println()
+
+	bundleIDs := []string{}
+	for bundleID := range bundleIDEntitlemenstMap {
+		bundleIDs = append(bundleIDs, bundleID)
+	}
+	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
+
+	log.Debugf("Codesign Groups:")
+	for _, group := range codeSignGroups {
+		log.Debugf(group.String())
+	}
+
+	if len(codeSignGroups) == 0 {
+		return []export.SelectableCodeSignGroup{}
+	}
+
+	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
+		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
+	)
+
+	// Handle if archive used NON xcode managed profile
+	if len(codeSignGroups) > 0 && !archive.IsXcodeManaged() {
+		log.Warnf("App was signed with NON xcode managed profile when archiving,")
+		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
+		log.Warnf("Removing xcode managed CodeSignInfo groups")
+
+		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
+			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
+		)
+	}
+
+	log.Debugf("\n")
+	log.Debugf("Filtered Codesign Groups:")
+	for _, group := range codeSignGroups {
+		log.Debugf(group.String())
+	}
+
+	return codeSignGroups
 }

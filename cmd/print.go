@@ -19,11 +19,11 @@ func printFinished(provProfilesUploaded bool, certsUploaded bool) {
 	}
 }
 
-func printCodesignGroup(group export.IosCodeSignGroup) {
-	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate.TeamName, group.Certificate.TeamID)
-	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate.CommonName, group.Certificate.Serial)
+func printCodesignGroup(group export.CodeSignGroup) {
+	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
+	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
 	idx := -1
-	for bundleID, profile := range group.BundleIDProfileMap {
+	for bundleID, profile := range group.BundleIDProfileMap() {
 		idx++
 		if idx == 0 {
 			fmt.Printf("%s %s -> %s\n", colorstring.Greenf("provisioning profiles:"), profile.Name, bundleID)

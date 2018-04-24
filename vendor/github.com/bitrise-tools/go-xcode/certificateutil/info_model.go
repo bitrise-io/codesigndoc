@@ -107,8 +107,16 @@ func NewCertificateInfosFromPKCS12(pkcs12Pth, password string) ([]CertificateInf
 }
 
 // InstalledCodesigningCertificateInfos ...
-func InstalledCodesigningCertificateInfos() ([]CertificateInfoModel, error) {
-	certificates, err := InstalledCodesigningCertificates()
+func InstalledCodesigningCertificateInfos(isMacOS bool) ([]CertificateInfoModel, error) {
+	if isMacOS {
+		certificates, err := InstalledMacAppStoreCertificates()
+		if err != nil {
+			return nil, err
+		}
+		return CertificateInfos(certificates), nil
+	}
+
+	certificates, err := InstalledIOSCodesigningCertificates()
 	if err != nil {
 		return nil, err
 	}

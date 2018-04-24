@@ -206,9 +206,9 @@ func TestAppStoreOptionsWriteToFile(t *testing.T) {
 		<key>teamID</key>
 		<string>123</string>
 		<key>uploadBitcode</key>
-		<false></false>
+		<false/>
 		<key>uploadSymbols</key>
-		<false></false>
+		<false/>
 	</dict>
 </plist>`
 		require.Equal(t, desired, content)
@@ -376,9 +376,9 @@ func TestNonAppStoreOptionsWriteToFile(t *testing.T) {
 <plist version="1.0">
 	<dict>
 		<key>compileBitcode</key>
-		<false></false>
+		<false/>
 		<key>embedOnDemandResourcesAssetPacksInBundle</key>
-		<false></false>
+		<false/>
 		<key>iCloudContainerEnvironment</key>
 		<string>Production</string>
 		<key>manifest</key>
