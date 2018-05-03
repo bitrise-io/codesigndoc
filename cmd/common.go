@@ -325,7 +325,9 @@ Would you like to use this team to sign your project?`, archiveCertificate.TeamI
 	if !useArchiveTeam {
 		teams := []string{}
 		for team := range certificatesByTeam {
-			teams = append(teams, team)
+			if teamHasCertificates(archiveCertificate, certificatesByTeam[team]) {
+				teams = append(teams, team)
+			}
 		}
 
 		fmt.Println()
@@ -865,6 +867,20 @@ func UploadIdentity(bitriseClient *bitriseclient.BitriseClient, outputDirPath st
 	}
 
 	return bitriseClient.ConfirmIdentityUpload(certificateResponseData.Slug, certificateResponseData.UploadFileName)
+}
+
+func teamHasCertificates(archiveCertificate certificateutil.CertificateInfoModel, certificates []certificateutil.CertificateInfoModel) bool {
+	if isDistributionCertificate(archiveCertificate) {
+		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return !isDistributionCertificate(certInfo)
+		})
+		return len(developmentCertificates) > 0
+	}
+
+	distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+		return isDistributionCertificate(certInfo)
+	})
+	return len(distributionCertificates) > 0
 }
 
 func askAccessToken() (token string, err error) {
