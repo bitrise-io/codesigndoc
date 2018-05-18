@@ -1,4 +1,4 @@
-package bitriseclient
+package bitrise
 
 import (
 	"net/http"
@@ -72,7 +72,7 @@ type UploadedProvisioningProfileResponse struct {
 }
 
 // FetchProvisioningProfiles ...
-func (client *BitriseClient) FetchProvisioningProfiles() ([]ProvisioningProfileListData, error) {
+func (client *Client) FetchProvisioningProfiles() ([]ProvisioningProfileListData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
@@ -102,7 +102,7 @@ func (client *BitriseClient) FetchProvisioningProfiles() ([]ProvisioningProfileL
 }
 
 // GetUploadedProvisioningProfileUUIDby ...
-func (client *BitriseClient) GetUploadedProvisioningProfileUUIDby(profileSlug string) (UUID string, err error) {
+func (client *Client) GetUploadedProvisioningProfileUUIDby(profileSlug string) (UUID string, err error) {
 	downloadURL, err := client.getUploadedProvisioningProfileDownloadURLBy(profileSlug)
 	if err != nil {
 		return "", err
@@ -126,7 +126,7 @@ func (client *BitriseClient) GetUploadedProvisioningProfileUUIDby(profileSlug st
 	return data.UUID, nil
 }
 
-func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profileSlug string) (downloadURL string, err error) {
+func (client *Client) getUploadedProvisioningProfileDownloadURLBy(profileSlug string) (downloadURL string, err error) {
 	log.Debugf("\nGet downloadURL for provisioning profile (slug - %s) from Bitrise...", profileSlug)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint, profileSlug)
@@ -155,7 +155,7 @@ func (client *BitriseClient) getUploadedProvisioningProfileDownloadURLBy(profile
 	return requestResponse.Data.DownloadURL, nil
 }
 
-func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL string) (content string, err error) {
+func (client *Client) downloadUploadedProvisioningProfile(downloadURL string) (content string, err error) {
 	log.Debugf("\nDownloading provisioning profile from Bitrise...")
 	log.Debugf("\nRequest URL: %s", downloadURL)
 
@@ -180,7 +180,7 @@ func (client *BitriseClient) downloadUploadedProvisioningProfile(downloadURL str
 }
 
 // RegisterProvisioningProfile ...
-func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileData, error) {
+func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileData, error) {
 	log.Printf("Register %s on Bitrise...", profile.Name)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
@@ -215,7 +215,7 @@ func (client *BitriseClient) RegisterProvisioningProfile(provisioningProfSize in
 }
 
 // UploadProvisioningProfile ...
-func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
+func (client *Client) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
 	log.Printf("Upload %s to Bitrise...", exportFileName)
 
 	filePth := filepath.Join(outputDirPath, exportFileName)
@@ -236,7 +236,7 @@ func (client *BitriseClient) UploadProvisioningProfile(uploadURL string, uploadF
 }
 
 // ConfirmProvisioningProfileUpload ...
-func (client *BitriseClient) ConfirmProvisioningProfileUpload(profileSlug string, provUploadName string) error {
+func (client *Client) ConfirmProvisioningProfileUpload(profileSlug string, provUploadName string) error {
 	log.Printf("Confirm - %s - upload to Bitrise...", provUploadName)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint, profileSlug, "uploaded")

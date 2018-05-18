@@ -1,4 +1,4 @@
-package bitriseclient
+package bitrise
 
 import (
 	"bytes"
@@ -58,17 +58,17 @@ type MyAppsResponse struct {
 	Paging Paging        `json:"paging"`
 }
 
-// BitriseClient ...
-type BitriseClient struct {
+// Client ...
+type Client struct {
 	accessToken     string
 	selectedAppSlug string
 	headers         map[string]string
 	client          http.Client
 }
 
-// NewBitriseClient ...
-func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error) {
-	client := &BitriseClient{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
+// NewClient ...
+func NewClient(accessToken string) (*Client, []Application, error) {
+	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
 	var apps []Application
 
 	log.Infof("Fetching your application list from Bitrise...")
@@ -120,12 +120,12 @@ func NewBitriseClient(accessToken string) (*BitriseClient, []Application, error)
 }
 
 // SetSelectedAppSlug ...
-func (client *BitriseClient) SetSelectedAppSlug(slug string) {
+func (client *Client) SetSelectedAppSlug(slug string) {
 	client.selectedAppSlug = slug
 }
 
 // RunRequest ...
-func RunRequest(client *BitriseClient, req *http.Request, requestResponse interface{}) (interface{}, []byte, error) {
+func RunRequest(client *Client, req *http.Request, requestResponse interface{}) (interface{}, []byte, error) {
 	var responseBody []byte
 
 	if err := retry.Times(1).Wait(5 * time.Second).Try(func(attempt uint) error {
@@ -201,7 +201,7 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 	return req, nil
 }
 
-func performRequest(bitriseClient *BitriseClient, request *http.Request) (body []byte, statusCode int, err error) {
+func performRequest(bitriseClient *Client, request *http.Request) (body []byte, statusCode int, err error) {
 	response, err := bitriseClient.client.Do(request)
 	if err != nil {
 		// On error, any Response can be ignored

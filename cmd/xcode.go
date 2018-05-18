@@ -2,13 +2,16 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/codesigndoc"
 	"github.com/bitrise-tools/codesigndoc/xcode"
 	"github.com/bitrise-tools/go-xcode/utility"
 	"github.com/spf13/cobra"
@@ -37,6 +40,25 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
+}
+
+func initExportOutputDir() (string, error) {
+	confExportOutputDirPath := "./codesigndoc_exports"
+	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
+	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
+	if err != nil {
+		return absExportOutputDirPath, fmt.Errorf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
+	}
+	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
+		return absExportOutputDirPath, fmt.Errorf("Failed to determin whether the export directory already exists: %s", err)
+	} else if !exist {
+		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
+			return absExportOutputDirPath, fmt.Errorf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
+		}
+	} else {
+		log.Warnf("Export output dir already exists at path: %s", absExportOutputDirPath)
+	}
+	return absExportOutputDirPath, nil
 }
 
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
@@ -129,5 +151,20 @@ the one you usually open in Xcode, then hit Enter.
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
-	return exportCodesignFiles("Xcode", archivePath, absExportOutputDirPath)
+	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	if err != nil {
+		return err
+	}
+	printFinished(provProfilesUploaded, certsUploaded)
+	return nil
+}
+
+func printFinished(provProfilesUploaded bool, certsUploaded bool) {
+	fmt.Println()
+	log.Successf("That's all.")
+
+	if !provProfilesUploaded && !certsUploaded {
+		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
+		fmt.Println()
+	}
 }

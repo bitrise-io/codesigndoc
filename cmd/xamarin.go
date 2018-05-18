@@ -10,6 +10,7 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/codesigndoc"
 	"github.com/bitrise-tools/codesigndoc/xamarin"
 	"github.com/bitrise-tools/go-xamarin/analyzers/project"
 	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
@@ -175,5 +176,10 @@ and then hit Enter`
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
-	return exportCodesignFiles("Xamarin Studio", archivePath, absExportOutputDirPath)
+	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	if err != nil {
+		return err
+	}
+	printFinished(provProfilesUploaded, certsUploaded)
+	return nil
 }
