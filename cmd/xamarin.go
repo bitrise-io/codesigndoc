@@ -180,6 +180,7 @@ and then hit Enter`
 	if err != nil {
 		return err
 	}
+
 	printFinished(provProfilesUploaded, certsUploaded)
 	return nil
 }

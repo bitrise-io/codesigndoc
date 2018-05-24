@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/spf13/cobra"
 )
 
@@ -53,4 +56,14 @@ with as many details & logs as you can share!
 ------------------------------
 
 ` + colorstring.Redf("Error: %s", e.msg)
+}
+
+func printFinished(provProfilesUploaded bool, certsUploaded bool) {
+	fmt.Println()
+	log.Successf("That's all.")
+
+	if !provProfilesUploaded && !certsUploaded {
+		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
+		fmt.Println()
+	}
 }
