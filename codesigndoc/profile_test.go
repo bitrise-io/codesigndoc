@@ -1,4 +1,4 @@
-package cmd
+package codesigndoc
 
 import (
 	"testing"
@@ -18,7 +18,7 @@ func timeToString(date time.Time) string {
 	return date.Format("2006.01.02")
 }
 
-func Test_filterLatestProfiles(t *testing.T) {
+func TestFilterLatestProfiles(t *testing.T) {
 	profiles := []profileutil.ProvisioningProfileInfoModel{
 		{
 			Name:           "Profile 1",

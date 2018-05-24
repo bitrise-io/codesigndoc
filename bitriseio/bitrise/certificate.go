@@ -1,4 +1,4 @@
-package bitriseclient
+package bitrise
 
 import (
 	"math/big"
@@ -76,7 +76,7 @@ type IdentityResponse struct {
 }
 
 // FetchUploadedIdentities ...
-func (client *BitriseClient) FetchUploadedIdentities() ([]IdentityListData, error) {
+func (client *Client) FetchUploadedIdentities() ([]IdentityListData, error) {
 	log.Debugf("\nDownloading provisioning profile list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
@@ -104,7 +104,7 @@ func (client *BitriseClient) FetchUploadedIdentities() ([]IdentityListData, erro
 }
 
 // GetUploadedCertificatesSerialby ...
-func (client *BitriseClient) GetUploadedCertificatesSerialby(identitySlug string) (certificateSerialList []big.Int, err error) {
+func (client *Client) GetUploadedCertificatesSerialby(identitySlug string) (certificateSerialList []big.Int, err error) {
 	downloadURL, certificatePassword, err := client.getUploadedIdentityDownloadURLBy(identitySlug)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ func (client *BitriseClient) GetUploadedCertificatesSerialby(identitySlug string
 	return serialList, nil
 }
 
-func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug string) (downloadURL string, password string, err error) {
+func (client *Client) getUploadedIdentityDownloadURLBy(certificateSlug string) (downloadURL string, password string, err error) {
 	log.Debugf("\nGet downloadURL for certificate (slug - %s) from Bitrise...", certificateSlug)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint, certificateSlug)
@@ -157,7 +157,7 @@ func (client *BitriseClient) getUploadedIdentityDownloadURLBy(certificateSlug st
 	return requestResponse.Data.DownloadURL, requestResponse.Data.CertificatePassword, nil
 }
 
-func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (content string, err error) {
+func (client *Client) downloadUploadedIdentity(downloadURL string) (content string, err error) {
 	log.Debugf("\nDownloading identities from Bitrise...")
 	log.Debugf("\nRequest URL: %s", downloadURL)
 
@@ -182,7 +182,7 @@ func (client *BitriseClient) downloadUploadedIdentity(downloadURL string) (conte
 }
 
 // RegisterIdentity ...
-func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterIdentityData, error) {
+func (client *Client) RegisterIdentity(certificateSize int64) (RegisterIdentityData, error) {
 	log.Printf("Register %s on Bitrise...", "Identities.p12")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, certificatesEndPoint)
@@ -217,7 +217,7 @@ func (client *BitriseClient) RegisterIdentity(certificateSize int64) (RegisterId
 }
 
 // UploadIdentity ...
-func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
+func (client *Client) UploadIdentity(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
 	log.Printf("Upload %s to Bitrise...", exportFileName)
 
 	filePth := filepath.Join(outputDirPath, exportFileName)
@@ -235,7 +235,7 @@ func (client *BitriseClient) UploadIdentity(uploadURL string, uploadFileName str
 }
 
 // ConfirmIdentityUpload ...
-func (client *BitriseClient) ConfirmIdentityUpload(certificateSlug string, certificateUploadName string) error {
+func (client *Client) ConfirmIdentityUpload(certificateSlug string, certificateUploadName string) error {
 	log.Printf("Confirm - %s - upload to Bitrise...", certificateUploadName)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, "build-certificates", certificateSlug, "uploaded")
