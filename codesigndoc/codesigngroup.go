@@ -81,7 +81,9 @@ Would you like to use this team to sign your project?`, archiveCertificate.TeamI
 	if !useArchiveTeam {
 		teams := []string{}
 		for team := range certificatesByTeam {
-			teams = append(teams, team)
+			if teamHasCertificates(archiveCertificate, certificatesByTeam[team]) {
+				teams = append(teams, team)
+			}
 		}
 
 		fmt.Println()
@@ -365,4 +367,18 @@ func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, inst
 	}
 
 	return codeSignGroups
+}
+
+func teamHasCertificates(archiveCertificate certificateutil.CertificateInfoModel, certificates []certificateutil.CertificateInfoModel) bool {
+	if isDistributionCertificate(archiveCertificate) {
+		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return !isDistributionCertificate(certInfo)
+		})
+		return len(developmentCertificates) > 0
+	}
+
+	distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+		return isDistributionCertificate(certInfo)
+	})
+	return len(distributionCertificates) > 0
 }
