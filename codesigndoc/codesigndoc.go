@@ -76,7 +76,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 			errorString := "\n🚨  " + colorstring.Red("Failed to collect codesigning files for the selected distribution type.\n") +
 				colorstring.Yellow("Export an ipa with the same export method which code signing files you want to collect (e.g app-store if you want to collect the code signing files for app-store distribution) in your local xcode and run codesigndoc again.\n") +
 				colorstring.Yellow("If the tool fails please report the issue with the codesigndoc log and the local ipa exportOptions.plist")
-			return false, false, fmt.Errorf(colorstring.Yellow(errorString))
+			return false, false, fmt.Errorf(errorString)
 		}
 
 		codeSignGroups := append(ipaExportCodeSignGroups, archiveCodeSignGroup)

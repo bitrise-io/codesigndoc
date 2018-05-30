@@ -184,7 +184,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 
 		if len(filteredCodeSignGroups) == 0 {
 			fmt.Println()
-			log.Errorf("🚨  Could not find any valid code signing file for the selected export method:")
+			log.Errorf("🚨  Could not find the codesigning files for %s ipa export:", selectedExportMethod)
 			log.Warnf(collectCodesigningFilesInfo)
 			fmt.Println()
 			fmt.Println()
