@@ -13,23 +13,6 @@ workflows:
     - golint:
     - errcheck:
     - go-test:
-    - slack:
-        run_if: .IsCI
-        inputs:
-        - webhook_url: $INTERNAL_DEV_SLACK_WEBHOOK_URL
-        - channel: $INTERNAL_DEV_SLACK_CHANNEL
-        - from_username: ${BITRISE_BIN_NAME} - CI - OK
-        - from_username_on_error: ${BITRISE_BIN_NAME} - CI - ERROR
-        - emoji: ":white_check_mark:"
-        - emoji_on_error: ":no_entry_sign:"
-        - message: |-
-            CI was successful on branch: *${BITRISE_GIT_BRANCH}*
-
-            Build URL: ${BITRISE_BUILD_URL}
-        - message_on_error: |-
-            CI FAILED on branch: *${BITRISE_GIT_BRANCH}*
-
-            Build URL: ${BITRISE_BUILD_URL}
 
   dep-update:
     title: Dep update
