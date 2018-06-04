@@ -1,4 +1,4 @@
-format_version: 1.1.0
+format_version: 5
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 app:
@@ -7,71 +7,12 @@ app:
   - GITHUB_RELEASES_URL: https://github.com/bitrise-tools/${BITRISE_BIN_NAME}/releases
 
 workflows:
-
-  _install_test_tools:
+  test:  
     steps:
-    - script:
-        title: Install required testing tools
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            # Check for unhandled errors
-            go get -u github.com/kisielk/errcheck
-            # Go lint
-            go get -u github.com/golang/lint/golint
-
-  _test:
-    steps:
-    - script:
-        title: GOLIST_WITHOUT_VENDOR
-        inputs:
-        - content: |-
-            set -ex
-            no_vendor_paths="$(go list ./... | grep -v vendor)"
-            envman add --key GOLIST_WITHOUT_VENDOR --value "$no_vendor_paths"
-    - script:
-        title: Go Test
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            go test $GOLIST_WITHOUT_VENDOR
-    - script:
-        title: Err check
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            errcheck -asserts=true -blank=true $GOLIST_WITHOUT_VENDOR
-    - script:
-        title: Go Lint
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -e
-
-            while read -r line; do
-              echo "-> Linting: $line"
-              golint_out="$(golint $line)"
-              if [[ "${golint_out}" != "" ]] ; then
-                echo "=> Golint issues found:"
-                echo "${golint_out}"
-                exit 1
-              fi
-            done <<< "$GOLIST_WITHOUT_VENDOR"
-
-  install:
-    before_run:
-    - _test
-    steps:
-    - script:
-        title: Test & install
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            go install
+    - go-list:
+    - golint:
+    - errcheck:
+    - go-test:
 
   dep-update:
     title: Dep update
@@ -88,32 +29,10 @@ workflows:
             dep ensure -v
             dep ensure -v -update
 
-  ci:
-    before_run:
-    - _install_test_tools
-    - _test
-    steps:
-    - slack:
-        run_if: .IsCI
-        inputs:
-        - webhook_url: $INTERNAL_DEV_SLACK_WEBHOOK_URL
-        - channel: $INTERNAL_DEV_SLACK_CHANNEL
-        - from_username: ${BITRISE_BIN_NAME} - CI - OK
-        - from_username_on_error: ${BITRISE_BIN_NAME} - CI - ERROR
-        - emoji: ":white_check_mark:"
-        - emoji_on_error: ":no_entry_sign:"
-        - message: |-
-            CI was successful on branch: *${BITRISE_GIT_BRANCH}*
-
-            Build URL: ${BITRISE_BUILD_URL}
-        - message_on_error: |-
-            CI FAILED on branch: *${BITRISE_GIT_BRANCH}*
-
-            Build URL: ${BITRISE_BUILD_URL}
 
   create-release:
     before_run:
-    - _test
+    - test
     steps:
     - script:
         title: Creating deploy
