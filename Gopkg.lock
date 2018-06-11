@@ -13,7 +13,10 @@
     "pathutil",
     "pkcs12",
     "pkcs12/internal/rc2",
-    "progress"
+    "progress",
+    "retry",
+    "sliceutil",
+    "urlutil"
   ]
   revision = "b33f6bcef9b50045d7e62364b354584afc3ee329"
 
@@ -53,7 +56,7 @@
     "utility",
     "xcarchive"
   ]
-  revision = "c23fa74e7b04374fbff484fd12ba87cf64cd89e1"
+  revision = "2ebe49789dd410cae7f6dc54f0d2f5893e4fd1a0"
 
 [[projects]]
   name = "github.com/davecgh/go-spew"
@@ -136,6 +139,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7c54a878fc17fec1c7e02c05175685a10bb47d854beae409eadfb296ff7b3ded"
+  inputs-digest = "389c31b7ef58a3c8f2c2d88c17bbfe8e0bd5b728b962d3d6fd5f2cf5e33f29c6"
   solver-name = "gps-cdcl"
   solver-version = 1

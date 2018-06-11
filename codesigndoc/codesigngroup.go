@@ -17,15 +17,15 @@ import (
 )
 
 // extractCertificatesAndProfiles returns the certificates and provisioning profiles of the given codesign group
-func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
+func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
 	certificateMap := map[string]certificateutil.CertificateInfoModel{}
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 	for _, group := range codeSignGroups {
-		certificate := group.Certificate
+		certificate := group.Certificate()
 
 		certificateMap[certificate.Serial] = certificate
 
-		for _, profile := range group.BundleIDProfileMap {
+		for _, profile := range group.BundleIDProfileMap() {
 			profilesMap[profile.UUID] = profile
 		}
 	}
@@ -42,19 +42,19 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.IosCodeSignGroup) (
 }
 
 // exportMethod returns which ipa/pkg/app export type is allowed by the given codesign group
-func exportMethod(group export.IosCodeSignGroup) string {
-	for _, profile := range group.BundleIDProfileMap {
+func exportMethod(group export.CodeSignGroup) string {
+	for _, profile := range group.BundleIDProfileMap() {
 		return string(profile.ExportType)
 	}
 	return ""
 }
 
 // printCodesignGroup prints the given codesign group
-func printCodesignGroup(group export.IosCodeSignGroup) {
-	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate.TeamName, group.Certificate.TeamID)
-	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate.CommonName, group.Certificate.Serial)
+func printCodesignGroup(group export.CodeSignGroup) {
+	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
+	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
 	idx := -1
-	for bundleID, profile := range group.BundleIDProfileMap {
+	for bundleID, profile := range group.BundleIDProfileMap() {
 		idx++
 		if idx == 0 {
 			fmt.Printf("%s %s -> %s\n", colorstring.Greenf("provisioning profiles:"), profile.Name, bundleID)
@@ -153,15 +153,22 @@ Please select a distribution certificate:`, archiveCertificate.CommonName, archi
 }
 
 // collectIpaExportCodeSignGroups returns the codesigngroups required to export an ipa with the selected export methods
-func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.IosCodeSignGroup, error) {
-	iosCodeSignGroups := []export.IosCodeSignGroup{}
+func collectIpaExportCodeSignGroups(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.CodeSignGroup, error) {
+	collectedCodeSignGroups := []export.CodeSignGroup{}
+	_, isMacArchive := archive.(xcarchive.MacosArchive)
 
 	codeSignGroups := collectIpaExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
 		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
 	}
 
-	exportMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
+	exportMethods := []string{"development", "app-store"}
+
+	if isMacArchive {
+		exportMethods = append(exportMethods, "developer-id")
+	} else {
+		exportMethods = append(exportMethods, "ad-hoc", "enterprise")
+	}
 
 	for true {
 		fmt.Println()
@@ -184,8 +191,7 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 
 		if len(filteredCodeSignGroups) == 0 {
 			fmt.Println()
-			log.Errorf("🚨  Could not find the codesigning files for %s ipa export:", selectedExportMethod)
-			log.Warnf(collectCodesigningFilesInfo)
+			log.Errorf(collectCodesigningFilesInfo)
 			fmt.Println()
 			fmt.Println()
 			question := "Do you want to collect another ipa export code sign files"
@@ -287,18 +293,45 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 			return nil, fmt.Errorf("failed to find Provisioning Profiles for ipa export")
 		}
 
-		iosCodeSignGroup := export.IosCodeSignGroup{
-			Certificate:        *selectedCertificate,
-			BundleIDProfileMap: selectedBundleIDProfileMap,
+		var collectedCodeSignGroup export.CodeSignGroup
+		if isMacArchive {
+			installedInstallerCertificates := []certificateutil.CertificateInfoModel{}
+
+			var selectedInstallerCetrificate certificateutil.CertificateInfoModel
+			if selectedExportMethod == string(exportoptions.MethodAppStore) {
+				installedInstallerCertificates, err = certificateutil.InstalledInstallerCertificateInfos()
+				if err != nil {
+					log.Errorf("Failed to read installed Installer certificates, error: %s", err)
+				}
+
+				installedInstallerCertificates = certificateutil.FilterValidCertificateInfos(installedInstallerCertificates)
+
+				log.Debugf("\n")
+				log.Debugf("Installed installer certificates:")
+				for _, certInfo := range installedInstallerCertificates {
+					log.Debugf(certInfo.String())
+				}
+
+				for _, installerCetrificate := range installedInstallerCertificates {
+					if installerCetrificate.TeamID == selectedCertificate.TeamID {
+						selectedInstallerCetrificate = installerCetrificate
+						break
+					}
+				}
+			}
+
+			collectedCodeSignGroup = export.NewMacGroup(*selectedCertificate, &selectedInstallerCetrificate, selectedBundleIDProfileMap)
+		} else {
+			collectedCodeSignGroup = export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
 		}
 
 		fmt.Println()
 		fmt.Println()
-		log.Infof("Codesign settings will be used for %s ipa export:", exportMethod(iosCodeSignGroup))
+		log.Infof("Codesign settings will be used for %s .ipa/.app export:", exportMethod(collectedCodeSignGroup))
 		fmt.Println()
-		printCodesignGroup(iosCodeSignGroup)
+		printCodesignGroup(collectedCodeSignGroup)
 
-		iosCodeSignGroups = append(iosCodeSignGroups, iosCodeSignGroup)
+		collectedCodeSignGroups = append(collectedCodeSignGroups, collectedCodeSignGroup)
 
 		fmt.Println()
 		fmt.Println()
@@ -313,11 +346,11 @@ func collectIpaExportCodeSignGroups(archive xcarchive.IosArchive, installedCerti
 		}
 	}
 
-	return iosCodeSignGroups, nil
+	return collectedCodeSignGroups, nil
 }
 
 // collectIpaExportSelectableCodeSignGroups returns every possible codesigngroup which can be used to export an ipa file
-func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
+func collectIpaExportSelectableCodeSignGroups(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
 	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
 
 	fmt.Println()
@@ -366,4 +399,74 @@ func collectIpaExportSelectableCodeSignGroups(archive xcarchive.IosArchive, inst
 	}
 
 	return codeSignGroups
+}
+
+func getIOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.IosArchive, *export.IosCodeSignGroup, error) {
+	archive, err := xcarchive.NewIosArchive(archivePath)
+	if err != nil {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, false)
+	if err != nil {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	archiveCodeSignGroup, ok := codeSignGroup.(*export.IosCodeSignGroup)
+	if !ok {
+		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	return archive, archiveCodeSignGroup, nil
+}
+
+func getMacOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.MacosArchive, *export.MacCodeSignGroup, error) {
+	archive, err := xcarchive.NewMacosArchive(archivePath)
+	if err != nil {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, true)
+	if err != nil {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	archiveCodeSignGroup, ok := codeSignGroup.(*export.MacCodeSignGroup)
+	if !ok {
+		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+
+	return archive, archiveCodeSignGroup, nil
+}
+
+func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, isMacArchive bool) (export.CodeSignGroup, error) {
+	if archive.SigningIdentity() == "" {
+		return nil, fmt.Errorf("no signing identity found")
+	}
+
+	certificate, err := findCertificate(archive.SigningIdentity(), installedCertificates)
+	if err != nil {
+		return nil, err
+	}
+
+	var archiveCodeSignGroup export.CodeSignGroup
+	if isMacArchive {
+		archiveCodeSignGroup = export.NewMacGroup(certificate, nil, archive.BundleIDProfileInfoMap())
+		if err != nil {
+			return &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
+		}
+
+	} else {
+		archiveCodeSignGroup = export.NewIOSGroup(certificate, archive.BundleIDProfileInfoMap())
+		if err != nil {
+			return &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze the archive, error: %s", err)
+		}
+	}
+
+	fmt.Println()
+	log.Infof("Codesign settings used for archive:")
+	fmt.Println()
+	printCodesignGroup(archiveCodeSignGroup)
+
+	return archiveCodeSignGroup, nil
 }
