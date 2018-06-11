@@ -122,7 +122,7 @@ func collectIpaExportCertificate(archiveCertificate certificateutil.CertificateI
 		// Skip the question + set the useArchiveTeam = false, if multiple team has certificate for the export method but the archiving team is not one of them.
 		if len(filteredCertificatesByTeam) > 1 && contains {
 			question := fmt.Sprintf(`The archive used codesigning files of team: %s - %s
-Would you like to use this team to sign your project?`, archiveCertificate.TeamID, archiveCertificate.TeamName)
+Would you like to use this team to export an ipa file?`, archiveCertificate.TeamID, archiveCertificate.TeamName)
 			useArchiveTeam, err = goinp.AskForBoolWithDefault(question, true)
 			if err != nil {
 				return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
@@ -151,7 +151,7 @@ Would you like to use this team to sign your project?`, archiveCertificate.TeamI
 			}
 
 			fmt.Println()
-			selectedTeam, err = goinp.SelectFromStringsWithDefault("Select the Development team to sign your project", 1, teams)
+			selectedTeam, err = goinp.SelectFromStringsWithDefault("Select the Development team to export your app", 1, teams)
 			if err != nil {
 				return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
 			}
