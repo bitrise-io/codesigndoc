@@ -45,6 +45,11 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
+	installerCertificates, err := certificateutil.InstalledInstallerCertificateInfos()
+	if err != nil {
+		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
+	}
+
 	log.Debugf("Installed certificates:")
 	for _, installedCertificate := range certificates {
 		log.Debugf(installedCertificate.String())
@@ -61,7 +66,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		log.Debugf(profileInfo.String(certificates...))
 	}
 
-	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, certificates, profiles, certificatesOnly)
+	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
 	if err != nil {
 		return false, false, err
 	}
@@ -109,7 +114,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	return certsUploaded, provProfilesUploaded, nil
 }
 
-func getFilesToExport(archivePath string, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+func getFilesToExport(archivePath string, installedCertificates []certificateutil.CertificateInfoModel, installedInstallerCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 	macOS, err := xcarchive.IsMacOS(archivePath)
 	if err != nil {
 		return nil, nil, err
@@ -137,12 +142,13 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
 
 	if certificatesOnly {
-		ipaExportCertificate, err := collectIpaExportCertificate(certificate, installedCertificates)
+		exportCertificate, err := collectExportCertificate(macOS, certificate, installedCertificates, installedInstallerCertificates)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		certificatesToExport = append(certificatesToExport, certificate, ipaExportCertificate)
+		certificatesToExport = append(certificatesToExport, certificate)
+		certificatesToExport = append(certificatesToExport, exportCertificate...)
 	} else {
 		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(archive, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, achiveCodeSignGroup)
 		if err != nil {

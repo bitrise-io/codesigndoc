@@ -81,6 +81,16 @@ func isDistributionCertificate(cert certificateutil.CertificateInfoModel) bool {
 	return false
 }
 
+// isInstallerCertificate returns true if the given certificate
+// is an installer certificate
+func isInstallerCertificate(cert certificateutil.CertificateInfoModel) bool {
+	if strings.Contains(strings.ToLower(cert.CommonName), strings.ToLower("installer")) {
+		return true
+	}
+
+	return false
+}
+
 // mapCertificatesByTeam returns a certificate list mapped by the certificate's team (in teamdID - teamName format)
 func mapCertificatesByTeam(certificates []certificateutil.CertificateInfoModel) map[string][]certificateutil.CertificateInfoModel {
 	certificatesByTeam := map[string][]certificateutil.CertificateInfoModel{}

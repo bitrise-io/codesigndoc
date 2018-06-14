@@ -22,8 +22,12 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]c
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 	for _, group := range codeSignGroups {
 		certificate := group.Certificate()
-
 		certificateMap[certificate.Serial] = certificate
+
+		installerCertificate := group.InstallerCertificate()
+		if installerCertificate != nil && installerCertificate.Serial != "" {
+			certificateMap[installerCertificate.Serial] = *installerCertificate
+		}
 
 		for _, profile := range group.BundleIDProfileMap() {
 			profilesMap[profile.UUID] = profile
@@ -53,6 +57,11 @@ func exportMethod(group export.CodeSignGroup) string {
 func printCodesignGroup(group export.CodeSignGroup) {
 	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
 	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
+
+	if group.InstallerCertificate() != nil && group.InstallerCertificate().Serial != "" {
+		fmt.Printf("%s %s [%s]\n", colorstring.Green("installer codesign identity:"), group.InstallerCertificate().CommonName, group.InstallerCertificate().Serial)
+	}
+
 	idx := -1
 	for bundleID, profile := range group.BundleIDProfileMap() {
 		idx++
@@ -64,46 +73,58 @@ func printCodesignGroup(group export.CodeSignGroup) {
 	}
 }
 
-// collectIpaExportCertificate returns the certificate to use for the ipa export
-func collectIpaExportCertificate(archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
+// collectExportCertificate returns the certificate to use for the ipa export
+func collectExportCertificate(isMacArchive bool, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel, installedInstallerCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
 	fmt.Println()
 	fmt.Println()
 
-	selectedCertificate := certificateutil.CertificateInfoModel{}
+	var selectedCertificates []certificateutil.CertificateInfoModel
+
+	// Export method
+	exportMethods := []string{"development", "app-store"}
+
+	if isMacArchive {
+		exportMethods = append(exportMethods, "developer-id", "installer")
+	} else {
+		exportMethods = append(exportMethods, "ad-hoc", "enterprise")
+	}
 
 	// Asking the user over and over until we find a valid certificate for the selected export method.
 	for searchingValidCertificate := true; searchingValidCertificate; {
 
-		// Export method
-		exportMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
-
+		fmt.Println()
 		selectedExportMethod, err := goinp.SelectFromStringsWithDefault("Select the ipa export method", 1, exportMethods)
 		if err != nil {
-			return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
+			return nil, fmt.Errorf("failed to read input: %s", err)
 		}
 		log.Debugf("selected export method: %v", selectedExportMethod)
 
-		// Export method needs Development or Distribution certificate?
-		exportDistCert := true
-		if selectedExportMethod == "development" {
-			exportDistCert = false
-		}
-
 		selectedTeam := ""
+		var certsForSelectedExport []certificateutil.CertificateInfoModel
 		log.Debugf("InstalledCerts: %v\n", installedCertificates)
 
 		// Filter the installed certificates by distribution type
-		var certsForSelectedExport []certificateutil.CertificateInfoModel
-		if exportDistCert {
-			certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-				return isDistributionCertificate(certInfo)
-			})
-			log.Debugf("Distribution certificated: %v\n", certsForSelectedExport)
-		} else {
+		switch selectedExportMethod {
+		case "development":
 			certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
 				return !isDistributionCertificate(certInfo)
 			})
-			log.Debugf("Developer certificated: %v\n", certsForSelectedExport)
+
+			log.Debugf("DeveloperDistribution certificates: %v\n", certsForSelectedExport)
+			break
+		case "installer":
+			certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedInstallerCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+				return isInstallerCertificate(certInfo)
+			})
+
+			log.Debugf("Installer certificates: %v\n", certsForSelectedExport)
+			break
+		default:
+			certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+				return isDistributionCertificate(certInfo)
+			})
+			log.Debugf("Distribution certificates: %v\n", certsForSelectedExport)
+			break
 		}
 
 		filteredCertificatesByTeam := mapCertificatesByTeam(certsForSelectedExport)
@@ -125,7 +146,7 @@ func collectIpaExportCertificate(archiveCertificate certificateutil.CertificateI
 Would you like to use this team to export an ipa file?`, archiveCertificate.TeamID, archiveCertificate.TeamName)
 			useArchiveTeam, err = goinp.AskForBoolWithDefault(question, true)
 			if err != nil {
-				return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
+				return nil, fmt.Errorf("failed to read input: %s", err)
 			}
 			// If multiple team has certificate for the export method but the archiving team is not one of them.
 		} else if !contains {
@@ -145,7 +166,7 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 		if !useArchiveTeam {
 			teams := []string{}
 			for team := range filteredCertificatesByTeam {
-				if hasCertificateForDistType(exportDistCert, filteredCertificatesByTeam[team]) {
+				if hasCertificateForDistType(selectedExportMethod, filteredCertificatesByTeam[team]) {
 					teams = append(teams, team)
 				}
 			}
@@ -153,7 +174,7 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 			fmt.Println()
 			selectedTeam, err = goinp.SelectFromStringsWithDefault("Select the Development team to export your app", 1, teams)
 			if err != nil {
-				return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
+				return nil, fmt.Errorf("failed to read input: %s", err)
 			}
 		} else {
 			selectedTeam = fmt.Sprintf("%s - %s", archiveCertificate.TeamID, archiveCertificate.TeamName)
@@ -169,27 +190,40 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 		}
 
 		certType := "distribution"
-		if !exportDistCert {
+		switch selectedExportMethod {
+		case "development":
 			certType = "development"
+			break
+		case "installer":
+			certType = "installer"
+			break
+		default:
+			break
 		}
 
 		fmt.Println()
 		question := fmt.Sprintf("Please select a %s certificate:", certType)
 		selectedCertificateOption, err := goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 		if err != nil {
-			return certificateutil.CertificateInfoModel{}, fmt.Errorf("failed to read input: %s", err)
+			return nil, fmt.Errorf("failed to read input: %s", err)
 		}
 
 		for _, certInfo := range filteredTeamCertificates {
 			certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
 			if certificateOption == selectedCertificateOption {
-				selectedCertificate = certInfo
-				searchingValidCertificate = false
+				selectedCertificates = append(selectedCertificates, certInfo)
 			}
+		}
+
+		fmt.Println()
+		question = `Do you want to collect another certificate? [yes,no]`
+		searchingValidCertificate, err = goinp.AskForBoolWithDefault(question, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read input: %s", err)
 		}
 	}
 
-	return selectedCertificate, nil
+	return selectedCertificates, nil
 }
 
 // collectIpaExportCodeSignGroups returns the codesigngroups required to export an ipa with the selected export methods
@@ -444,18 +478,24 @@ func collectIpaExportSelectableCodeSignGroups(archive Archive, installedCertific
 // hasCertificateForDistType returns true if the provided certificate list has certificate for the selected cert type.
 // If isDistCert == true it will search for Distribution Certificates. If it's == false it will search for Developmenttion Certificates.
 // If the team doesn't have any certificate for the selected cert type, it will return false.
-func hasCertificateForDistType(isDistCert bool, certificates []certificateutil.CertificateInfoModel) bool {
-	if !isDistCert {
+func hasCertificateForDistType(exportMethod string, certificates []certificateutil.CertificateInfoModel) bool {
+	switch exportMethod {
+	case "development":
 		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
 			return !isDistributionCertificate(certInfo)
 		})
 		return len(developmentCertificates) > 0
+	case "installer":
+		installerCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return isInstallerCertificate(certInfo)
+		})
+		return len(installerCertificates) > 0
+	default:
+		distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+			return isDistributionCertificate(certInfo)
+		})
+		return len(distributionCertificates) > 0
 	}
-
-	distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-		return isDistributionCertificate(certInfo)
-	})
-	return len(distributionCertificates) > 0
 }
 
 func getIOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.IosArchive, *export.IosCodeSignGroup, error) {
