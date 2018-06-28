@@ -19,7 +19,7 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 - which has installed Codesign Identity in your Keychain"
 - which can provision your application target's bundle ids"
 - which has the project defined Capabilities set"
-- which matches to the selected ipa export method"
+- which matches to the selected export method"
 `
 
 // ExportCodesignFiles exports the codesigning files required to create an xcode archive
@@ -71,10 +71,10 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
-	// ipa export code sign settings
+	// export code sign settings
 	fmt.Println()
 	fmt.Println()
-	log.Printf("🔦  Analyzing the archive, to get ipa export code signing settings...")
+	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
 
 	if err := collectAndExportIdentities(certificatesToExport, outputDirPath, askForPassword); err != nil {
 		return false, false, err
@@ -166,7 +166,7 @@ func collectCertificatesAndProfiles(archive Archive, certificate certificateutil
 
 	_, macOS := archive.(xcarchive.MacosArchive)
 
-	groups, err := collectIpaExportCodeSignGroups(archive, installedCertificates, installedProfiles)
+	groups, err := collectExportCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -187,7 +187,7 @@ func collectCertificatesAndProfiles(archive Archive, certificate certificateutil
 	}
 
 	if len(exportCodeSignGroups) == 0 {
-		return nil, nil, errors.New("no ipa export code sign groups collected")
+		return nil, nil, errors.New("no export code sign groups collected")
 	}
 
 	codeSignGroups := append(exportCodeSignGroups, achiveCodeSignGroup)
