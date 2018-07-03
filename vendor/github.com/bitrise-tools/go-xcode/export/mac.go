@@ -8,9 +8,33 @@ import (
 
 // MacCodeSignGroup ...
 type MacCodeSignGroup struct {
-	Certificate          certificateutil.CertificateInfoModel
-	InstallerCertificate *certificateutil.CertificateInfoModel
-	BundleIDProfileMap   map[string]profileutil.ProvisioningProfileInfoModel
+	certificate          certificateutil.CertificateInfoModel
+	installerCertificate *certificateutil.CertificateInfoModel
+	bundleIDProfileMap   map[string]profileutil.ProvisioningProfileInfoModel
+}
+
+// Certificate ...
+func (signGroup *MacCodeSignGroup) Certificate() certificateutil.CertificateInfoModel {
+	return signGroup.certificate
+}
+
+// InstallerCertificate ...
+func (signGroup *MacCodeSignGroup) InstallerCertificate() *certificateutil.CertificateInfoModel {
+	return signGroup.installerCertificate
+}
+
+// BundleIDProfileMap ...
+func (signGroup *MacCodeSignGroup) BundleIDProfileMap() map[string]profileutil.ProvisioningProfileInfoModel {
+	return signGroup.bundleIDProfileMap
+}
+
+// NewMacGroup ...
+func NewMacGroup(certificate certificateutil.CertificateInfoModel, installerCertificate *certificateutil.CertificateInfoModel, bundleIDProfileMap map[string]profileutil.ProvisioningProfileInfoModel) *MacCodeSignGroup {
+	return &MacCodeSignGroup{
+		certificate:          certificate,
+		installerCertificate: installerCertificate,
+		bundleIDProfileMap:   bundleIDProfileMap,
+	}
 }
 
 // CreateMacCodeSignGroup ...
@@ -24,7 +48,7 @@ func CreateMacCodeSignGroup(selectableGroups []SelectableCodeSignGroup, installe
 			installerCertificates := []certificateutil.CertificateInfoModel{}
 
 			for _, installerCertificate := range installedInstallerCertificates {
-				if installerCertificate.TeamID == group.Certificate.TeamID {
+				if installerCertificate.TeamID == group.certificate.TeamID {
 					installerCertificates = append(installerCertificates, installerCertificate)
 				}
 			}
@@ -32,15 +56,15 @@ func CreateMacCodeSignGroup(selectableGroups []SelectableCodeSignGroup, installe
 			if len(installerCertificates) > 0 {
 				installerCertificate := installerCertificates[0]
 				macosCodeSignGroups = append(macosCodeSignGroups, MacCodeSignGroup{
-					Certificate:          group.Certificate,
-					InstallerCertificate: &installerCertificate,
-					BundleIDProfileMap:   group.BundleIDProfileMap,
+					certificate:          group.certificate,
+					installerCertificate: &installerCertificate,
+					bundleIDProfileMap:   group.bundleIDProfileMap,
 				})
 			}
 		} else {
 			macosCodeSignGroups = append(macosCodeSignGroups, MacCodeSignGroup{
-				Certificate:        group.Certificate,
-				BundleIDProfileMap: group.BundleIDProfileMap,
+				certificate:        group.certificate,
+				bundleIDProfileMap: group.bundleIDProfileMap,
 			})
 		}
 	}
