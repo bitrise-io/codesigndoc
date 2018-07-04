@@ -99,7 +99,7 @@ func collectExportCertificate(isMacArchive bool, archiveCertificate certificateu
 		}
 		log.Debugf("selected export method: %v", selectedExportMethod)
 
-		selectedCertificates, err = filterCertificates(selectedExportMethod, "", selectedCertificates, archiveCertificate, installedCertificates, installedInstallerCertificates)
+		selectedCertificates, err = filterCertificates(isMacArchive, selectedExportMethod, "", selectedCertificates, archiveCertificate, installedCertificates, installedInstallerCertificates)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +115,7 @@ func collectExportCertificate(isMacArchive bool, archiveCertificate certificateu
 	return selectedCertificates, nil
 }
 
-func filterCertificates(selectedExportMethod, selectedTeam string, selectedCertificates []certificateutil.CertificateInfoModel, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates, installedInstallerCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
+func filterCertificates(isMacArchive bool, selectedExportMethod, selectedTeam string, selectedCertificates []certificateutil.CertificateInfoModel, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates, installedInstallerCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
 	var certsForSelectedExport []certificateutil.CertificateInfoModel
 	var err error
 	log.Debugf("InstalledCerts: %v\n", installedCertificates)
@@ -236,7 +236,7 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 	}
 
 	// Collect installer cert for MacOS app-store export.
-	if selectedExportMethod == "app-store" {
+	if selectedExportMethod == "app-store" && isMacArchive {
 		fmt.Println()
 		question := `Do you want to collect installer certificate for the app-store export? [yes,no]`
 		collectInstallerCert, err := goinp.AskForBoolWithDefault(question, true)
@@ -251,7 +251,7 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 		}
 
 		if collectInstallerCert {
-			selectedCertificates, err = filterCertificates("installer", selectedTeam, selectedCertificates, archiveCertificate, installedCertificates, installedInstallerCertificates)
+			selectedCertificates, err = filterCertificates(isMacArchive, "installer", selectedTeam, selectedCertificates, archiveCertificate, installedCertificates, installedInstallerCertificates)
 			if err != nil {
 				return nil, err
 			}
