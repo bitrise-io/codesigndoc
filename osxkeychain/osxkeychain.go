@@ -212,7 +212,8 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 
 		labl, err := getCFDictValueUTF8String(aIdentityDictRef, C.CFTypeRef(convertCStringToCFString(lablCSting)))
 		if err != nil {
-			return nil, fmt.Errorf("FindIdentity: failed to get 'labl' property: %s", err)
+			log.Warnf("FindIdentity: failed to get 'labl' property: %s", err)
+			continue
 		}
 		log.Debugf("labl: %#v", labl)
 		if labl != identityLabel {
@@ -222,7 +223,8 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 
 		vrefRef, err := getCFDictValueRef(aIdentityDictRef, C.CFTypeRef(convertCStringToCFString(vrefCSting)))
 		if err != nil {
-			return nil, fmt.Errorf("FindIdentity: failed to get 'v_Ref' property: %s", err)
+			log.Warnf("FindIdentity: failed to get 'v_Ref' property: %s", err)
+			continue
 		}
 		log.Debugf("vrefRef: %#v", vrefRef)
 
