@@ -84,6 +84,9 @@ func IsXcodeManaged(profileName string) bool {
 	if strings.HasPrefix(profileName, "iOS Team") && strings.Contains(profileName, "Provisioning Profile") {
 		return true
 	}
+	if strings.HasPrefix(profileName, "tvOS Team") && strings.Contains(profileName, "Provisioning Profile") {
+		return true
+	}
 	if strings.HasPrefix(profileName, "Mac Team") && strings.Contains(profileName, "Provisioning Profile") {
 		return true
 	}

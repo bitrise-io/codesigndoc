@@ -13,6 +13,7 @@ type AppStoreOptionsModel struct {
 	SigningCertificate                 string
 	InstallerSigningCertificate        string
 	SigningStyle                       string
+	ICloudContainerEnvironment         ICloudContainerEnvironment
 
 	// for app-store exports
 	UploadBitcode bool
@@ -39,6 +40,9 @@ func (options AppStoreOptionsModel) Hash() map[string]interface{} {
 	}
 	if options.UploadSymbols != UploadSymbolsDefault {
 		hash[UploadSymbolsKey] = options.UploadSymbols
+	}
+	if options.ICloudContainerEnvironment != "" {
+		hash[ICloudContainerEnvironmentKey] = options.ICloudContainerEnvironment
 	}
 	if len(options.BundleIDProvisioningProfileMapping) > 0 {
 		hash[ProvisioningProfilesKey] = options.BundleIDProvisioningProfileMapping

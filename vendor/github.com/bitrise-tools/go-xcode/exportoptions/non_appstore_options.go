@@ -13,11 +13,11 @@ type NonAppStoreOptionsModel struct {
 	BundleIDProvisioningProfileMapping map[string]string
 	SigningCertificate                 string
 	SigningStyle                       string
+	ICloudContainerEnvironment         ICloudContainerEnvironment
 
 	// for non app-store exports
 	CompileBitcode                           bool
 	EmbedOnDemandResourcesAssetPacksInBundle bool
-	ICloudContainerEnvironment               ICloudContainerEnvironment
 	Manifest                                 Manifest
 	OnDemandResourcesAssetPacksBaseURL       string
 	Thinning                                 string
@@ -29,8 +29,7 @@ func NewNonAppStoreOptions(method Method) NonAppStoreOptionsModel {
 		Method:                                   method,
 		CompileBitcode:                           CompileBitcodeDefault,
 		EmbedOnDemandResourcesAssetPacksInBundle: EmbedOnDemandResourcesAssetPacksInBundleDefault,
-		ICloudContainerEnvironment:               ICloudContainerEnvironmentDefault,
-		Thinning:                                 ThinningDefault,
+		Thinning: ThinningDefault,
 	}
 }
 
@@ -49,7 +48,7 @@ func (options NonAppStoreOptionsModel) Hash() map[string]interface{} {
 	if options.EmbedOnDemandResourcesAssetPacksInBundle != EmbedOnDemandResourcesAssetPacksInBundleDefault {
 		hash[EmbedOnDemandResourcesAssetPacksInBundleKey] = options.EmbedOnDemandResourcesAssetPacksInBundle
 	}
-	if options.ICloudContainerEnvironment != ICloudContainerEnvironmentDefault {
+	if options.ICloudContainerEnvironment != "" {
 		hash[ICloudContainerEnvironmentKey] = options.ICloudContainerEnvironment
 	}
 	if !options.Manifest.IsEmpty() {

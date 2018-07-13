@@ -222,7 +222,7 @@ func TestNonNewAppStoreOptions(t *testing.T) {
 		require.Equal(t, MethodDevelopment, options.Method)
 		require.Equal(t, CompileBitcodeDefault, options.CompileBitcode)
 		require.Equal(t, EmbedOnDemandResourcesAssetPacksInBundleDefault, options.EmbedOnDemandResourcesAssetPacksInBundle)
-		require.Equal(t, ICloudContainerEnvironmentDefault, options.ICloudContainerEnvironment)
+		require.Equal(t, ICloudContainerEnvironment(""), options.ICloudContainerEnvironment)
 		require.Equal(t, ThinningDefault, options.Thinning)
 	}
 }

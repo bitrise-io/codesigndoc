@@ -14,6 +14,11 @@ func (g *Git) Clone(repo string) *command.Model {
 	return g.command("clone", repo, ".")
 }
 
+// CloneTagOrBranch is recursively clones a tag or branch.
+func (g *Git) CloneTagOrBranch(repo, tagOrBranch string) *command.Model {
+	return g.command("clone", "--recursive", "--branch", tagOrBranch, repo, ".")
+}
+
 // RemoteList shows a list of existing remote urls with remote names.
 func (g *Git) RemoteList() *command.Model {
 	return g.command("remote", "-v")
@@ -127,9 +132,4 @@ func (g *Git) Status(opts ...string) *command.Model {
 	args := []string{"status"}
 	args = append(args, opts...)
 	return g.command(args...)
-}
-
-// CloneTagOrBranch is recursively clones a tag or branch.
-func (g *Git) CloneTagOrBranch(uri, destination, tagOrBranch string) *command.Model {
-	return g.command("git", "clone", "--recursive", "--branch", tagOrBranch, uri, destination)
 }
