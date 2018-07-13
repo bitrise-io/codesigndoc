@@ -7,8 +7,10 @@ import (
 	"os"
 
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/command/rubycommand"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-tools/go-xcode/xcodebuild"
+	version "github.com/hashicorp/go-version"
 )
 
 const (
@@ -103,4 +105,42 @@ func (c CommandModel) Run() (string, error) {
 	}
 
 	return outBuffer.String(), nil
+}
+
+// IsInstalled ...
+func IsInstalled() (bool, error) {
+	return rubycommand.IsGemInstalled("xcpretty", "")
+}
+
+// Install ...
+func Install() error {
+	cmds, err := rubycommand.GemInstall("xcpretty", "")
+	if err != nil {
+		return fmt.Errorf("failed to create command model, error: %s", err)
+	}
+
+	for _, cmd := range cmds {
+		log.Printf("$ %s", cmd.PrintableCommandArgs())
+
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to create xcpretty install command, error: %s", err)
+		}
+	}
+
+	return nil
+}
+
+// Version ...
+func Version() (*version.Version, error) {
+	cmd := command.New("xcpretty", "--version")
+	versionOut, err := cmd.RunAndReturnTrimmedCombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	return parseVersionOut(versionOut)
+}
+
+func parseVersionOut(versionOut string) (*version.Version, error) {
+	return version.NewVersion(versionOut)
 }

@@ -3,6 +3,7 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:2aa540c5a392849eaa3c5a81aee4e2a31025a5bfcf00c43351a97e830cf63d2a"
   name = "github.com/bitrise-io/go-utils"
   packages = [
     "colorstring",
@@ -16,18 +17,22 @@
     "progress",
     "retry",
     "sliceutil",
-    "urlutil"
+    "urlutil",
   ]
-  revision = "b33f6bcef9b50045d7e62364b354584afc3ee329"
+  pruneopts = ""
+  revision = "d1de0dbcb811588e61362aff67bb700b93c13c17"
 
 [[projects]]
   branch = "master"
+  digest = "1:fb3cc9c055818a84aba159da735a24efce77453a904e7742141f2aa0359a6ae6"
   name = "github.com/bitrise-io/goinp"
   packages = ["goinp"]
+  pruneopts = ""
   revision = "f451b19ba4d087d8272d411ad91af5f4218fd517"
 
 [[projects]]
   branch = "master"
+  digest = "1:189a7e7bbda8a5f93eb4931155d9dc88c30a050dd316f8f613a05a799e36c559"
   name = "github.com/bitrise-tools/go-xamarin"
   packages = [
     "analyzers/project",
@@ -39,12 +44,14 @@
     "tools/buildtools/msbuild",
     "tools/buildtools/xbuild",
     "tools/nunit",
-    "utility"
+    "utility",
   ]
+  pruneopts = ""
   revision = "60f614520f9dd2d58ea982488ed8e21ca2c5bb1d"
 
 [[projects]]
   branch = "master"
+  digest = "1:f3eb815b9c0b11d53813a09340e6fbdf6151aefc6b780a83b5a80471a189c11a"
   name = "github.com/bitrise-tools/go-xcode"
   packages = [
     "certificateutil",
@@ -54,91 +61,142 @@
     "plistutil",
     "profileutil",
     "utility",
-    "xcarchive"
+    "xcarchive",
   ]
-  revision = "2ebe49789dd410cae7f6dc54f0d2f5893e4fd1a0"
+  pruneopts = ""
+  revision = "07db8cf760f5213241e12c0595158aedce96669a"
 
 [[projects]]
+  digest = "1:0a39ec8bf5629610a4bc7873a92039ee509246da3cef1a0ea60f1ed7e5f9cea5"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:e048ea497a949a07065a2076746a43629df92f2439ae5e2c476d1eb700052fa7"
   name = "github.com/fullsailor/pkcs7"
   packages = ["."]
-  revision = "a009d8d7de53d9503c797cb8ec66fa3b21eed209"
+  pruneopts = ""
+  revision = "8306686428a5fe132eac8cb7c4848af725098bd4"
 
 [[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
+  pruneopts = ""
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:edf55a9a482f7883632a230443fc11d09a5ddb1eadc6c9457c01c75b7625a406"
   name = "github.com/pkg/errors"
   packages = ["."]
-  revision = "e881fd58d78e04cf6d0de1217f8707c8cc2249bc"
+  pruneopts = ""
+  revision = "816c9085562cd7ee03e7f8188a1cfd942858cded"
 
 [[projects]]
+  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = ""
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:29df111893b87bd947307aab294c042e900c2f29c53ad3896127955b4283728a"
   name = "github.com/ryanuber/go-glob"
   packages = ["."]
+  pruneopts = ""
   revision = "572520ed46dbddaed19ea3d9541bdd0494163693"
   version = "v0.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:04f9cbdaf9ddfd1fa3e4851a69a1b0bc254a034a0542c0134568de2f8abdc185"
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "b95ab734e27d33e0d8fbabf71ca990568d4e2020"
+  pruneopts = ""
+  revision = "a114f312e075f65bf30d6d9a1430113f857e543b"
 
 [[projects]]
+  digest = "1:8e243c568f36b09031ec18dff5f7d2769dcf5ca4d624ea511c8e3197dc3d352d"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  revision = "e57e3eeb33f795204c1ca35f56c44f83227c6e66"
-  version = "v1.0.0"
+  pruneopts = ""
+  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:bc2a12c8863e1080226b7bc69192efd6c37aaa9b85cec508b0a8f54fabb9bd9f"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
-    "require"
+    "require",
   ]
-  revision = "87b1dfb5b2fa649f52695dd9eae19abe404a4308"
+  pruneopts = ""
+  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
 
 [[projects]]
   branch = "master"
+  digest = "1:e79c3d6b195477b429f017aaa02af135249bbdff31c9acbd8a93bb37a4ef7d3b"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "0fcca4842a8d74bfddc2c96a073bd2a4d2a7a2e8"
+  pruneopts = ""
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
+  digest = "1:880f5ae3ffdd8741fe179f0f70b46df57fcdd746f3a0e9d0e189bb6a241535e4"
   name = "golang.org/x/sys"
   packages = [
     "unix",
-    "windows"
+    "windows",
   ]
-  revision = "28a7276518d399b9634904daad79e18b44d481bc"
+  pruneopts = ""
+  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
 
 [[projects]]
   branch = "master"
+  digest = "1:cb91f4514dcec0fbc8e1af274856c50553f8088770c05982b76369759426c087"
   name = "howett.net/plist"
   packages = ["."]
-  revision = "233df3c4f07b0c562da0e8a6fb850681ac49bb90"
+  pruneopts = ""
+  revision = "500bd5b9081b5957ac10389f86e069869f00c348"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "389c31b7ef58a3c8f2c2d88c17bbfe8e0bd5b728b962d3d6fd5f2cf5e33f29c6"
+  input-imports = [
+    "github.com/bitrise-io/go-utils/colorstring",
+    "github.com/bitrise-io/go-utils/command",
+    "github.com/bitrise-io/go-utils/fileutil",
+    "github.com/bitrise-io/go-utils/log",
+    "github.com/bitrise-io/go-utils/pathutil",
+    "github.com/bitrise-io/go-utils/progress",
+    "github.com/bitrise-io/go-utils/retry",
+    "github.com/bitrise-io/go-utils/sliceutil",
+    "github.com/bitrise-io/go-utils/urlutil",
+    "github.com/bitrise-io/goinp/goinp",
+    "github.com/bitrise-tools/go-xamarin/analyzers/project",
+    "github.com/bitrise-tools/go-xamarin/analyzers/solution",
+    "github.com/bitrise-tools/go-xamarin/builder",
+    "github.com/bitrise-tools/go-xamarin/constants",
+    "github.com/bitrise-tools/go-xamarin/tools/buildtools",
+    "github.com/bitrise-tools/go-xcode/certificateutil",
+    "github.com/bitrise-tools/go-xcode/export",
+    "github.com/bitrise-tools/go-xcode/exportoptions",
+    "github.com/bitrise-tools/go-xcode/plistutil",
+    "github.com/bitrise-tools/go-xcode/profileutil",
+    "github.com/bitrise-tools/go-xcode/utility",
+    "github.com/bitrise-tools/go-xcode/xcarchive",
+    "github.com/pkg/errors",
+    "github.com/spf13/cobra",
+    "github.com/stretchr/testify/require",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
