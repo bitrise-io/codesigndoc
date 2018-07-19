@@ -17,7 +17,7 @@ import (
 )
 
 // UploadCodesigningFiles ...
-func UploadCodesigningFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, outputDirPath string) (bool, bool, error) {
+func UploadCodesigningFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, certsOnly bool, outputDirPath string) (bool, bool, error) {
 	accessToken, err := askAccessToken()
 	if err != nil {
 		return false, false, err
@@ -35,9 +35,12 @@ func UploadCodesigningFiles(certificates []certificateutil.CertificateInfoModel,
 
 	bitriseClient.SetSelectedAppSlug(selectedAppSlug)
 
-	provProfilesUploaded, err := uploadExportedProvProfiles(bitriseClient, profiles, outputDirPath)
-	if err != nil {
-		return false, false, err
+	var provProfilesUploaded bool
+	if !certsOnly {
+		provProfilesUploaded, err = uploadExportedProvProfiles(bitriseClient, profiles, outputDirPath)
+		if err != nil {
+			return false, false, err
+		}
 	}
 
 	certsUploaded, err := uploadExportedIdentity(bitriseClient, certificates, outputDirPath)

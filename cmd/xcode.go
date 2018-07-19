@@ -83,9 +83,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	if projectPath == "" {
 		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
 the one you usually open in Xcode, then hit Enter.
-
 (Note: if you have a Workspace file you should most likely use that)`
-		fmt.Println()
 		projpth, err := goinp.AskForPath(askText)
 		if err != nil {
 			return fmt.Errorf("failed to read input: %s", err)
@@ -127,7 +125,6 @@ the one you usually open in Xcode, then hit Enter.
 		xcodeCmd.SDK = paramXcodebuildSDK
 	}
 
-	fmt.Println()
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
 	archivePath, buildLog, err := xcodeCmd.GenerateArchive()

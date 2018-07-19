@@ -65,5 +65,8 @@ func printFinished(provProfilesUploaded bool, certsUploaded bool) {
 	if !provProfilesUploaded && !certsUploaded {
 		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
 		fmt.Println()
+	} else if !certsUploaded {
+		log.Warnf("You just have to upload the found certificates (.p12) and you'll be good to go!")
+		fmt.Println()
 	}
 }
