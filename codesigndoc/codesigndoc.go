@@ -87,18 +87,24 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	provProfilesUploaded := (len(profilesToExport) == 0)
 	certsUploaded := (len(certificatesToExport) == 0)
 
-	if len(profilesToExport) > 0 || len(certificatesToExport) > 0 {
+	var shouldUpload bool
+	if !certificatesOnly {
 		fmt.Println()
-		shouldUpload, err := goinp.AskForBoolFromReader("Do you want to upload the provisioning profiles and certificates to Bitrise?", os.Stdin)
+		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the provisioning profiles and certificates to Bitrise?", os.Stdin)
 		if err != nil {
 			return false, false, err
 		}
+	} else {
+		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the certificates to Bitrise?", os.Stdin)
+		if err != nil {
+			return false, false, err
+		}
+	}
 
-		if shouldUpload {
-			certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, outputDirPath)
-			if err != nil {
-				return false, false, err
-			}
+	if shouldUpload {
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, certificatesOnly, outputDirPath)
+		if err != nil {
+			return false, false, err
 		}
 	}
 

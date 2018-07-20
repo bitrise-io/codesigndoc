@@ -75,9 +75,6 @@ func printCodesignGroup(group export.CodeSignGroup) {
 
 // collectExportCertificate returns the certificate to use for the ipa export
 func collectExportCertificate(isMacArchive bool, archiveCertificate certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel, installedInstallerCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
-	fmt.Println()
-	fmt.Println()
-
 	var selectedCertificates []certificateutil.CertificateInfoModel
 
 	// Export method
@@ -91,12 +88,12 @@ func collectExportCertificate(isMacArchive bool, archiveCertificate certificateu
 
 	// Asking the user over and over until we find a valid certificate for the selected export method.
 	for searchingValidCertificate := true; searchingValidCertificate; {
-
 		fmt.Println()
 		selectedExportMethod, err := goinp.SelectFromStringsWithDefault("Select the ipa export method", 1, exportMethods)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read input: %s", err)
 		}
+
 		log.Debugf("selected export method: %v", selectedExportMethod)
 
 		selectedCertificates, err = filterCertificates(isMacArchive, selectedExportMethod, "", selectedCertificates, archiveCertificate, installedCertificates, installedInstallerCertificates)
@@ -105,7 +102,7 @@ func collectExportCertificate(isMacArchive bool, archiveCertificate certificateu
 		}
 
 		fmt.Println()
-		question := `Do you want to collect another certificate? [yes,no]`
+		question := `Do you want to collect another certificate?`
 		searchingValidCertificate, err = goinp.AskForBoolWithDefault(question, true)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read input: %s", err)
@@ -161,6 +158,8 @@ func filterCertificates(isMacArchive bool, selectedExportMethod, selectedTeam st
 		// Skip it if only 1 team has certificates on the machine. Or the archiving team does'n have the desired certificate type.
 		// Skip the question + set the useArchiveTeam = false, if multiple team has certificate for the export method but the archiving team is not one of them.
 		if len(filteredCertificatesByTeam) > 1 && contains {
+			fmt.Println()
+
 			question := fmt.Sprintf(`The archive used codesigning files of team: %s - %s
 Would you like to use this team to export an ipa file?`, archiveCertificate.TeamID, archiveCertificate.TeamName)
 			useArchiveTeam, err = goinp.AskForBoolWithDefault(question, true)
@@ -280,7 +279,6 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 	}
 
 	for true {
-		fmt.Println()
 		selectedExportMethod, err := goinp.SelectFromStringsWithDefault("Select the ipa export method", 1, exportMethods)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read input: %s", err)
@@ -301,7 +299,6 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 		if len(filteredCodeSignGroups) == 0 {
 			fmt.Println()
 			log.Errorf(collectCodesigningFilesInfo)
-			fmt.Println()
 			fmt.Println()
 			question := "Do you want to collect another ipa export code sign files"
 			question += "\n(select NO to finish collecting codesign files and continue)"
@@ -333,7 +330,6 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 		} else {
 			sort.Strings(certificateOptions)
 
-			fmt.Println()
 			question := fmt.Sprintf("Select the Codesign Indentity for %s ipa export", selectedExportMethod)
 			selectedCertificateOption, err = goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 			if err != nil {
@@ -435,14 +431,11 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 		}
 
 		fmt.Println()
-		fmt.Println()
 		log.Infof("Codesign settings will be used for %s .ipa/.app export:", exportMethod(collectedCodeSignGroup))
-		fmt.Println()
 		printCodesignGroup(collectedCodeSignGroup)
 
 		collectedCodeSignGroups = append(collectedCodeSignGroups, collectedCodeSignGroup)
 
-		fmt.Println()
 		fmt.Println()
 		question := "Do you want to collect another ipa export code sign files"
 		question += "\n(select NO to finish collecting codesign files and continue)"
@@ -463,9 +456,7 @@ func collectExportSelectableCodeSignGroups(archive Archive, installedCertificate
 	bundleIDEntitlemenstMap := archive.BundleIDEntitlementsMap()
 
 	fmt.Println()
-	fmt.Println()
 	log.Infof("Targets to sign:")
-	fmt.Println()
 	for bundleID, entitlements := range bundleIDEntitlemenstMap {
 		fmt.Printf("- %s with %d capabilities\n", bundleID, len(entitlements))
 	}
@@ -597,7 +588,6 @@ func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.C
 
 	fmt.Println()
 	log.Infof("Codesign settings used for archive:")
-	fmt.Println()
 	printCodesignGroup(archiveCodeSignGroup)
 
 	return archiveCodeSignGroup, nil

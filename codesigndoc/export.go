@@ -21,14 +21,12 @@ func collectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	fmt.Println()
 	fmt.Println()
 	log.Infof("Required Identities/Certificates (%d)", len(certificates))
-	fmt.Println()
 	for _, certificate := range certificates {
 		log.Printf("- %s", certificate.CommonName)
 	}
 
 	fmt.Println()
 	log.Infof("Exporting the Identities (Certificates):")
-	fmt.Println()
 
 	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
 	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
@@ -80,16 +78,13 @@ func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 		return nil
 	}
 
-	fmt.Println()
 	log.Infof("Required Provisioning Profiles (%d)", len(profiles))
-	fmt.Println()
 	for _, profile := range profiles {
 		log.Printf("- %s (UUID: %s)", profile.Name, profile.UUID)
 	}
 
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
-	fmt.Println()
 
 	for _, profile := range profiles {
 		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
