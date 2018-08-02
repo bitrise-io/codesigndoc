@@ -180,8 +180,8 @@ func (client *Client) downloadUploadedProvisioningProfile(downloadURL string) (c
 }
 
 // RegisterProvisioningProfile ...
-func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, profile profileutil.ProvisioningProfileInfoModel) (RegisterProvisioningProfileData, error) {
-	log.Printf("Register %s on Bitrise...", profile.Name)
+func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, exportedProfileName string) (RegisterProvisioningProfileData, error) {
+	log.Printf("Register %s on Bitrise...", exportedProfileName)
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint, client.selectedAppSlug, provisioningProfilesEndPoint)
 	if err != nil {
@@ -191,7 +191,7 @@ func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, pr
 	log.Debugf("\nRequest URL: %s", requestURL)
 
 	fields := map[string]interface{}{
-		"upload_file_name": profile.Name,
+		"upload_file_name": exportedProfileName,
 		"upload_file_size": provisioningProfSize,
 	}
 
