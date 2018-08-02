@@ -167,7 +167,7 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 
 		log.Debugf("\n%s size: %d", exportFileName, info.Size())
 
-		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(info.Size(), profile)
+		provProfSlugResponseData, err := bitriseClient.RegisterProvisioningProfile(info.Size(), exportFileName)
 		if err != nil {
 			return err
 		}
