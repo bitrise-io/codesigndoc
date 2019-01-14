@@ -69,33 +69,14 @@ the one you usually open in Xcode, then hit Enter.
 	log.Debugf("projectPath: %s", projectPath)
 	xcodeUITestsCmd.ProjectFilePath = projectPath
 
-	workspace, err := xcworkspace.Open(projectPath)
-	if err != nil {
-		return fmt.Errorf("Failed to open workspace (%s), error: %s", projectPath, err)
-	}
-
 	schemeToUse := paramXcodeScheme
 	if schemeToUse == "" {
 		fmt.Println()
 		log.Printf("🔦  Scanning Schemes ...")
-		schemesByContainer, err := workspace.Schemes()
+
+		schemes, schemeNames, err := scanSchemes(projectPath)
 		if err != nil {
-			return ArchiveError{toolXcode, "failed to scan Schemes: " + err.Error()}
-		}
-
-		var schemes []xcscheme.Scheme
-		var schemeNames []string
-		for container, containerSchemes := range schemesByContainer {
-			log.Warnf(container)
-			if strings.ToLower(path.Base(container)) != "pods.xcodeproj" {
-				schemes = append(schemes, containerSchemes...)
-			}
-		}
-
-		schemes = filterScheme(schemes)
-
-		for _, scheme := range schemes {
-			schemeNames = append(schemeNames, scheme.Name)
+			return fmt.Errorf("failed to scan schemes, error: %s", err)
 		}
 
 		log.Debugf("schemes: %v", schemes)
@@ -178,20 +159,21 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 		return xcodeproj.XcodeProj{}, "", fmt.Errorf("no configuration provided nor default defined for the scheme's (%s) archive action", schemeName)
 	}
 
-	var archiveEntry xcscheme.BuildActionEntry
+	var testEntry xcscheme.BuildActionEntry
+	log.Warnf("scheme.BuildAction.BuildActionEntries: %+v", scheme.BuildAction.BuildActionEntries)
 	for _, entry := range scheme.BuildAction.BuildActionEntries {
-		if entry.BuildForArchiving != "YES" || !entry.BuildableReference.IsAppReference() {
+		if entry.BuildForTesting != "YES" || !strings.HasSuffix(entry.BuildableReference.BuildableName, ".xctest") {
 			continue
 		}
-		archiveEntry = entry
+		testEntry = entry
 		break
 	}
 
-	if archiveEntry.BuildableReference.BlueprintIdentifier == "" {
+	if testEntry.BuildableReference.BlueprintIdentifier == "" {
 		return xcodeproj.XcodeProj{}, "", fmt.Errorf("archivable entry not found")
 	}
 
-	projectPth, err := archiveEntry.BuildableReference.ReferencedContainerAbsPath(schemeContainerDir)
+	projectPth, err := testEntry.BuildableReference.ReferencedContainerAbsPath(schemeContainerDir)
 	if err != nil {
 		return xcodeproj.XcodeProj{}, "", err
 	}
@@ -201,5 +183,57 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 		return xcodeproj.XcodeProj{}, "", err
 	}
 
+	project.Proj.Target()
+
+	log.Warnf("Project: %v", project)
 	return project, scheme.Name, nil
+}
+
+func scanSchemes(projectPath string) ([]xcscheme.Scheme, []string, error) {
+	var schemes []xcscheme.Scheme
+	if xcworkspace.IsWorkspace(projectPath) {
+		workspace, err := xcworkspace.Open(projectPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", projectPath, err)
+		}
+
+		schemesByContainer, err := workspace.Schemes()
+		if err != nil {
+			return nil, nil, ArchiveError{toolXcode, "failed to scan Schemes: " + err.Error()}
+		}
+
+		// Remove Cocoapod schemes
+		for container, containerSchemes := range schemesByContainer {
+			log.Warnf(container)
+			if strings.ToLower(path.Base(container)) != "pods.xcodeproj" {
+				schemes = append(schemes, containerSchemes...)
+			}
+		}
+	} else {
+		proj, err := xcodeproj.Open(projectPath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", projectPath, err)
+		}
+
+		schemes, err = proj.Schemes()
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	schemes = filterScheme(schemes)
+
+	for _, scheme := range schemes {
+		_, _, err := findBuiltProject(projectPath, scheme.Name, "")
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var schemeNames []string
+	for _, scheme := range schemes {
+		schemeNames = append(schemeNames, scheme.Name)
+	}
+
+	return schemes, schemeNames, nil
 }
