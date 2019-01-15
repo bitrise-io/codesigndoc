@@ -74,20 +74,20 @@ the one you usually open in Xcode, then hit Enter.
 		fmt.Println()
 		log.Printf("🔦  Scanning Schemes ...")
 
-		schemes, schemeNames, err := scanSchemes(projectPath)
+		schemes, schemesWitUITests, _, schemesWitUITestNames, err := scanSchemes(projectPath)
 		if err != nil {
 			return fmt.Errorf("failed to scan schemes, error: %s", err)
 		}
 
 		log.Debugf("schemes: %v", schemes)
 
-		if len(schemes) == 0 {
+		if len(schemesWitUITests) == 0 {
 			return ArchiveError{toolXcode, "no schemes found"}
-		} else if len(schemes) == 1 {
-			schemeToUse = schemes[0].Name
+		} else if len(schemesWitUITests) == 1 {
+			schemeToUse = schemesWitUITests[0].Name
 		} else {
 			fmt.Println()
-			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemeNames)
+			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemesWitUITestNames)
 			if err != nil {
 				return fmt.Errorf("failed to select Scheme: %s", err)
 			}
@@ -105,18 +105,27 @@ the one you usually open in Xcode, then hit Enter.
 	return nil
 }
 
-func filterScheme(schemes []xcscheme.Scheme) []xcscheme.Scheme {
-	var schemesWithTest []xcscheme.Scheme
-	for _, scheme := range schemes {
-		for _, e := range scheme.BuildAction.BuildActionEntries {
-			if e.BuildForTesting == "YES" {
-				schemesWithTest = append(schemesWithTest, scheme)
-				break
+func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
+	var testEntries []xcscheme.BuildActionEntry
+
+	for _, entry := range scheme.BuildAction.BuildActionEntries {
+		if entry.BuildForTesting != "YES" || !strings.HasSuffix(entry.BuildableReference.BuildableName, ".xctest") {
+			continue
+		}
+		testEntries = append(testEntries, entry)
+	}
+
+	for _, entry := range testEntries {
+		for _, target := range proj.Targets {
+			if target.ID == entry.BuildableReference.BlueprintIdentifier {
+				if strings.HasSuffix(target.ProductType, "ui-testing") {
+					return true
+				}
 			}
 		}
-
 	}
-	return schemesWithTest
+	return false
+
 }
 
 func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.XcodeProj, string, error) {
@@ -160,7 +169,6 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 	}
 
 	var testEntry xcscheme.BuildActionEntry
-	log.Warnf("scheme.BuildAction.BuildActionEntries: %+v", scheme.BuildAction.BuildActionEntries)
 	for _, entry := range scheme.BuildAction.BuildActionEntries {
 		if entry.BuildForTesting != "YES" || !strings.HasSuffix(entry.BuildableReference.BuildableName, ".xctest") {
 			continue
@@ -183,28 +191,23 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 		return xcodeproj.XcodeProj{}, "", err
 	}
 
-	project.Proj.Target()
-
-	log.Warnf("Project: %v", project)
 	return project, scheme.Name, nil
 }
 
-func scanSchemes(projectPath string) ([]xcscheme.Scheme, []string, error) {
-	var schemes []xcscheme.Scheme
+func scanSchemes(projectPath string) (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, error error) {
 	if xcworkspace.IsWorkspace(projectPath) {
 		workspace, err := xcworkspace.Open(projectPath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", projectPath, err)
+			return nil, nil, nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", projectPath, err)
 		}
 
 		schemesByContainer, err := workspace.Schemes()
 		if err != nil {
-			return nil, nil, ArchiveError{toolXcode, "failed to scan Schemes: " + err.Error()}
+			return nil, nil, nil, nil, ArchiveError{toolXcode, "failed to scan Schemes: " + err.Error()}
 		}
 
 		// Remove Cocoapod schemes
 		for container, containerSchemes := range schemesByContainer {
-			log.Warnf(container)
 			if strings.ToLower(path.Base(container)) != "pods.xcodeproj" {
 				schemes = append(schemes, containerSchemes...)
 			}
@@ -212,28 +215,42 @@ func scanSchemes(projectPath string) ([]xcscheme.Scheme, []string, error) {
 	} else {
 		proj, err := xcodeproj.Open(projectPath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", projectPath, err)
+			return nil, nil, nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", projectPath, err)
 		}
 
 		schemes, err = proj.Schemes()
 		if err != nil {
-			return nil, nil, err
+			return
 		}
 	}
 
-	schemes = filterScheme(schemes)
+	// Check every scheme if it has UITest target in the .pbxproj file or not.
+	{
+		var proj xcodeproj.Proj
+		for _, scheme := range schemes {
+			xcproj, _, err := findBuiltProject(projectPath, scheme.Name, "")
+			if err != nil {
+				continue
+			}
 
-	for _, scheme := range schemes {
-		_, _, err := findBuiltProject(projectPath, scheme.Name, "")
-		if err != nil {
-			return nil, nil, err
+			proj = xcproj.Proj
+			if schemesHasUITest(scheme, proj) {
+				schemesWitUITests = append(schemesWitUITests, scheme)
+			}
+
 		}
 	}
 
-	var schemeNames []string
-	for _, scheme := range schemes {
-		schemeNames = append(schemeNames, scheme.Name)
+	// Iterate trough the scheme arrays and get the scheme names
+	{
+		for _, scheme := range schemes {
+			schemeNames = append(schemeNames, scheme.Name)
+		}
+
+		for _, schemeWithUITest := range schemesWitUITests {
+			schemesWitUITestNames = append(schemesWitUITestNames, schemeWithUITest.Name)
+		}
 	}
 
-	return schemes, schemeNames, nil
+	return
 }
