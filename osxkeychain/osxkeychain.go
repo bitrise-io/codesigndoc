@@ -176,7 +176,7 @@ func FindAndValidateIdentity(identityLabel string) (*IdentityWithRefModel, error
 //             you can use the ReleaseIdentityWithRefList method to do that
 func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 
-	queryDict := C.CFDictionaryCreateMutable(nil, 0, nil, nil)
+	queryDict := C.CFDictionaryCreateMutable(C.kCFAllocatorDefault, 0, nil, nil)
 	defer C.CFRelease(C.CFTypeRef(queryDict))
 	C.CFDictionaryAddValue(queryDict, unsafe.Pointer(C.kSecClass), unsafe.Pointer(C.kSecClassIdentity))
 	C.CFDictionaryAddValue(queryDict, unsafe.Pointer(C.kSecMatchLimit), unsafe.Pointer(C.kSecMatchLimitAll))
