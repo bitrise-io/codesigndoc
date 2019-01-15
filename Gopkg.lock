@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2aa540c5a392849eaa3c5a81aee4e2a31025a5bfcf00c43351a97e830cf63d2a"
+  digest = "1:5306f1051f67906b51a08c34bfb52fafd0f0634b275dc5b92aa368a3aeb573a7"
   name = "github.com/bitrise-io/go-utils"
   packages = [
     "colorstring",
@@ -24,7 +24,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fb3cc9c055818a84aba159da735a24efce77453a904e7742141f2aa0359a6ae6"
+  digest = "1:6825c56bedbe125a302e7516f731fa841ce9db05f873dbc5745ee807a8c3d3a2"
   name = "github.com/bitrise-io/goinp"
   packages = ["goinp"]
   pruneopts = ""
@@ -32,7 +32,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:189a7e7bbda8a5f93eb4931155d9dc88c30a050dd316f8f613a05a799e36c559"
+  digest = "1:5a10928d8c90f5f52d5b126c507db75f6a330fbd8d69f669737688a894875ff9"
   name = "github.com/bitrise-tools/go-xamarin"
   packages = [
     "analyzers/project",
@@ -51,7 +51,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f3eb815b9c0b11d53813a09340e6fbdf6151aefc6b780a83b5a80471a189c11a"
+  digest = "1:165bebf2fc00916648e90c424a19105b0d3afc72ead558e7ae7a56edcde7524c"
   name = "github.com/bitrise-tools/go-xcode"
   packages = [
     "certificateutil",
@@ -67,7 +67,21 @@
   revision = "07db8cf760f5213241e12c0595158aedce96669a"
 
 [[projects]]
-  digest = "1:0a39ec8bf5629610a4bc7873a92039ee509246da3cef1a0ea60f1ed7e5f9cea5"
+  branch = "master"
+  digest = "1:dd751fbca8284308b408714a38c386895e6f8dc59309360fd6363fc94e143e78"
+  name = "github.com/bitrise-tools/xcode-project"
+  packages = [
+    "serialized",
+    "xcodebuild",
+    "xcodeproj",
+    "xcscheme",
+    "xcworkspace",
+  ]
+  pruneopts = ""
+  revision = "489a630c4fa828115a6265700eb61c3839aad9a7"
+
+[[projects]]
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   pruneopts = ""
@@ -116,7 +130,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:04f9cbdaf9ddfd1fa3e4851a69a1b0bc254a034a0542c0134568de2f8abdc185"
+  digest = "1:348b9440fef689f042a46a46daf154b997e464db696c56019603d2c6d3eac0ae"
   name = "github.com/spf13/cobra"
   packages = ["."]
   pruneopts = ""
@@ -132,7 +146,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bc2a12c8863e1080226b7bc69192efd6c37aaa9b85cec508b0a8f54fabb9bd9f"
+  digest = "1:c587772fb8ad29ad4db67575dad25ba17a51f072ff18a22b4f0257a4d9c24f75"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
@@ -143,7 +157,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e79c3d6b195477b429f017aaa02af135249bbdff31c9acbd8a93bb37a4ef7d3b"
+  digest = "1:6ef14be530be39b6b9d75d54ce1d546ae9231e652d9e3eef198cbb19ce8ed3e7"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = ""
@@ -151,7 +165,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:880f5ae3ffdd8741fe179f0f70b46df57fcdd746f3a0e9d0e189bb6a241535e4"
+  digest = "1:19f072f12708aaafef9064b49432953e3f813a98fcb356b30831cf2b0f5272b3"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -162,7 +176,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:cb91f4514dcec0fbc8e1af274856c50553f8088770c05982b76369759426c087"
+  digest = "1:5e44963f3ff639a4fd8a03522f38614b223467fd040beda2b7122cbf75ede030"
   name = "howett.net/plist"
   packages = ["."]
   pruneopts = ""
@@ -194,6 +208,9 @@
     "github.com/bitrise-tools/go-xcode/profileutil",
     "github.com/bitrise-tools/go-xcode/utility",
     "github.com/bitrise-tools/go-xcode/xcarchive",
+    "github.com/bitrise-tools/xcode-project/xcodeproj",
+    "github.com/bitrise-tools/xcode-project/xcscheme",
+    "github.com/bitrise-tools/xcode-project/xcworkspace",
     "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/require",

@@ -25,3 +25,7 @@
 [[constraint]]
   name = "github.com/stretchr/testify"
   branch = "master"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bitrise-tools/xcode-project"
