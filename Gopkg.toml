@@ -27,5 +27,5 @@
   branch = "master"
 
 [[constraint]]
-  branch = "master"
+  branch = "UITest"
   name = "github.com/bitrise-tools/xcode-project"

@@ -55,7 +55,8 @@ type TestableReference struct {
 
 // TestAction ...
 type TestAction struct {
-	Testables []TestableReference `xml:"Testables>TestableReference"`
+	Testables          []TestableReference `xml:"Testables>TestableReference"`
+	BuildConfiguration string              `xml:"buildConfiguration,attr"`
 }
 
 // ArchiveAction ...

@@ -5,10 +5,15 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/progress"
 	"github.com/bitrise-tools/xcode-project/xcodeproj"
 	"github.com/bitrise-tools/xcode-project/xcscheme"
 	"github.com/bitrise-tools/xcode-project/xcworkspace"
+	"github.com/lunny/log"
 )
 
 // CommandModel ...
@@ -34,29 +39,76 @@ type CommandModel struct {
 	SDK string
 }
 
-// GenerateArchive : generates the archive for subsequent "Scan"
-// func (xcuicmd CommandModel) GenerateArchive() (string, string, error) {
-// 	xcoutput := ""
-// 	var err error
+// RunBuildForTesting runs the build-for-tesing xcode command
+func (xcuitestcmd CommandModel) RunBuildForTesting() (string, string, error) {
+	xcoutput := ""
+	var err error
 
-// 	tmpDir, err := pathutil.NormalizedOSTempDirPath("__codesigndoc__")
-// 	if err != nil {
-// 		return "", "", fmt.Errorf("failed to create temp dir for archives, error: %s", err)
-// 	}
-// 	tmpArchivePath := filepath.Join(tmpDir, xcuicmd.Scheme+".xcarchive")
+	tmpDir, err := pathutil.NormalizedOSTempDirPath("__codesigndoc__")
+	if err != nil {
+		return "", "", fmt.Errorf("failed to create temp dir for archives, error: %s", err)
+	}
+	tmpBuildPath := filepath.Join(tmpDir, xcuitestcmd.Scheme)
 
-// 	progress.SimpleProgress(".", 1*time.Second, func() {
-// 		xcoutput, err = xcuicmd.RunXcodebuildCommand("clean", "archive", "-archivePath", tmpArchivePath)
-// 	})
-// 	fmt.Println()
+	progress.SimpleProgress(".", 1*time.Second, func() {
+		xcoutput, err = xcuitestcmd.RunXcodebuildCommand("clean", "build-for-testing", "CONFIGURATION_BUILD_DIR="+tmpBuildPath)
+	})
+	fmt.Println()
 
-// 	if err != nil {
-// 		return "", xcoutput, err
-// 	}
-// 	return tmpArchivePath, xcoutput, nil
-// }
+	if err != nil {
+		return "", xcoutput, err
+	}
+	return tmpBuildPath, xcoutput, nil
+}
 
-// ScanSchemes TODO
+func (xcuitestcmd CommandModel) xcodeProjectOrWorkspaceParam() (string, error) {
+	if strings.HasSuffix(xcuitestcmd.ProjectFilePath, "xcworkspace") {
+		return "-workspace", nil
+	} else if strings.HasSuffix(xcuitestcmd.ProjectFilePath, "xcodeproj") {
+		return "-project", nil
+	}
+	return "", fmt.Errorf("invalid project/workspace file, the extension should be either .xcworkspace or .xcodeproj ; (file path: %s)", xcuitestcmd.ProjectFilePath)
+}
+
+func (xcuitestcmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...string) ([]string, error) {
+	projParam, err := xcuitestcmd.xcodeProjectOrWorkspaceParam()
+	if err != nil {
+		return []string{}, err
+	}
+
+	baseArgs := []string{projParam, xcuitestcmd.ProjectFilePath}
+	if xcuitestcmd.Scheme != "" {
+		baseArgs = append(baseArgs, "-scheme", xcuitestcmd.Scheme)
+	}
+
+	if xcuitestcmd.SDK != "" {
+		baseArgs = append(baseArgs, "-sdk", xcuitestcmd.SDK)
+	}
+
+	if xcuitestcmd.CodeSignIdentity != "" {
+		baseArgs = append(baseArgs, `CODE_SIGN_IDENTITY=`+xcuitestcmd.CodeSignIdentity)
+	}
+	return append(baseArgs, xcodebuildActionArgs...), nil
+}
+
+// RunXcodebuildCommand TODO comment
+func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (string, error) {
+	xcodeCmdParamsToRun, err := xcuitestcmd.transformToXcodebuildParams(xcodebuildActionArgs...)
+	if err != nil {
+		return "", err
+	}
+
+	log.Infof("$ xcodebuild %s", command.PrintableCommandArgs(true, xcodeCmdParamsToRun))
+	xcoutput, err := command.RunCommandAndReturnCombinedStdoutAndStderr("xcodebuild", xcodeCmdParamsToRun...)
+	if err != nil {
+		return xcoutput, fmt.Errorf("failed to run xcodebuild command, error: %s", err)
+	}
+
+	log.Debugf("xcoutput: %s", xcoutput)
+	return xcoutput, nil
+}
+
+// ScanSchemes TODO comment
 func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, error error) {
 	if xcworkspace.IsWorkspace(xcuitestcmd.ProjectFilePath) {
 		workspace, err := xcworkspace.Open(xcuitestcmd.ProjectFilePath)

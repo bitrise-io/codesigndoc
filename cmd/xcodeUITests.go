@@ -2,11 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/codesigndoc"
 	"github.com/bitrise-tools/codesigndoc/xcodeuitest"
 	"github.com/bitrise-tools/go-xcode/utility"
 	"github.com/spf13/cobra"
@@ -31,10 +34,10 @@ func init() {
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
-	// absExportOutputDirPath, err := initExportOutputDir()
-	// if err != nil {
-	// 	return fmt.Errorf("failed to prepare Export directory: %s", err)
-	// }
+	absExportOutputDirPath, err := initExportOutputDir()
+	if err != nil {
+		return fmt.Errorf("failed to prepare Export directory: %s", err)
+	}
 
 	// Output tools versions
 	xcodebuildVersion, err := utility.GetXcodeVersion()
@@ -45,7 +48,7 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 	fmt.Println()
 
-	// xcodebuildOutput := ""
+	xcodebuildOutput := ""
 	xcodeUITestsCmd := xcodeuitest.CommandModel{}
 
 	projectPath := paramXcodeProjectFilePath
@@ -97,6 +100,32 @@ the one you usually open in Xcode, then hit Enter.
 	}
 
 	fmt.Println()
-	log.Printf("🔦  Running an Xcode Build-for-testing, to get all the required code signing settings...")
+	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
+	buildForTestingPath, buildLog, err := xcodeUITestsCmd.RunBuildForTesting()
+	xcodebuildOutput = buildLog
+	// save the xcodebuild output into a debug log file
+	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+	{
+		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
+		} else if err != nil {
+			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
+			log.Warnf("and make sure that you can Archive this project from Xcode!")
+			fmt.Println()
+			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
+			log.Printf("and Archive, using the Scheme: %s", xcodeUITestsCmd.Scheme)
+			fmt.Println()
+		}
+	}
+	if err != nil {
+		return ArchiveError{toolXcode, err.Error()}
+	}
+
+	/*certsUploaded, provProfilesUploaded*/
+	_, _, err = codesigndoc.ExportCodesignFiles_UITests(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	if err != nil {
+		return err
+	}
 	return nil
 }
