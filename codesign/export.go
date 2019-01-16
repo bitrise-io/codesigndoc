@@ -1,4 +1,4 @@
-package codesigndoc
+package codesign
 
 import (
 	"errors"
@@ -12,8 +12,8 @@ import (
 	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
-// collectAndExportIdentities exports the given certificates into the given directory as a single .p12 file
-func collectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, absExportOutputDirPath string, isAskForPassword bool) error {
+// CollectAndExportIdentities exports the given certificates into the given directory as a single .p12 file
+func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, absExportOutputDirPath string, isAskForPassword bool) error {
 	if len(certificates) == 0 {
 		return nil
 	}
@@ -72,8 +72,8 @@ func collectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	return nil
 }
 
-// collectAndExportProvisioningProfiles copies the give profiles into the given directory
-func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel, absExportOutputDirPath string) error {
+// CollectAndExportProvisioningProfiles copies the give profiles into the given directory
+func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel, absExportOutputDirPath string) error {
 	if len(profiles) == 0 {
 		return nil
 	}

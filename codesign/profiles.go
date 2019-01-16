@@ -1,4 +1,4 @@
-package codesigndoc
+package codesign
 
 import (
 	"regexp"
@@ -24,8 +24,8 @@ func profileExportFileName(info profileutil.ProvisioningProfileInfoModel, path s
 	return info.UUID + "." + safeTitle + extension
 }
 
-// filterLatestProfiles renmoves older versions of the same profile
-func filterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) []profileutil.ProvisioningProfileInfoModel {
+// FilterLatestProfiles renmoves older versions of the same profile
+func FilterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) []profileutil.ProvisioningProfileInfoModel {
 	profilesByBundleIDAndName := map[string][]profileutil.ProvisioningProfileInfoModel{}
 	for _, profile := range profiles {
 		bundleID := profile.BundleID

@@ -9,7 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesigndoc"
+	"github.com/bitrise-tools/codesigndoc/codesigndocuitests"
 	"github.com/bitrise-tools/codesigndoc/xcodeuitest"
 	"github.com/bitrise-tools/go-xcode/utility"
 	"github.com/spf13/cobra"
@@ -123,7 +123,7 @@ the one you usually open in Xcode, then hit Enter.
 	}
 
 	/*certsUploaded, provProfilesUploaded*/
-	_, _, err = codesigndoc.ExportCodesignFiles_UITests(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	_, _, err = codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
 	if err != nil {
 		return err
 	}

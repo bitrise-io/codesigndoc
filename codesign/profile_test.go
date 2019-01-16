@@ -1,4 +1,4 @@
-package codesigndoc
+package codesign
 
 import (
 	"testing"

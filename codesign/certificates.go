@@ -1,4 +1,4 @@
-package codesigndoc
+package codesign
 
 import (
 	"fmt"
@@ -35,9 +35,9 @@ var (
 	}
 )
 
-// installedCertificates returns the certificate installed in the keychain,
+// InstalledCertificates returns the certificate installed in the keychain,
 // the expired certificates are removed from the list
-func installedCertificates(certType certificateType) ([]certificateutil.CertificateInfoModel, error) {
+func InstalledCertificates(certType certificateType) ([]certificateutil.CertificateInfoModel, error) {
 	var certs []certificateutil.CertificateInfoModel
 	var err error
 
@@ -67,9 +67,9 @@ func installedCertificates(certType certificateType) ([]certificateutil.Certific
 	return certificateutil.FilterValidCertificateInfos(certs), nil
 }
 
-// isDistributionCertificate returns true if the given certificate
+// IsDistributionCertificate returns true if the given certificate
 // is an iOS Distribution, Mac App Distribution or Developer ID Application certificate
-func isDistributionCertificate(cert certificateutil.CertificateInfoModel) bool {
+func IsDistributionCertificate(cert certificateutil.CertificateInfoModel) bool {
 	if strings.Contains(strings.ToLower(cert.CommonName), strings.ToLower("iPhone Distribution")) {
 		return true
 	}
@@ -81,9 +81,9 @@ func isDistributionCertificate(cert certificateutil.CertificateInfoModel) bool {
 	return false
 }
 
-// isInstallerCertificate returns true if the given certificate
+// IsInstallerCertificate returns true if the given certificate
 // is an installer certificate
-func isInstallerCertificate(cert certificateutil.CertificateInfoModel) bool {
+func IsInstallerCertificate(cert certificateutil.CertificateInfoModel) bool {
 	if strings.Contains(strings.ToLower(cert.CommonName), strings.ToLower("installer")) {
 		return true
 	}
@@ -91,8 +91,8 @@ func isInstallerCertificate(cert certificateutil.CertificateInfoModel) bool {
 	return false
 }
 
-// mapCertificatesByTeam returns a certificate list mapped by the certificate's team (in teamdID - teamName format)
-func mapCertificatesByTeam(certificates []certificateutil.CertificateInfoModel) map[string][]certificateutil.CertificateInfoModel {
+// MapCertificatesByTeam returns a certificate list mapped by the certificate's team (in teamdID - teamName format)
+func MapCertificatesByTeam(certificates []certificateutil.CertificateInfoModel) map[string][]certificateutil.CertificateInfoModel {
 	certificatesByTeam := map[string][]certificateutil.CertificateInfoModel{}
 	for _, certificateInfo := range certificates {
 		team := fmt.Sprintf("%s - %s", certificateInfo.TeamID, certificateInfo.TeamName)
@@ -106,8 +106,8 @@ func mapCertificatesByTeam(certificates []certificateutil.CertificateInfoModel) 
 	return certificatesByTeam
 }
 
-// findCertificate returns the first certificate, which's common_name or SHA1 fingerprint matches to the given string
-func findCertificate(nameOrSHA1Fingerprint string, certificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
+// FindCertificate returns the first certificate, which's common_name or SHA1 fingerprint matches to the given string
+func FindCertificate(nameOrSHA1Fingerprint string, certificates []certificateutil.CertificateInfoModel) (certificateutil.CertificateInfoModel, error) {
 	for _, certificate := range certificates {
 		if certificate.CommonName == nameOrSHA1Fingerprint {
 			return certificate, nil
