@@ -1,11 +1,9 @@
 package codesigndocuitests
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
-
-	"github.com/bitrise-io/go-utils/pathutil"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
@@ -13,6 +11,7 @@ import (
 	"github.com/bitrise-tools/codesigndoc/bitriseio"
 	"github.com/bitrise-tools/codesigndoc/codesign"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/profileutil"
 )
 
@@ -106,11 +105,6 @@ func ExportCodesignFiles(buildPath, outputDirPath string, certificatesOnly bool,
 }
 
 func getFilesToExport(buildPath string, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
-	_, err := getEmbedProfile(buildPath)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	certificatesToExport := []certificateutil.CertificateInfoModel{}
 	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
 
@@ -122,34 +116,45 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 
 		certificatesToExport = append(certificatesToExport, exportCertificate...)
 	} else {
-		// certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(archive, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, achiveCodeSignGroup)
-		// if err != nil {
-		// 	return nil, nil, err
-		// }
+		testRunner, err := NewIOSTestRunner(buildPath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		log.Debugf("testRunner: %s", LogPretty(testRunner))
+
+		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles, certificatesToExport, profilesToExport)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	return certificatesToExport, profilesToExport, nil
 }
 
-func getEmbedProfile(buildPath string) (profileutil.ProvisioningProfileInfoModel, error) {
-	runnerPattern := filepath.Join(buildPath, "*-Runner.app")
-	possibleTestRunnerPths, err := filepath.Glob(runnerPattern)
+func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel,
+	certificatesToExport []certificateutil.CertificateInfoModel, profilesToExport []profileutil.ProvisioningProfileInfoModel) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+
+	groups, err := collectExportCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if err != nil {
-		return profileutil.ProvisioningProfileInfoModel{}, err
+		return nil, nil, err
 	}
 
-	if len(possibleTestRunnerPths) == 0 {
-		return profileutil.ProvisioningProfileInfoModel{}, fmt.Errorf("no Test-Runner.app found in %s", buildPath)
-	} else if len(possibleTestRunnerPths) != 1 {
-		return profileutil.ProvisioningProfileInfoModel{}, fmt.Errorf("found multiple Test-Runner.app in %s", buildPath)
+	var exportCodeSignGroups []export.CodeSignGroup
+	for _, group := range groups {
+		exportCodeSignGroup, ok := group.(*export.IosCodeSignGroup)
+		if ok {
+			exportCodeSignGroups = append(exportCodeSignGroups, exportCodeSignGroup)
+		}
 	}
 
-	embedProfilePath := filepath.Join(possibleTestRunnerPths[0], "embedded.mobileprovision")
-	if exist, err := pathutil.IsPathExists(embedProfilePath); err != nil {
-		return profileutil.ProvisioningProfileInfoModel{}, fmt.Errorf("failed to find embedded.mobileprovision in %s, error: %s", embedProfilePath, err)
-	} else if !exist {
-		return profileutil.ProvisioningProfileInfoModel{}, fmt.Errorf("failed to find embedded.mobileprovision in %s", embedProfilePath)
+	if len(exportCodeSignGroups) == 0 {
+		return nil, nil, errors.New("no export code sign groups collected")
 	}
 
-	return profileutil.NewProvisioningProfileInfoFromFile(embedProfilePath)
+	certificates, profiles := extractCertificatesAndProfiles(exportCodeSignGroups...)
+	certificatesToExport = append(certificatesToExport, certificates...)
+	profilesToExport = append(profilesToExport, profiles...)
+
+	return certificatesToExport, profilesToExport, nil
 }
