@@ -177,11 +177,8 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 		}
 	}
 
-	log.Infof("Project targets: %+v", proj.Targets)
 	for _, entry := range testables {
-		log.Warnf("Entry: %+v", entry)
 		for _, target := range proj.Targets {
-			log.Warnf("%s\n", target.ID)
 			if target.ID == entry.BuildableReference.BlueprintIdentifier {
 				if strings.HasSuffix(target.ProductType, "ui-testing") {
 					return true
