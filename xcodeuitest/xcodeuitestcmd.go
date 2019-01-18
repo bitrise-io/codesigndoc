@@ -104,7 +104,7 @@ func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...str
 // ScanSchemes scans the provided project or workspace for schemes.
 // Returns the schemes of the provided project's or the provided workspace's + project's schemes, the names of the schemes,
 // the schemes with UITest target and the schemes' which has UITest.
-func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, error error) {
+func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, err error) {
 	if xcworkspace.IsWorkspace(xcuitestcmd.ProjectFilePath) {
 		workspace, err := xcworkspace.Open(xcuitestcmd.ProjectFilePath)
 		if err != nil {
@@ -130,7 +130,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 
 		schemes, err = proj.Schemes()
 		if err != nil {
-			return
+			return nil, nil, nil, nil, err
 		}
 	}
 
@@ -140,6 +140,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 		for _, scheme := range schemes {
 			xcproj, _, err := findBuiltProject(xcuitestcmd.ProjectFilePath, scheme.Name, "")
 			if err != nil {
+				log.Debugf("failed to find build project, error: %s", err)
 				continue
 			}
 
@@ -167,17 +168,20 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 
 // Return true if the provided scheme has BuildActionEntry with BuildForTesting = YES and one of this entries has target with *ui-testing product type.
 func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
-	var testEntries []xcscheme.BuildActionEntry
+	var testables []xcscheme.TestableReference
 
-	for _, entry := range scheme.BuildAction.BuildActionEntries {
-		if entry.BuildForTesting != "YES" || !strings.HasSuffix(entry.BuildableReference.BuildableName, ".xctest") {
-			continue
+	for _, testable := range scheme.TestAction.Testables {
+		if testable.Skipped == "NO" {
+			log.Printf("Not skipped")
+			testables = append(testables, testable)
 		}
-		testEntries = append(testEntries, entry)
 	}
 
-	for _, entry := range testEntries {
+	log.Infof("Project targets: %+v", proj.Targets)
+	for _, entry := range testables {
+		log.Warnf("Entry: %+v", entry)
 		for _, target := range proj.Targets {
+			log.Warnf("%s\n", target.ID)
 			if target.ID == entry.BuildableReference.BlueprintIdentifier {
 				if strings.HasSuffix(target.ProductType, "ui-testing") {
 					return true
@@ -185,6 +189,7 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 			}
 		}
 	}
+
 	return false
 
 }
@@ -214,7 +219,7 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 		var containerProject string
 		scheme, containerProject, err = workspace.Scheme(schemeName)
 		if err != nil {
-			return xcodeproj.XcodeProj{}, "", fmt.Errorf("no scheme found with name: %s in workspace: %s", schemeName, pth)
+			return xcodeproj.XcodeProj{}, "", err
 		}
 		schemeContainerDir = filepath.Dir(containerProject)
 	} else {
@@ -229,17 +234,16 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 		return xcodeproj.XcodeProj{}, "", fmt.Errorf("no configuration provided nor default defined for the scheme's (%s) archive action", schemeName)
 	}
 
-	var testEntry xcscheme.BuildActionEntry
-	for _, entry := range scheme.BuildAction.BuildActionEntries {
-		if entry.BuildForTesting != "YES" || !strings.HasSuffix(entry.BuildableReference.BuildableName, ".xctest") {
-			continue
+	var testEntry xcscheme.TestableReference
+	for _, testable := range scheme.TestAction.Testables {
+		if testable.Skipped == "NO" {
+			log.Printf("Not skipped")
+			testEntry = testable
 		}
-		testEntry = entry
-		break
 	}
 
 	if testEntry.BuildableReference.BlueprintIdentifier == "" {
-		return xcodeproj.XcodeProj{}, "", fmt.Errorf("archivable entry not found")
+		return xcodeproj.XcodeProj{}, "", fmt.Errorf("testable entry not found")
 	}
 
 	projectPth, err := testEntry.BuildableReference.ReferencedContainerAbsPath(schemeContainerDir)

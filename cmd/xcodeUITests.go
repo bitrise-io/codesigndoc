@@ -122,10 +122,11 @@ the one you usually open in Xcode, then hit Enter.
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
-	/*certsUploaded, provProfilesUploaded*/
-	_, _, err = codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	certsUploaded, provProfilesUploaded, err := codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
 	if err != nil {
 		return err
 	}
+
+	printFinished(provProfilesUploaded, certsUploaded)
 	return nil
 }
