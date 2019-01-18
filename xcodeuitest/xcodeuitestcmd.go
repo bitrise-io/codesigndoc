@@ -8,12 +8,12 @@ import (
 	"time"
 
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
 	"github.com/bitrise-tools/xcode-project/xcodeproj"
 	"github.com/bitrise-tools/xcode-project/xcscheme"
 	"github.com/bitrise-tools/xcode-project/xcworkspace"
-	"github.com/lunny/log"
 )
 
 // CommandModel ...
@@ -28,10 +28,6 @@ type CommandModel struct {
 	// Scheme will be passed to xcodebuild as the -scheme flag's value
 	// Only passed to xcodebuild if not empty!
 	Scheme string
-
-	// CodeSignIdentity will be passed to xcodebuild as an CODE_SIGN_IDENTITY= argument.
-	// Only passed to xcodebuild if not empty!
-	CodeSignIdentity string
 
 	// SDK: if defined it'll be passed as the -sdk flag to xcodebuild.
 	// For more info about the possible values please see xcodebuild's docs about the -sdk flag.
@@ -85,9 +81,6 @@ func (xcuitestcmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs
 		baseArgs = append(baseArgs, "-sdk", xcuitestcmd.SDK)
 	}
 
-	if xcuitestcmd.CodeSignIdentity != "" {
-		baseArgs = append(baseArgs, `CODE_SIGN_IDENTITY=`+xcuitestcmd.CodeSignIdentity)
-	}
 	return append(baseArgs, xcodebuildActionArgs...), nil
 }
 
@@ -108,7 +101,9 @@ func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...str
 	return xcoutput, nil
 }
 
-// ScanSchemes TODO comment
+// ScanSchemes scans the provided project or workspace for schemes.
+// Returns the schemes of the provided project's or the provided workspace's + project's schemes, the names of the schemes,
+// the schemes with UITest target and the schemes' which has UITest.
 func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, error error) {
 	if xcworkspace.IsWorkspace(xcuitestcmd.ProjectFilePath) {
 		workspace, err := xcworkspace.Open(xcuitestcmd.ProjectFilePath)
@@ -170,6 +165,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 	return
 }
 
+// Return true if the provided scheme has BuildActionEntry with BuildForTesting = YES and one of this entries has target with *ui-testing product type.
 func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 	var testEntries []xcscheme.BuildActionEntry
 

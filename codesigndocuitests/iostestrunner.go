@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-tools/go-xcode/plistutil"
 	"github.com/bitrise-tools/go-xcode/profileutil"
@@ -20,7 +19,7 @@ type IOSTestRunner struct {
 	ProvisioningProfile profileutil.ProvisioningProfileInfoModel
 }
 
-// NewIOSTestRunner ...
+// NewIOSTestRunner is the *-Runner.app which is generated with the xcodebuild build-for-testing command
 func NewIOSTestRunner(path string) (*IOSTestRunner, error) {
 	runnerPattern := filepath.Join(path, "*-Runner.app")
 	possibleTestRunnerPths, err := filepath.Glob(runnerPattern)
@@ -98,8 +97,6 @@ func (runner IOSTestRunner) BundleIDEntitlementsMap() map[string]plistutil.Plist
 
 	bundleID := strings.TrimSuffix(runner.ProvisioningProfile.BundleID, "-Runner")
 	bundleIDEntitlementsMap[bundleID] = runner.ProvisioningProfile.Entitlements
-
-	log.Warnf("bundleIDEntitlementsMap: %+v", bundleIDEntitlementsMap)
 
 	return bundleIDEntitlementsMap
 }
