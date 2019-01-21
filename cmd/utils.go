@@ -14,6 +14,9 @@ const (
 	// iOS
 	xcodeWorkspace ProjectType = "*.xcworkspace"
 	xcodeProject   ProjectType = "*.xcodeproj"
+
+	// Xamarin
+	xamarinSolution ProjectType = "*.sln"
 )
 
 // Scans the root dir for the provided project files

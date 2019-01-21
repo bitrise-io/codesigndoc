@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -87,13 +88,25 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	// Xamarin Solution Path
 	xamarinCmd.SolutionFilePath = paramXamarinSolutionFilePath
 	if xamarinCmd.SolutionFilePath == "" {
-		askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `) file,
-and then hit Enter`
+
 		fmt.Println()
-		projpth, err := goinp.AskForPath(askText)
+		log.Infof("Scan the directory for project files")
+		projpth, err := scanForProjectFiles([]ProjectType{xamarinSolution})
 		if err != nil {
-			return fmt.Errorf("failed to read input: %s", err)
+			log.Printf("Failed: %s", err)
+			fmt.Println()
+
+			log.Infof("Provide the project file manually")
+			askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `) file,
+and then hit Enter`
+			projpth, err = goinp.AskForPath(askText)
+			if err != nil {
+				return fmt.Errorf("failed to read input: %s", err)
+			}
+		} else {
+			log.Printf("Found one project file: %s.", path.Base(projpth))
 		}
+
 		xamarinCmd.SolutionFilePath = projpth
 	}
 	log.Debugf("xamSolutionPth: %s", xamarinCmd.SolutionFilePath)
