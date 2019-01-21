@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -81,12 +82,23 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
-		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
+
+		log.Infof("Scan the directory for project files")
+		projpth, err := scanForProjectFiles()
+		if err != nil {
+			log.Printf("Failed: %s", err)
+			fmt.Println()
+
+			log.Infof("Provide the project file manually")
+			askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
 the one you usually open in Xcode, then hit Enter.
 (Note: if you have a Workspace file you should most likely use that)`
-		projpth, err := goinp.AskForPath(askText)
-		if err != nil {
-			return fmt.Errorf("failed to read input: %s", err)
+			projpth, err = goinp.AskForPath(askText)
+			if err != nil {
+				return fmt.Errorf("failed to read input: %s", err)
+			}
+		} else {
+			log.Printf("Found one project file: %s.", path.Base(projpth))
 		}
 
 		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")
@@ -155,4 +167,47 @@ the one you usually open in Xcode, then hit Enter.
 
 	printFinished(provProfilesUploaded, certsUploaded)
 	return nil
+}
+
+// Scans the root dir for project files
+// If there is a .xcworkspace file in the root dir it will return it's paths
+// If there is a .xcodeproject file in the root dir it will return it's paths
+// If non of them in the root dir, then it will return an error
+func scanForProjectFiles() (string, error) {
+	root, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	workspacePattern := filepath.Join(root, "*.xcworkspace")
+	workspacePaths, err := filepath.Glob(workspacePattern)
+	if err != nil {
+		return "", err
+	}
+
+	switch len(workspacePaths) {
+	case 0:
+		// Search for .xcodeproj
+		break
+	case 1:
+		return workspacePaths[0], nil
+	default:
+		return "", fmt.Errorf("multiple .xcworkspace files found in the root (%s), directory: %s", root, strings.Join(workspacePaths, "\n"))
+	}
+
+	projectPattern := filepath.Join(root, "*.xcodeproj")
+	projectPaths, err := filepath.Glob(projectPattern)
+	if err != nil {
+		return "", err
+	}
+
+	switch len(projectPaths) {
+	case 0:
+		return "", fmt.Errorf("no .xcworkspace or .xcodeproject file found in directory: %s", root)
+	case 1:
+		return projectPaths[0], nil
+	default:
+		return "", fmt.Errorf("multiple .xcworkspace files found in the root (%s), directory: %s", root, strings.Join(workspacePaths, "\n"))
+	}
+
 }
