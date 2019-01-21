@@ -79,11 +79,14 @@ the one you usually open in Xcode, then hit Enter.
 		log.Debugf("schemes: %v", schemes)
 
 		if len(schemesWitUITests) == 0 {
-			return BuildForTestingError{toolXcode, "no schemes found"}
+			return BuildForTestingError{toolXcode, "no schemes found with UITest target enabled:"}
 		} else if len(schemesWitUITests) == 1 {
+			log.Infof("Only one scheme found with UITest target enabled:")
+			log.Printf(schemesWitUITests[0].Name)
 			schemeToUse = schemesWitUITests[0].Name
 		} else {
 			fmt.Println()
+			log.Infof("Schemes with UITest target enabled:")
 			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemesWitUITestNames)
 			if err != nil {
 				return fmt.Errorf("failed to select Scheme: %s", err)
