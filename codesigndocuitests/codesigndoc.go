@@ -121,8 +121,6 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 			return nil, nil, err
 		}
 
-		log.Debugf("testRunner: %s", LogPretty(testRunners))
-
 		for _, testRunner := range testRunners {
 			certsToExport, profsToExport, err := collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles, certificatesToExport, profilesToExport)
 			if err != nil {

@@ -41,10 +41,12 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 			} else if !exist {
 				return nil, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
 			}
+
 			plist, err := plistutil.NewPlistDataFromFile(infoPlistPath)
 			if err != nil {
 				return nil, err
 			}
+
 			infoPlist = plist
 		}
 
@@ -72,6 +74,8 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 				return nil, err
 			}
 
+			// The codesign -d --entitlements command's output contains unnecessary characters before the valid xml
+			// We need to trim them before parsing the xml
 			outSplit := strings.Split(out, "<?xml version")
 			if len(outSplit) > 1 {
 				out = outSplit[1]

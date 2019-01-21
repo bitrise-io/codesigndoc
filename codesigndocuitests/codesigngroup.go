@@ -1,7 +1,6 @@
 package codesigndocuitests
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -413,14 +412,4 @@ func hasCertificateForDistType(exportMethod string, certificates []certificateut
 		})
 		return len(distributionCertificates) > 0
 	}
-}
-
-// TODO remove it
-func LogPretty(v interface{}) string {
-	b, err := json.MarshalIndent(v, "", "  ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	return fmt.Sprintf("%+v\n", string(b))
 }
