@@ -114,7 +114,6 @@ the one you usually open in Xcode, then hit Enter.
 			log.Warnf("and make sure that you can Archive this project from Xcode!")
 			fmt.Println()
 			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
-			log.Printf("and Archive, using the Scheme: %s", xcodeUITestsCmd.Scheme)
 			fmt.Println()
 		}
 	}

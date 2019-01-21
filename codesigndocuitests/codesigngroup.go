@@ -3,6 +3,7 @@ package codesigndocuitests
 import (
 	"errors"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 
@@ -199,6 +200,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 	}
 
 	testRunnerID, _ := testRunner.InfoPlist.GetString("CFBundleIdentifier")
+	fmt.Println()
 	log.Infof("Code signing for target with %s bundle ID", strings.TrimRight(testRunnerID, "-Runner"))
 
 	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
@@ -224,7 +226,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 			fmt.Println()
 			log.Errorf(collectCodesigningFilesInfo)
 			fmt.Println()
-			question := "Do you want to collect another ipa export code sign files"
+			question := fmt.Sprintf("Do you want to collect other  code sign files for (%s)", testRunnerID)
 			question += "\n(select NO to finish collecting codesign files and continue)"
 			anotherExport, err := goinp.AskForBoolWithDefault(question, false)
 			if err != nil {
@@ -333,7 +335,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 		collectedCodeSignGroups = append(collectedCodeSignGroups, collectedCodeSignGroup)
 
 		fmt.Println()
-		question := "Do you want to collect another ipa export code sign files"
+		question := fmt.Sprintf("Do you want to collect other code sign files for (%s)", testRunnerID)
 		question += "\n(select NO to finish collecting codesign files and continue)"
 		anotherExport, err := goinp.AskForBoolWithDefault(question, false)
 		if err != nil {
@@ -371,14 +373,26 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
 	)
 
-	// Handle if archive used NON xcode managed profile
+	fmt.Println()
+	// Handle if UITest target used NON xcode managed profile
 	if len(codeSignGroups) > 0 && !testRunner.IsXcodeManaged() {
-		log.Warnf("App was signed with NON xcode managed profile when archiving,")
-		log.Warnf("only NOT xcode managed profiles are allowed to sign when exporting the archive.")
+		log.Warnf("The UITest target (%s) was signed with NON xcode managed profile,", path.Base(testRunner.Path))
+		log.Warnf("only NOT xcode managed profiles are allowed to sign the UITest target.")
 		log.Warnf("Removing xcode managed CodeSignInfo groups")
 
 		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
 			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
+		)
+	}
+
+	// Handle if UITest target used NON xcode managed profile
+	if len(codeSignGroups) > 0 && testRunner.IsXcodeManaged() {
+		log.Warnf("The UITest target (%s) was signed with xcode managed profile,", path.Base(testRunner.Path))
+		log.Warnf("only xcode managed profiles are allowed to sign the UITest target.")
+		log.Warnf("Removing NON xcode managed CodeSignInfo groups")
+
+		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
+			export.CreateXcodeManagedSelectableCodeSignGroupFilter(),
 		)
 	}
 
@@ -401,11 +415,6 @@ func hasCertificateForDistType(exportMethod string, certificates []certificateut
 			return !codesign.IsDistributionCertificate(certInfo)
 		})
 		return len(developmentCertificates) > 0
-	case "installer":
-		installerCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return codesign.IsInstallerCertificate(certInfo)
-		})
-		return len(installerCertificates) > 0
 	default:
 		distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
 			return codesign.IsDistributionCertificate(certInfo)

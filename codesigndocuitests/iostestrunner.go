@@ -88,7 +88,7 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 		}
 
 		testRunners = append(testRunners, &IOSTestRunner{
-			Path:                path,
+			Path:                testRunnerPath,
 			InfoPlist:           infoPlist,
 			Entitlements:        entitlements,
 			ProvisioningProfile: provisioningProfile,
