@@ -172,7 +172,7 @@ the one you usually open in Xcode, then hit Enter.
 // Scans the root dir for project files
 // If there is a .xcworkspace file in the root dir it will return it's paths
 // If there is a .xcodeproject file in the root dir it will return it's paths
-// If non of them in the root dir, then it will return an error
+// If none of them in the root dir, then it will return an error
 func scanForProjectFiles() (string, error) {
 	root, err := os.Getwd()
 	if err != nil {
