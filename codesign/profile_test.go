@@ -37,7 +37,7 @@ func TestFilterLatestProfiles(t *testing.T) {
 		},
 	}
 
-	filtered := filterLatestProfiles(profiles)
+	filtered := FilterLatestProfiles(profiles)
 	require.Equal(t, 2, len(filtered))
 
 	desiredProfileExpireMap := map[string]bool{
