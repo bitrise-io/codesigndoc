@@ -79,7 +79,7 @@ the one you usually open in Xcode, then hit Enter.
 		log.Debugf("schemes: %v", schemes)
 
 		if len(schemesWitUITests) == 0 {
-			return ArchiveError{toolXcode, "no schemes found"}
+			return BuildForTestingError{toolXcode, "no schemes found"}
 		} else if len(schemesWitUITests) == 1 {
 			schemeToUse = schemesWitUITests[0].Name
 		} else {
@@ -119,7 +119,7 @@ the one you usually open in Xcode, then hit Enter.
 		}
 	}
 	if err != nil {
-		return ArchiveError{toolXcode, err.Error()}
+		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
 	certsUploaded, provProfilesUploaded, err := codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)

@@ -199,8 +199,10 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
 	}
 
-	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
+	testRunnerID, _ := testRunner.InfoPlist.GetString("CFBundleIdentifier")
+	log.Infof("Code signing for target with %s bundle ID", strings.TrimRight(testRunnerID, "-Runner"))
 
+	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
 	for true {
 		selectedCodeSignMethod, err := goinp.SelectFromStringsWithDefault("Select the code signing method", 1, codeSignMethods)
 		if err != nil {

@@ -172,7 +172,6 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 
 	for _, testable := range scheme.TestAction.Testables {
 		if testable.Skipped == "NO" {
-			log.Printf("Not skipped")
 			testables = append(testables, testable)
 		}
 	}
@@ -234,7 +233,6 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 	var testEntry xcscheme.TestableReference
 	for _, testable := range scheme.TestAction.Testables {
 		if testable.Skipped == "NO" {
-			log.Printf("Not skipped")
 			testEntry = testable
 		}
 	}

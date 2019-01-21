@@ -19,8 +19,8 @@ type IOSTestRunner struct {
 	ProvisioningProfile profileutil.ProvisioningProfileInfoModel
 }
 
-// NewIOSTestRunner is the *-Runner.app which is generated with the xcodebuild build-for-testing command
-func NewIOSTestRunner(path string) (*IOSTestRunner, error) {
+// NewIOSTestRunners is the *-Runner.app which is generated with the xcodebuild build-for-testing command
+func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 	runnerPattern := filepath.Join(path, "*-Runner.app")
 	possibleTestRunnerPths, err := filepath.Glob(runnerPattern)
 	if err != nil {
@@ -29,66 +29,69 @@ func NewIOSTestRunner(path string) (*IOSTestRunner, error) {
 
 	if len(possibleTestRunnerPths) == 0 {
 		return nil, fmt.Errorf("no Test-Runner.app found in %s", path)
-	} else if len(possibleTestRunnerPths) != 1 {
-		return nil, fmt.Errorf("found multiple Test-Runner.app in %s", path)
 	}
 
-	infoPlist := plistutil.PlistData{}
-	{
-		infoPlistPath := filepath.Join(possibleTestRunnerPths[0], "Info.plist")
-		if exist, err := pathutil.IsPathExists(infoPlistPath); err != nil {
-			return nil, fmt.Errorf("failed to check if Info.plist exists at: %s, error: %s", infoPlistPath, err)
-		} else if !exist {
-			return nil, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
+	var testRunners []*IOSTestRunner
+	for _, testRunnerPath := range possibleTestRunnerPths {
+		infoPlist := plistutil.PlistData{}
+		{
+			infoPlistPath := filepath.Join(testRunnerPath, "Info.plist")
+			if exist, err := pathutil.IsPathExists(infoPlistPath); err != nil {
+				return nil, fmt.Errorf("failed to check if Info.plist exists at: %s, error: %s", infoPlistPath, err)
+			} else if !exist {
+				return nil, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
+			}
+			plist, err := plistutil.NewPlistDataFromFile(infoPlistPath)
+			if err != nil {
+				return nil, err
+			}
+			infoPlist = plist
 		}
-		plist, err := plistutil.NewPlistDataFromFile(infoPlistPath)
-		if err != nil {
-			return nil, err
+
+		provisioningProfile := profileutil.ProvisioningProfileInfoModel{}
+		{
+			provisioningProfilePath := filepath.Join(testRunnerPath, "embedded.mobileprovision")
+			if exist, err := pathutil.IsPathExists(provisioningProfilePath); err != nil {
+				return nil, fmt.Errorf("failed to check if profile exists at: %s, error: %s", provisioningProfilePath, err)
+			} else if !exist {
+				return nil, fmt.Errorf("profile not exists at: %s", provisioningProfilePath)
+			}
+
+			profile, err := profileutil.NewProvisioningProfileInfoFromFile(provisioningProfilePath)
+			if err != nil {
+				return nil, err
+			}
+			provisioningProfile = profile
 		}
-		infoPlist = plist
+
+		entitlements := plistutil.PlistData{}
+		{
+			cmd := command.New("codesign", "-d", "--entitlements", "-", testRunnerPath)
+			out, err := cmd.RunAndReturnTrimmedOutput()
+			if err != nil {
+				return nil, err
+			}
+
+			outSplit := strings.Split(out, "<?xml version")
+			if len(outSplit) > 1 {
+				out = outSplit[1]
+			}
+
+			entitlements, err = plistutil.NewPlistDataFromContent(out)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		testRunners = append(testRunners, &IOSTestRunner{
+			Path:                path,
+			InfoPlist:           infoPlist,
+			Entitlements:        entitlements,
+			ProvisioningProfile: provisioningProfile,
+		})
 	}
 
-	provisioningProfile := profileutil.ProvisioningProfileInfoModel{}
-	{
-		provisioningProfilePath := filepath.Join(possibleTestRunnerPths[0], "embedded.mobileprovision")
-		if exist, err := pathutil.IsPathExists(provisioningProfilePath); err != nil {
-			return nil, fmt.Errorf("failed to check if profile exists at: %s, error: %s", provisioningProfilePath, err)
-		} else if !exist {
-			return nil, fmt.Errorf("profile not exists at: %s", provisioningProfilePath)
-		}
-
-		profile, err := profileutil.NewProvisioningProfileInfoFromFile(provisioningProfilePath)
-		if err != nil {
-			return nil, err
-		}
-		provisioningProfile = profile
-	}
-
-	entitlements := plistutil.PlistData{}
-	{
-		cmd := command.New("codesign", "-d", "--entitlements", "-", possibleTestRunnerPths[0])
-		out, err := cmd.RunAndReturnTrimmedOutput()
-		if err != nil {
-			return nil, err
-		}
-
-		outSplit := strings.Split(out, "<?xml version")
-		if len(outSplit) > 1 {
-			out = outSplit[1]
-		}
-
-		entitlements, err = plistutil.NewPlistDataFromContent(out)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &IOSTestRunner{
-		Path:                path,
-		InfoPlist:           infoPlist,
-		Entitlements:        entitlements,
-		ProvisioningProfile: provisioningProfile,
-	}, nil
+	return testRunners, nil
 }
 
 // BundleIDEntitlementsMap ...

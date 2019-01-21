@@ -116,17 +116,23 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 
 		certificatesToExport = append(certificatesToExport, exportCertificate...)
 	} else {
-		testRunner, err := NewIOSTestRunner(buildPath)
+		testRunners, err := NewIOSTestRunners(buildPath)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		log.Debugf("testRunner: %s", LogPretty(testRunner))
+		log.Debugf("testRunner: %s", LogPretty(testRunners))
 
-		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles, certificatesToExport, profilesToExport)
-		if err != nil {
-			return nil, nil, err
+		for _, testRunner := range testRunners {
+			certsToExport, profsToExport, err := collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles, certificatesToExport, profilesToExport)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			certificatesToExport = append(certificatesToExport, certsToExport...)
+			profilesToExport = append(profilesToExport, profsToExport...)
 		}
+
 	}
 
 	return certificatesToExport, profilesToExport, nil

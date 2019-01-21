@@ -58,6 +58,26 @@ with as many details & logs as you can share!
 ` + colorstring.Redf("Error: %s", e.msg)
 }
 
+// BuildForTestingError ...
+type BuildForTestingError struct {
+	tool Tool
+	msg  string
+}
+
+// Error ...
+func (e BuildForTestingError) Error() string {
+	return `
+------------------------------` + `
+First of all ` + colorstring.Red("please make sure that you can run build-for-testing for your app from "+e.tool+".") + `
+codesigndoc only works if you can run build-for-testing for your app from ` + string(e.tool) + `.
+For this run a ` + colorstring.Red("clean") + ` in your ` + string(e.tool) + `, after that, run a ` + colorstring.Red("build-for-testing") + ` for your app in ` + string(e.tool) + `.
+If you can, and you get a valid *-Runner.app file, ` + colorstring.Red("please create an issue") + ` on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues
+with as many details & logs as you can share!
+------------------------------
+
+` + colorstring.Redf("Error: %s", e.msg)
+}
+
 func printFinished(provProfilesUploaded bool, certsUploaded bool) {
 	fmt.Println()
 	log.Successf("That's all.")
