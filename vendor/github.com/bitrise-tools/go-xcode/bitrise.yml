@@ -14,47 +14,10 @@ workflows:
     after_run:
     - integration-test
     steps:
-    - script:
-        title: Export go files to test
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-
-            no_vendor_paths="$(go list ./... | grep -v vendor)"
-            envman add --key GOLIST_WITHOUT_VENDOR --value "$no_vendor_paths"
-    - script:
-        title: Err check
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-
-            errcheck -asserts=true -blank=true $GOLIST_WITHOUT_VENDOR
-    - script:
-        title: Go lint
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-
-            while read -r line; do
-              echo "-> Linting: $line"
-              golint_out="$(golint $line)"
-              if [[ "${golint_out}" != "" ]] ; then
-                echo "=> Golint issues found:"
-                echo "${golint_out}"
-                exit 1
-              fi
-            done <<< "$GOLIST_WITHOUT_VENDOR"
-    - script:
-        title: Go test
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-
-            go test ./...
+    - go-list:
+    - golint:
+    - errcheck:
+    - go-test:
 
   integration-test:
     after_run:
@@ -77,12 +40,6 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-
-            # Check for unhandled errors
-            go get -u -v github.com/kisielk/errcheck
-
-            # Go lint
-            go get -u -v github.com/golang/lint/golint
 
             go get -u -v github.com/stretchr/testify/require
             go get -u -v github.com/bitrise-io/go-utils/fileutil

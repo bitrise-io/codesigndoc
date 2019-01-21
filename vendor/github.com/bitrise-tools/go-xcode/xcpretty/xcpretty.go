@@ -20,8 +20,7 @@ const (
 // CommandModel ...
 type CommandModel struct {
 	xcodebuildCommand xcodebuild.CommandModel
-
-	customOptions []string
+	customOptions     []string
 }
 
 // New ...
@@ -113,21 +112,12 @@ func IsInstalled() (bool, error) {
 }
 
 // Install ...
-func Install() error {
+func Install() ([]*command.Model, error) {
 	cmds, err := rubycommand.GemInstall("xcpretty", "")
 	if err != nil {
-		return fmt.Errorf("failed to create command model, error: %s", err)
+		return nil, fmt.Errorf("failed to create command model, error: %s", err)
 	}
-
-	for _, cmd := range cmds {
-		log.Printf("$ %s", cmd.PrintableCommandArgs())
-
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to create xcpretty install command, error: %s", err)
-		}
-	}
-
-	return nil
+	return cmds, nil
 }
 
 // Version ...
@@ -138,9 +128,5 @@ func Version() (*version.Version, error) {
 		return nil, err
 	}
 
-	return parseVersionOut(versionOut)
-}
-
-func parseVersionOut(versionOut string) (*version.Version, error) {
 	return version.NewVersion(versionOut)
 }

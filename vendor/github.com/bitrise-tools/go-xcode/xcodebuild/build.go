@@ -45,6 +45,7 @@ type CommandBuilder struct {
 	isWorkspace   bool
 	scheme        string
 	configuration string
+	destination   string
 
 	// buildsetting
 	forceDevelopmentTeam              string
@@ -77,6 +78,12 @@ func NewCommandBuilder(projectPath string, isWorkspace bool, action Action) *Com
 // SetScheme ...
 func (c *CommandBuilder) SetScheme(scheme string) *CommandBuilder {
 	c.scheme = scheme
+	return c
+}
+
+// SetDestination ...
+func (c *CommandBuilder) SetDestination(destination string) *CommandBuilder {
+	c.destination = destination
 	return c
 }
 
@@ -154,24 +161,39 @@ func (c *CommandBuilder) cmdSlice() []string {
 	if c.scheme != "" {
 		slice = append(slice, "-scheme", c.scheme)
 	}
+
 	if c.configuration != "" {
 		slice = append(slice, "-configuration", c.configuration)
 	}
 
-	if c.forceDevelopmentTeam != "" {
-		slice = append(slice, fmt.Sprintf("DEVELOPMENT_TEAM=%s", c.forceDevelopmentTeam))
-	}
-	if c.forceProvisioningProfileSpecifier != "" {
-		slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE_SPECIFIER=%s", c.forceProvisioningProfileSpecifier))
-	}
-	if c.forceProvisioningProfile != "" {
-		slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE=%s", c.forceProvisioningProfile))
-	}
-	if c.forceCodeSignIdentity != "" {
-		slice = append(slice, fmt.Sprintf("CODE_SIGN_IDENTITY=%s", c.forceCodeSignIdentity))
-	} else if c.disableCodesign {
+	if c.disableCodesign {
 		slice = append(slice, "CODE_SIGN_IDENTITY=")
 		slice = append(slice, "CODE_SIGNING_REQUIRED=NO")
+		slice = append(slice, "PROVISIONING_PROFILE_SPECIFIER=")
+		slice = append(slice, "PROVISIONING_PROFILE=")
+		slice = append(slice, "DEVELOPMENT_TEAM=")
+	} else {
+		if c.forceDevelopmentTeam != "" {
+			slice = append(slice, fmt.Sprintf("DEVELOPMENT_TEAM=%s", c.forceDevelopmentTeam))
+		}
+
+		if c.forceProvisioningProfileSpecifier != "" {
+			slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE_SPECIFIER=%s", c.forceProvisioningProfileSpecifier))
+		}
+
+		if c.forceProvisioningProfile != "" {
+			slice = append(slice, fmt.Sprintf("PROVISIONING_PROFILE=%s", c.forceProvisioningProfile))
+		}
+
+		if c.forceCodeSignIdentity != "" {
+			slice = append(slice, fmt.Sprintf("CODE_SIGN_IDENTITY=%s", c.forceCodeSignIdentity))
+		}
+	}
+
+	if c.destination != "" {
+		// "-destination" "id=07933176-D03B-48D3-A853-0800707579E6" => (need the plus `"` marks between the `destination` and the `id`)
+		slice = append(slice, "-destination")
+		slice = append(slice, c.destination)
 	}
 
 	slice = append(slice, c.customBuildActions...)

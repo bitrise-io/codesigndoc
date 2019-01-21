@@ -80,34 +80,35 @@ func (profile PlistData) GetBundleIdentifier() string {
 }
 
 // GetExportMethod ...
-func (profile PlistData) GetExportMethod(profileType ProfileType) exportoptions.Method {
+func (profile PlistData) GetExportMethod() exportoptions.Method {
 	data := plistutil.PlistData(profile)
+	entitlements, _ := data.GetMapStringInterface("Entitlements")
+	platform, _ := data.GetStringArray("Platform")
 
-	if profileType == ProfileTypeMacOs {
-		_, ok := data.GetStringArray("ProvisionedDevices")
-		if !ok {
-			if allDevices, ok := data.GetBool("ProvisionsAllDevices"); ok && allDevices {
-				return exportoptions.MethodDeveloperID
+	if len(platform) != 0 {
+		switch strings.ToLower(platform[0]) {
+		case "osx":
+			_, ok := data.GetStringArray("ProvisionedDevices")
+			if !ok {
+				if allDevices, ok := data.GetBool("ProvisionsAllDevices"); ok && allDevices {
+					return exportoptions.MethodDeveloperID
+				}
+				return exportoptions.MethodAppStore
 			}
-			return exportoptions.MethodAppStore
-		}
-		return exportoptions.MethodDevelopment
-	}
-
-	_, ok := data.GetStringArray("ProvisionedDevices")
-	if !ok {
-		if allDevices, ok := data.GetBool("ProvisionsAllDevices"); ok && allDevices {
-			return exportoptions.MethodEnterprise
-		}
-		return exportoptions.MethodAppStore
-	}
-
-	entitlements, ok := data.GetMapStringInterface("Entitlements")
-	if ok {
-		if allow, ok := entitlements.GetBool("get-task-allow"); ok && allow {
 			return exportoptions.MethodDevelopment
+		case "ios", "tvos":
+			_, ok := data.GetStringArray("ProvisionedDevices")
+			if !ok {
+				if allDevices, ok := data.GetBool("ProvisionsAllDevices"); ok && allDevices {
+					return exportoptions.MethodEnterprise
+				}
+				return exportoptions.MethodAppStore
+			}
+			if allow, ok := entitlements.GetBool("get-task-allow"); ok && allow {
+				return exportoptions.MethodDevelopment
+			}
+			return exportoptions.MethodAdHoc
 		}
-		return exportoptions.MethodAdHoc
 	}
 
 	return exportoptions.MethodDefault

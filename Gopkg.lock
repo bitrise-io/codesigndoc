@@ -50,8 +50,8 @@
   revision = "60f614520f9dd2d58ea982488ed8e21ca2c5bb1d"
 
 [[projects]]
-  branch = "master"
-  digest = "1:165bebf2fc00916648e90c424a19105b0d3afc72ead558e7ae7a56edcde7524c"
+  branch = "xcode-managed-codesign-group"
+  digest = "1:cff36e323b9e9a92832280dae62ce823673f5b2478470d5ffaecebb2fda4acd1"
   name = "github.com/bitrise-tools/go-xcode"
   packages = [
     "certificateutil",
@@ -64,7 +64,7 @@
     "xcarchive",
   ]
   pruneopts = ""
-  revision = "07db8cf760f5213241e12c0595158aedce96669a"
+  revision = "406a54d72013754afff3a93aa6b56e26cf3983c6"
 
 [[projects]]
   branch = "UITest"

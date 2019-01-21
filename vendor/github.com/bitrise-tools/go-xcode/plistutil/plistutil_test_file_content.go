@@ -293,3 +293,39 @@ const enterpriseProfileContent = `<?xml version="1.0" encoding="UTF-8"?>
 	<key>Version</key>
 	<integer>1</integer>
 </dict>`
+
+const paritalTestSummariesContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Duration</key>
+	<real>0.34774100780487061</real>
+	<key>Subtests</key>
+	<array>
+		<dict>
+			<key>TestIdentifier</key>
+			<string>ios_simple_objcTests/testExample</string>
+			<key>TestStatus</key>
+			<string>Success</string>
+		</dict>
+		<dict>
+			<key>TestIdentifier</key>
+			<string>ios_simple_objcTests/testExample2</string>
+			<key>TestStatus</key>
+			<string>Success</string>
+		</dict>
+	</array>
+	<key>TestIdentifier</key>
+	<string>ios_simple_objcTests</string>
+	<key>TestName</key>
+	<string>ios_simple_objcTests</string>
+	<key>TestObjectClass</key>
+	<string>IDESchemeActionTestSummaryGroup</string>
+</dict>
+<key>TestIdentifier</key>
+<string>ios-simple-objcTests.xctest</string>
+<key>TestName</key>
+<string>ios-simple-objcTests.xctest</string>
+<key>TestObjectClass</key>
+<string>IDESchemeActionTestSummaryGroup</string>
+</dict>`
