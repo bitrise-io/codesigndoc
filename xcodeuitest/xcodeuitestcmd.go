@@ -104,16 +104,16 @@ func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...str
 // ScanSchemes scans the provided project or workspace for schemes.
 // Returns the schemes of the provided project's or the provided workspace's + project's schemes, the names of the schemes,
 // the schemes with UITest target and the schemes' which has UITest.
-func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, schemeNames []string, schemesWitUITestNames []string, err error) {
+func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, schemesWitUITests []xcscheme.Scheme, err error) {
 	if xcworkspace.IsWorkspace(xcuitestcmd.ProjectFilePath) {
 		workspace, err := xcworkspace.Open(xcuitestcmd.ProjectFilePath)
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
+			return nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
 		}
 
 		schemesByContainer, err := workspace.Schemes()
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, err
 		}
 
 		// Remove Cocoapod schemes
@@ -125,12 +125,12 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 	} else {
 		proj, err := xcodeproj.Open(xcuitestcmd.ProjectFilePath)
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
+			return nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
 		}
 
 		schemes, err = proj.Schemes()
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -149,17 +149,6 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 				schemesWitUITests = append(schemesWitUITests, scheme)
 			}
 
-		}
-	}
-
-	// Iterate trough the scheme arrays and get the scheme names
-	{
-		for _, scheme := range schemes {
-			schemeNames = append(schemeNames, scheme.Name)
-		}
-
-		for _, schemeWithUITest := range schemesWitUITests {
-			schemesWitUITestNames = append(schemesWitUITestNames, schemeWithUITest.Name)
 		}
 	}
 

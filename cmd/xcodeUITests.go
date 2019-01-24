@@ -48,9 +48,6 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 	fmt.Println()
 
-	xcodebuildOutput := ""
-	xcodeUITestsCmd := xcodeuitest.CommandModel{}
-
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
 		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
@@ -64,14 +61,15 @@ the one you usually open in Xcode, then hit Enter.
 		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")
 	}
 	log.Debugf("projectPath: %s", projectPath)
-	xcodeUITestsCmd.ProjectFilePath = projectPath
+
+	xcodeUITestsCmd := xcodeuitest.CommandModel{ProjectFilePath: projectPath}
 
 	schemeToUse := paramXcodeScheme
 	if schemeToUse == "" {
 		fmt.Println()
 		log.Printf("🔦  Scanning Schemes ...")
 
-		schemes, schemesWitUITests, _, schemesWitUITestNames, err := xcodeUITestsCmd.ScanSchemes()
+		schemes, schemesWitUITests, err := xcodeUITestsCmd.ScanSchemes()
 		if err != nil {
 			return fmt.Errorf("failed to scan schemes, error: %s", err)
 		}
@@ -87,6 +85,15 @@ the one you usually open in Xcode, then hit Enter.
 		} else {
 			fmt.Println()
 			log.Infof("Schemes with UITest target enabled:")
+
+			// Iterate trough the scheme arrays and get the scheme names
+			var schemesWitUITestNames []string
+			{
+				for _, schemeWithUITest := range schemesWitUITests {
+					schemesWitUITestNames = append(schemesWitUITestNames, schemeWithUITest.Name)
+				}
+			}
+
 			selectedScheme, err := goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, schemesWitUITestNames)
 			if err != nil {
 				return fmt.Errorf("failed to select Scheme: %s", err)
@@ -105,7 +112,7 @@ the one you usually open in Xcode, then hit Enter.
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
 	buildForTestingPath, buildLog, err := xcodeUITestsCmd.RunBuildForTesting()
-	xcodebuildOutput = buildLog
+	xcodebuildOutput := buildLog
 	// save the xcodebuild output into a debug log file
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 	{
@@ -114,7 +121,7 @@ the one you usually open in Xcode, then hit Enter.
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
 		} else if err != nil {
 			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
-			log.Warnf("and make sure that you can Archive this project from Xcode!")
+			log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
 			fmt.Println()
 			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
 			fmt.Println()

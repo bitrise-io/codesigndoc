@@ -26,11 +26,6 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]c
 		certificate := group.Certificate()
 		certificateMap[certificate.Serial] = certificate
 
-		installerCertificate := group.InstallerCertificate()
-		if installerCertificate != nil && installerCertificate.Serial != "" {
-			certificateMap[installerCertificate.Serial] = *installerCertificate
-		}
-
 		for _, profile := range group.BundleIDProfileMap() {
 			profilesMap[profile.UUID] = profile
 		}
@@ -60,10 +55,6 @@ func printCodesignGroup(group export.CodeSignGroup) {
 	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
 	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
 
-	if group.InstallerCertificate() != nil && group.InstallerCertificate().Serial != "" {
-		fmt.Printf("%s %s [%s]\n", colorstring.Green("installer codesign identity:"), group.InstallerCertificate().CommonName, group.InstallerCertificate().Serial)
-	}
-
 	idx := -1
 	for bundleID, profile := range group.BundleIDProfileMap() {
 		idx++
@@ -75,7 +66,7 @@ func printCodesignGroup(group export.CodeSignGroup) {
 	}
 }
 
-// collectExportCertificate returns the certificate to use for the ipa export
+// collectExportCertificate returns the certificate to use for the UITest-Runner
 func collectExportCertificate(installedCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
 	var selectedCertificates []certificateutil.CertificateInfoModel
 
@@ -165,12 +156,8 @@ func filterCertificates(selectedCodeSignMethod, selectedTeam string, selectedCer
 	}
 
 	certType := "distribution"
-	switch selectedCodeSignMethod {
-	case "development":
+	if selectedCodeSignMethod == "development" {
 		certType = "development"
-		break
-	default:
-		break
 	}
 
 	fmt.Println()
@@ -349,7 +336,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 	return collectedCodeSignGroups, nil
 }
 
-// collectExportSelectableCodeSignGroups returns every possible codesigngroup which can be used to export an ipa file
+// collectExportSelectableCodeSignGroups returns every possible codesigngroup which can be used to sign the UITest-Runner
 func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
 	bundleIDEntitlemenstMap := map[string]plistutil.PlistData{}
 	bundleIDEntitlemenstMap = testRunner.BundleIDEntitlementsMap()
@@ -374,8 +361,8 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 	)
 
 	fmt.Println()
-	// Handle if UITest target used NON xcode managed profile
-	if len(codeSignGroups) > 0 && !testRunner.IsXcodeManaged() {
+	if !testRunner.IsXcodeManaged() {
+		// Handle if UITest target used NON xcode managed profile
 		log.Warnf("The UITest target (%s) was signed with NON xcode managed profile,", path.Base(testRunner.Path))
 		log.Warnf("only NOT xcode managed profiles are allowed to sign the UITest target.")
 		log.Warnf("Removing xcode managed CodeSignInfo groups")
@@ -383,10 +370,8 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 		codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
 			export.CreateNotXcodeManagedSelectableCodeSignGroupFilter(),
 		)
-	}
-
-	// Handle if UITest target used NON xcode managed profile
-	if len(codeSignGroups) > 0 && testRunner.IsXcodeManaged() {
+	} else {
+		// Handle if UITest target used NON xcode managed profile
 		log.Warnf("The UITest target (%s) was signed with xcode managed profile,", path.Base(testRunner.Path))
 		log.Warnf("only xcode managed profiles are allowed to sign the UITest target.")
 		log.Warnf("Removing NON xcode managed CodeSignInfo groups")
@@ -409,16 +394,16 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 // If isDistCert == true it will search for Distribution Certificates. If it's == false it will search for Developmenttion Certificates.
 // If the team doesn't have any certificate for the selected cert type, it will return false.
 func hasCertificateForDistType(exportMethod string, certificates []certificateutil.CertificateInfoModel) bool {
-	switch exportMethod {
-	case "development":
+	if exportMethod == "development" {
 		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
 			return !codesign.IsDistributionCertificate(certInfo)
 		})
 		return len(developmentCertificates) > 0
-	default:
-		distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return codesign.IsDistributionCertificate(certInfo)
-		})
-		return len(distributionCertificates) > 0
 	}
+
+	distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
+		return codesign.IsDistributionCertificate(certInfo)
+	})
+	return len(distributionCertificates) > 0
+
 }
