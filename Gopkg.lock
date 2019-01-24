@@ -50,7 +50,7 @@
   revision = "60f614520f9dd2d58ea982488ed8e21ca2c5bb1d"
 
 [[projects]]
-  branch = "xcode-managed-codesign-group"
+  branch = "master"
   digest = "1:cff36e323b9e9a92832280dae62ce823673f5b2478470d5ffaecebb2fda4acd1"
   name = "github.com/bitrise-tools/go-xcode"
   packages = [
@@ -64,11 +64,11 @@
     "xcarchive",
   ]
   pruneopts = ""
-  revision = "406a54d72013754afff3a93aa6b56e26cf3983c6"
+  revision = "8e44ecb550c0cadef602edda92e5c10476dd5daa"
 
 [[projects]]
-  branch = "UITest"
-  digest = "1:b8e0f1ed1b5f6c4d1a3378e36a04992fa72fe1fe4824c55c8d84d4a7c37754c3"
+  branch = "master"
+  digest = "1:c76f33df935b090b57d208027cd899e0fd0c3a74a7a414a76eaa6744846e30ce"
   name = "github.com/bitrise-tools/xcode-project"
   packages = [
     "serialized",
@@ -78,7 +78,7 @@
     "xcworkspace",
   ]
   pruneopts = ""
-  revision = "1f2afb345d06613a7c5f00eb5fc047c0e2fe38ed"
+  revision = "476ea7a82b2ef7c77d0d41445afc94bdb1cda04d"
 
 [[projects]]
   digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"

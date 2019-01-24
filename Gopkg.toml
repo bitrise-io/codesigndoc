@@ -12,7 +12,7 @@
 
 [[constraint]]
   name = "github.com/bitrise-tools/go-xcode"
-  branch = "xcode-managed-codesign-group"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -27,5 +27,5 @@
   branch = "master"
 
 [[constraint]]
-  branch = "UITest"
   name = "github.com/bitrise-tools/xcode-project"
+  branch = "master"

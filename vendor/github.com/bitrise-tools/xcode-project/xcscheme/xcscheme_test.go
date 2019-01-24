@@ -59,6 +59,7 @@ func TestAppTestActionEntry(t *testing.T) {
 	var scheme Scheme
 	require.NoError(t, xml.Unmarshal([]byte(schemeContent), &scheme))
 
+	require.Equal(t, "Debug", scheme.TestAction.BuildConfiguration)
 	require.Equal(t, 2, len(scheme.TestAction.Testables))
 	require.Equal(t, "NO", scheme.TestAction.Testables[0].Skipped)
 	require.Equal(t, "YES", scheme.TestAction.Testables[1].Skipped)
