@@ -42,7 +42,7 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]c
 	return certificates, profiles
 }
 
-// codesignMethod returns which ipa/pkg/app export type is allowed by the given codesign group
+// codesignMethod returns which code sign method type is allowed by the given codesign group
 func codesignMethod(group export.CodeSignGroup) string {
 	for _, profile := range group.BundleIDProfileMap() {
 		return string(profile.ExportType)
@@ -183,7 +183,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 
 	codeSignGroups := collectExportSelectableCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
-		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
+		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to sing the UITest target\n" + collectCodesigningFilesInfo)
 	}
 
 	testRunnerID, _ := testRunner.InfoPlist.GetString("CFBundleIdentifier")
@@ -239,7 +239,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 		if len(certificateOptions) == 1 {
 			selectedCertificateOption = certificateOptions[0]
 
-			fmt.Printf("Codesign Indentity for %s ipa export: %s\n", selectedCodeSignMethod, selectedCertificateOption)
+			fmt.Printf("Codesign Indentity for %s signing: %s\n", selectedCodeSignMethod, selectedCertificateOption)
 		} else {
 			sort.Strings(certificateOptions)
 
