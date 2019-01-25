@@ -122,7 +122,7 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 		}
 
 		for _, testRunner := range testRunners {
-			certsToExport, profsToExport, err := collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles, certificatesToExport, profilesToExport)
+			certsToExport, profsToExport, err := collectCertificatesAndProfiles(*testRunner, installedCertificates, installedProfiles)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -136,8 +136,7 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 	return certificatesToExport, profilesToExport, nil
 }
 
-func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel,
-	certificatesToExport []certificateutil.CertificateInfoModel, profilesToExport []profileutil.ProvisioningProfileInfoModel) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 
 	groups, err := collectExportCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if err != nil {
@@ -157,8 +156,5 @@ func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertifica
 	}
 
 	certificates, profiles := extractCertificatesAndProfiles(exportCodeSignGroups...)
-	certificatesToExport = append(certificatesToExport, certificates...)
-	profilesToExport = append(profilesToExport, profiles...)
-
-	return certificatesToExport, profilesToExport, nil
+	return certificates, profiles, nil
 }

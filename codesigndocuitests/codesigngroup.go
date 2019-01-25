@@ -308,7 +308,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 			}
 		}
 		if len(selectedBundleIDProfileMap) != len(bundleIDProfilesMap) {
-			return nil, fmt.Errorf("failed to find Provisioning Profiles for ipa export")
+			return nil, fmt.Errorf("failed to find Provisioning Profiles for UITest target signing")
 		}
 
 		var collectedCodeSignGroup export.CodeSignGroup
