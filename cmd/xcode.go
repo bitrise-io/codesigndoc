@@ -40,7 +40,6 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
-	xcodeCmd.Flags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
 }
 
 func initExportOutputDir() (string, error) {
