@@ -40,6 +40,7 @@ func init() {
 
 	xamarinCmd.Flags().StringVar(&paramXamarinSolutionFilePath, "file", "", `Xamarin Solution file path`)
 	xamarinCmd.Flags().StringVar(&paramXamarinConfigurationName, "config", "", `Xamarin Configuration Name (e.g.: "Release|iPhone")`)
+	xamarinCmd.Flags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
 }
 
 func archivableSolutionConfigNames(projectsByID map[string]project.Model) []string {
