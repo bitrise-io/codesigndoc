@@ -83,8 +83,9 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
 
+		var projpth string
 		log.Infof("Scan the directory for project files")
-		projpth, err := scanForProjectFiles([]ProjectType{xcodeWorkspace, xcodeProject})
+		projPaths, err := scanForProjectFiles(xcodeIDE)
 		if err != nil {
 			log.Printf("Failed: %s", err)
 			fmt.Println()
@@ -98,7 +99,16 @@ the one you usually open in Xcode, then hit Enter.
 				return fmt.Errorf("failed to read input: %s", err)
 			}
 		} else {
-			log.Printf("Found one project file: %s.", path.Base(projpth))
+			if len(projPaths) == 1 {
+				log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
+				projpth = projPaths[0]
+			} else {
+				log.Printf("Found multiple project file: %s.", path.Base(projpth))
+				projpth, err = goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, projPaths)
+				if err != nil {
+					return fmt.Errorf("failed to select Scheme: %s", err)
+				}
+			}
 		}
 
 		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")

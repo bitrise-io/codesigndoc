@@ -4,43 +4,224 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/bitrise-core/bitrise-init/utility"
+	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-tools/go-xcode/xcodeproj"
 )
 
-// ProjectType ...
-type ProjectType string
+// IDEType ...
+type IDEType string
 
 const (
+	xcodeIDE IDEType = "iOS"
+
+	//
 	// iOS
-	xcodeWorkspace ProjectType = "*.xcworkspace"
-	xcodeProject   ProjectType = "*.xcodeproj"
+	embeddedWorkspacePathPattern = `.+\.xcodeproj/.+\.xcworkspace`
+
+	gitDirName        = ".git"
+	podsDirName       = "Pods"
+	carthageDirName   = "Carthage"
+	cordovaLibDirName = "CordovaLib"
+
+	frameworkExt = ".framework"
+
+	//
+	// Xamarin
+	solutionExtension = ".sln"
+	componentsDirName = "Components"
+
+	// NodeModulesDirName ...
+	NodeModulesDirName = "node_modules"
+
+	solutionConfigurationStart = "GlobalSection(SolutionConfigurationPlatforms) = preSolution"
+	solutionConfigurationEnd   = "EndGlobalSection"
 )
 
 // Scans the root dir for the provided project files
-// If none of them in the root dir, then it will return an error
-func scanForProjectFiles(projectFiles []ProjectType) (string, error) {
-	root, err := os.Getwd()
+func scanForProjectFiles(ideType IDEType) ([]string, error) {
+	searchDir, err := os.Getwd()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	for _, projectFile := range projectFiles {
-		pathPattern := filepath.Join(root, string(projectFile))
-		paths, err := filepath.Glob(pathPattern)
-		if err != nil {
-			return "", err
-		}
-
-		switch len(paths) {
-		case 0:
-			continue
-		case 1:
-			return paths[0], nil
-		default:
-			return "", fmt.Errorf("multiple project file (%s) found in the root (%s) directory: %s", projectFile, root, strings.Join(paths, "\n"))
-		}
+	fileList, err := utility.ListPathInDirSortedByComponents(searchDir, false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search for files in (%s), error: %s", searchDir, err)
 	}
 
-	return "", fmt.Errorf("no project file found: %s", root)
+	var paths []string
+	{
+		if ideType == xcodeIDE {
+			paths, err = FilterRelevantWorkspaceFiles(fileList)
+			if err != nil {
+				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
+			}
 
+			if len(paths) == 0 {
+				paths, err = FilterRelevantProjectFiles(fileList)
+				if err != nil {
+					return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
+				}
+			}
+		} else {
+			paths, err = FilterSolutionFiles(fileList)
+			if err != nil {
+				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
+			}
+		}
+
+	}
+
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("no project file found: %s", searchDir)
+
+	}
+	return paths, nil
+}
+
+//
+// iOS
+
+// XcodeProjectType ...
+type XcodeProjectType string
+
+// AllowXcodeProjExtFilter ...
+var AllowXcodeProjExtFilter = utility.ExtensionFilter(xcodeproj.XCodeProjExt, true)
+
+// AllowXCWorkspaceExtFilter ...
+var AllowXCWorkspaceExtFilter = utility.ExtensionFilter(xcodeproj.XCWorkspaceExt, true)
+
+// AllowIsDirectoryFilter ...
+var AllowIsDirectoryFilter = utility.IsDirectoryFilter(true)
+
+// ForbidEmbeddedWorkspaceRegexpFilter ...
+var ForbidEmbeddedWorkspaceRegexpFilter = utility.RegexpFilter(embeddedWorkspacePathPattern, false)
+
+// ForbidGitDirComponentFilter ...
+var ForbidGitDirComponentFilter = utility.ComponentFilter(gitDirName, false)
+
+// ForbidPodsDirComponentFilter ...
+var ForbidPodsDirComponentFilter = utility.ComponentFilter(podsDirName, false)
+
+// ForbidCarthageDirComponentFilter ...
+var ForbidCarthageDirComponentFilter = utility.ComponentFilter(carthageDirName, false)
+
+// ForbidCordovaLibDirComponentFilter ...
+var ForbidCordovaLibDirComponentFilter = utility.ComponentFilter(cordovaLibDirName, false)
+
+// ForbidFramworkComponentWithExtensionFilter ...
+var ForbidFramworkComponentWithExtensionFilter = utility.ComponentWithExtensionFilter(frameworkExt, false)
+
+// ForbidNodeModulesComponentFilter ...
+var ForbidNodeModulesComponentFilter = utility.ComponentFilter(NodeModulesDirName, false)
+
+// AllowIphoneosSDKFilter ...
+var AllowIphoneosSDKFilter = SDKFilter("iphoneos", true)
+
+// AllowMacosxSDKFilter ...
+var AllowMacosxSDKFilter = SDKFilter("macosx", true)
+
+// SDKFilter ...
+func SDKFilter(sdk string, allowed bool) utility.FilterFunc {
+	return func(pth string) (bool, error) {
+		found := false
+
+		projectFiles := []string{}
+
+		if xcodeproj.IsXCodeProj(pth) {
+			projectFiles = append(projectFiles, pth)
+		} else if xcodeproj.IsXCWorkspace(pth) {
+			projects, err := xcodeproj.WorkspaceProjectReferences(pth)
+			if err != nil {
+				return false, err
+			}
+
+			for _, project := range projects {
+				exist, err := pathutil.IsPathExists(project)
+				if err != nil {
+					return false, err
+				}
+				if !exist {
+					continue
+				}
+				projectFiles = append(projectFiles, project)
+
+			}
+		} else {
+			return false, fmt.Errorf("Not Xcode project nor workspace file: %s", pth)
+		}
+
+		for _, projectFile := range projectFiles {
+			pbxprojPth := filepath.Join(projectFile, "project.pbxproj")
+			projectSDKs, err := xcodeproj.GetBuildConfigSDKs(pbxprojPth)
+			if err != nil {
+				return false, err
+			}
+
+			for _, projectSDK := range projectSDKs {
+				if projectSDK == sdk {
+					found = true
+					break
+				}
+			}
+		}
+
+		return (allowed == found), nil
+	}
+}
+
+// FilterRelevantProjectFiles ...
+func FilterRelevantProjectFiles(fileList []string, projectTypes ...XcodeProjectType) ([]string, error) {
+	filters := []utility.FilterFunc{
+		AllowXcodeProjExtFilter,
+		AllowIsDirectoryFilter,
+		ForbidEmbeddedWorkspaceRegexpFilter,
+		ForbidGitDirComponentFilter,
+		ForbidPodsDirComponentFilter,
+		ForbidCarthageDirComponentFilter,
+		ForbidFramworkComponentWithExtensionFilter,
+		ForbidCordovaLibDirComponentFilter,
+		ForbidNodeModulesComponentFilter,
+	}
+
+	return utility.FilterPaths(fileList, filters...)
+}
+
+// FilterRelevantWorkspaceFiles ...
+func FilterRelevantWorkspaceFiles(fileList []string, projectTypes ...XcodeProjectType) ([]string, error) {
+	filters := []utility.FilterFunc{
+		AllowXCWorkspaceExtFilter,
+		AllowIsDirectoryFilter,
+		ForbidEmbeddedWorkspaceRegexpFilter,
+		ForbidGitDirComponentFilter,
+		ForbidPodsDirComponentFilter,
+		ForbidCarthageDirComponentFilter,
+		ForbidFramworkComponentWithExtensionFilter,
+		ForbidCordovaLibDirComponentFilter,
+		ForbidNodeModulesComponentFilter,
+	}
+
+	return utility.FilterPaths(fileList, filters...)
+}
+
+//
+// Xamarin
+
+var allowSolutionExtensionFilter = utility.ExtensionFilter(solutionExtension, true)
+var forbidComponentsSolutionFilter = utility.ComponentFilter(componentsDirName, false)
+var forbidNodeModulesDirComponentFilter = utility.ComponentFilter(NodeModulesDirName, false)
+
+// FilterSolutionFiles ...
+func FilterSolutionFiles(fileList []string) ([]string, error) {
+	files, err := utility.FilterPaths(fileList,
+		allowSolutionExtensionFilter,
+		forbidComponentsSolutionFilter,
+		forbidNodeModulesDirComponentFilter)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return files, nil
 }
