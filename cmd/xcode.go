@@ -82,9 +82,11 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
-
 		var projpth string
+
 		log.Infof("Scan the directory for project files")
+		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
+
 		projPaths, err := scanForProjectFiles(xcodeIDE)
 		if err != nil {
 			log.Printf("Failed: %s", err)
