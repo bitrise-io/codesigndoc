@@ -104,9 +104,9 @@ the one you usually open in Xcode, then hit Enter.
 				projpth = projPaths[0]
 			} else {
 				log.Printf("Found multiple project file: %s.", path.Base(projpth))
-				projpth, err = goinp.SelectFromStringsWithDefault("Select the Scheme you usually use in Xcode", 1, projPaths)
+				projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
 				if err != nil {
-					return fmt.Errorf("failed to select Scheme: %s", err)
+					return fmt.Errorf("failed to select project file: %s", err)
 				}
 			}
 		}

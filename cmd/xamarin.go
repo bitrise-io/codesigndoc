@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -87,14 +88,35 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	// Xamarin Solution Path
 	xamarinCmd.SolutionFilePath = paramXamarinSolutionFilePath
 	if xamarinCmd.SolutionFilePath == "" {
-		askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `) file,
-and then hit Enter`
-		fmt.Println()
-		projpth, err := goinp.AskForPath(askText)
+
+		var solutionPth string
+		log.Infof("Scan the directory for solution files")
+		solPaths, err := scanForProjectFiles(xamarinIDE)
 		if err != nil {
-			return fmt.Errorf("failed to read input: %s", err)
+			log.Printf("Failed: %s", err)
+			fmt.Println()
+
+			log.Infof("Provide the solution file manually")
+			askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `) file,
+and then hit Enter`
+			solutionPth, err = goinp.AskForPath(askText)
+			if err != nil {
+				return fmt.Errorf("failed to read input: %s", err)
+			}
+		} else {
+			if len(solPaths) == 1 {
+				log.Printf("Found one solution file: %s.", path.Base(solPaths[0]))
+				solutionPth = solPaths[0]
+			} else {
+				log.Printf("Found multiple solution file: %s.", path.Base(solutionPth))
+				solutionPth, err = goinp.SelectFromStringsWithDefault("Select the solution file you want to scan", 1, solPaths)
+				if err != nil {
+					return fmt.Errorf("failed to select solution file: %s", err)
+				}
+			}
 		}
-		xamarinCmd.SolutionFilePath = projpth
+
+		xamarinCmd.SolutionFilePath = solutionPth
 	}
 	log.Debugf("xamSolutionPth: %s", xamarinCmd.SolutionFilePath)
 

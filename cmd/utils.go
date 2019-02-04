@@ -13,7 +13,8 @@ import (
 type IDEType string
 
 const (
-	xcodeIDE IDEType = "iOS"
+	xcodeIDE   IDEType = "iOS"
+	xamarinIDE IDEType = "xamarin"
 )
 
 // Scans the root dir for the provided project files
@@ -42,7 +43,7 @@ func scanForProjectFiles(ideType IDEType) ([]string, error) {
 					return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
 				}
 			}
-		} else {
+		} else if ideType == xamarinIDE {
 			paths, err = xamarin.FilterSolutionFiles(fileList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
