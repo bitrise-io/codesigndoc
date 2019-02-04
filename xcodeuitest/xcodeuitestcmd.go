@@ -144,6 +144,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 				continue
 			}
 
+			log.Printf("Check if the (%s) scheme is valid for UI testing", scheme.Name)
 			proj = xcproj.Proj
 			if schemesHasUITest(scheme, proj) {
 				schemesWitUITests = append(schemesWitUITests, scheme)
@@ -165,16 +166,25 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 		}
 	}
 
+	if len(testables) == 0 {
+		log.Printf("No enabled test targets found in (%s) => Skipping...\n", scheme.Name)
+		return false
+	}
+
+	log.Printf("Found enabled test target in (%s)", scheme.Name)
+
 	for _, entry := range testables {
 		for _, target := range proj.Targets {
 			if target.ID == entry.BuildableReference.BlueprintIdentifier {
 				if strings.HasSuffix(target.ProductType, "ui-testing") {
+					log.Printf("Found enabled test target (%s) => Add it to the list...\n", scheme.Name)
 					return true
 				}
 			}
 		}
 	}
 
+	log.Printf("No UITest target found in (%s) => Skipping...\n", scheme.Name)
 	return false
 
 }

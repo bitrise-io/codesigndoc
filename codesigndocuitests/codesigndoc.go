@@ -136,7 +136,8 @@ func getFilesToExport(buildPath string, installedCertificates []certificateutil.
 	return certificatesToExport, profilesToExport, nil
 }
 
-func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+func collectCertificatesAndProfiles(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel,
+	installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 
 	groups, err := collectExportCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if err != nil {
