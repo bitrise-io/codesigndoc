@@ -1,0 +1,352 @@
+format_version: "2"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+app:
+  envs:
+  - RELEASE_VERSION: 1.8.0
+  - BIN_NAME: bitrise
+  - GITHUB_RELEASES_URL: https://github.com/bitrise-io/${BIN_NAME}/releases
+
+  - INTERNAL_DEV_SLACK_WEBHOOK_URL: https://hooks.slack.com/services/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
+  - INTERNAL_DEV_SLACK_CHANNEL: bitrise-devs
+  - INTERNAL_DEV_LIFELINE_SLACK_CHANNEL: bitrise-dev-lifeline
+
+trigger_map:
+- push_branch: "/release"
+  workflow: create-release
+- push_branch: "/release/announce"
+  workflow: announce-release
+- push_branch: "*"
+  workflow: ci
+- pull_request_source_branch: "*"
+  workflow: ci
+
+workflows:
+  # ----------------------------------------------------------------
+  # --- workflows for CI and testing
+  ci:
+    title: Bitrise CI
+    description: |
+      1, Git clone bitrise repo and install testing tools
+      2, Run tests
+      3, Announce test result
+    before_run:
+    - _prepare-and-setup
+    - test
+    steps:
+    - slack:
+        title: Slack notifications
+        run_if: ".IsCI"
+        inputs:
+        - webhook_url: "$INTERNAL_DEV_SLACK_WEBHOOK_URL"
+        - channel: "$INTERNAL_DEV_LIFELINE_SLACK_CHANNEL"
+        - from_username: "${BIN_NAME} - CI - OK"
+        - from_username_on_error: "${BIN_NAME} - CI - ERROR"
+        - message: |-
+            CI was successful on branch: *${BITRISE_GIT_BRANCH}*
+
+            Build URL: ${BITRISE_BUILD_URL}
+        - message_on_error: |-
+            CI FAILED on branch: *${BITRISE_GIT_BRANCH}*
+
+            Build URL: ${BITRISE_BUILD_URL}
+
+  integration-test:
+    after_run:
+    - _bitrise-run-setup
+    steps:
+    - script:
+        title: Go build
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+
+            # build the new bitrise
+            current_dir=$(pwd)
+            current_bitrise=$current_dir/_tmp/ci-bin
+            go build -o $current_bitrise
+
+            # setup for the new bitrise as well
+            $current_bitrise setup
+
+            envman add --key CURRENT_BITRISE --value $current_bitrise
+    - script:
+        title: Run integration tests
+        inputs:
+        - content: |-
+            #!/bin/bash
+            echo "Running integration tests ..."
+            set -ex
+
+            export PR=""
+            export PULL_REQUEST_ID=""
+            export INTEGRATION_TEST_BINARY_PATH="$CURRENT_BITRISE"
+            go test -v ./_tests/integration/...
+
+  test:
+    title: Bitrise test
+    description: |
+      1, Err check
+      2, Go Lint
+      3, Go Test
+      4, Test-build
+      5, Step-template test
+      6, Integration tests
+    after_run:
+    - integration-test
+    steps:
+    - script:
+        title: Print go environment
+        inputs:
+        - content: |-
+            set -x
+            go version
+            echo $GO15VENDOREXPERIMENT
+    - script:
+        title: Export go files to test
+        inputs:
+        - content: |-
+            set -e
+            set -x
+            no_vendor_paths="$(go list ./... | grep -v vendor)"
+            envman add --key GOLIST_WITHOUT_VENDOR --value "$no_vendor_paths"
+    - script:
+        title: Err check
+        inputs:
+        - content: errcheck -asserts=true -blank=true $GOLIST_WITHOUT_VENDOR
+    - script:
+        title: Go lint
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -e
+            while read -r line; do
+              echo "-> Linting: $line"
+              golint_out="$(golint $line)"
+              if [[ "${golint_out}" != "" ]] ; then
+                echo "=> Golint issues found:"
+                echo "${golint_out}"
+                exit 1
+              fi
+            done <<< "$GOLIST_WITHOUT_VENDOR"
+    - script:
+        title: Go test
+        inputs:
+        - content: go test ./...
+
+  _bitrise-run-setup:
+    steps:
+    - script:
+        title: Setup system bitrise
+        run_if: ".IsCI"
+        inputs:
+        - content: |-
+            #!/bin/bash
+
+            bitrise setup
+
+  _prepare-and-setup:
+    title: Prepare bitrise and install testing tools
+    description: |
+        Prepares the environment for testing
+    steps:
+    - script:
+        is_skippable: true
+        inputs:
+        - content: brew update
+    - script:
+        title: Install testing tools
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+
+            # Check for unhandled errors
+            go get -u -v github.com/kisielk/errcheck
+
+            # Go lint
+            go get -u -v github.com/golang/lint/golint
+    - script:
+        title: Install bitrise tools
+        run_if: ".IsCI"
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -e
+            set -x
+
+            # Install envman
+            envman -v
+            curl -fL https://github.com/bitrise-io/envman/releases/download/1.1.0/envman-$(uname -s)-$(uname -m) > /usr/local/bin/envman
+            chmod +x /usr/local/bin/envman
+            envman -v
+
+            # Install stepman
+            stepman -v
+            curl -fL https://github.com/bitrise-io/stepman/releases/download/0.9.18/stepman-$(uname -s)-$(uname -m) > /usr/local/bin/stepman
+            chmod +x /usr/local/bin/stepman
+            stepman -v
+
+  # ----------------------------------------------------------------
+  # --- workflows for Releasing
+  create-release:
+    title: Create Release version
+    description: |-
+        Creates new version with specified RELEASE_VERSION environment
+
+        1, Create CHANGELOG and git release
+        2, Export RELEASE_VERSION
+        3, Create binaries
+    after_run:
+    - create-binaries
+    steps:
+    - script:
+        title: Create CHANGELOG and git release
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+
+            go get github.com/bitrise-tools/releaseman
+
+            export CI=true
+
+            releaseman create-changelog \
+              --version $RELEASE_VERSION \
+              --set-version-script "bash _scripts/set_version.sh version/version.go"
+
+  announce-release:
+    title: Announce Release
+    description: |-
+      Notifying about new version of bitrise
+
+      Send Slack notifications
+    steps:
+    - slack:
+        title: Announce on Internal Slack channel
+        inputs:
+        - webhook_url: "$INTERNAL_DEV_SLACK_WEBHOOK_URL"
+        - channel: "$INTERNAL_DEV_SLACK_CHANNEL"
+        - from_username: ${BIN_NAME}
+        - message: |
+            Release v${RELEASE_VERSION} was just published! :tada:
+
+            You can find it at ${GITHUB_RELEASES_URL}
+        - emoji: ":rocket:"
+    - slack:
+        title: Announce on Public Slack channel
+        inputs:
+        - webhook_url: "$PUBLIC_SLACK_WEBHOOK_URL"
+        - channel: "$PUBLIC_SLACK_CHANNEL"
+        - from_username: ${BIN_NAME}
+        - message: |
+            Release v${RELEASE_VERSION} was just published! :tada:
+
+            You can find it at ${GITHUB_RELEASES_URL}
+        - emoji: ":rocket:"
+
+  create-binaries:
+    title: Create binaries
+    description: |
+        Creates Linux and Darwin binaries
+    steps:
+    - script:
+        title: Create binaries
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -e
+            set -x
+
+            echo
+            echo "Create final binaries"
+            echo "  Build number: $BITRISE_BUILD_NUMBER"
+
+            export ARCH=x86_64
+            export GOARCH=amd64
+
+            # Create Darwin bin
+            export OS=Darwin
+            export GOOS=darwin
+
+            DEPLOY_PATH="_bin/$BIN_NAME-$OS-$ARCH"
+            echo "  Create final Darwin binary at: $DEPLOY_PATH"
+
+            version_package="github.com/bitrise-io/bitrise/version"
+
+            go build \
+              -ldflags "-X $version_package.BuildNumber=$BITRISE_BUILD_NUMBER -X $version_package.Commit=$GIT_CLONE_COMMIT_HASH" \
+              -o "$DEPLOY_PATH"
+
+            envman add --key OSX_DEPLOY_PATH --value $DEPLOY_PATH
+            cp $DEPLOY_PATH $BITRISE_DEPLOY_DIR/$BIN_NAME-$OS-$ARCH
+            echo "  Copy final Darwin binary to: $BITRISE_DEPLOY_DIR/$BIN_NAME-$OS-$ARCH"
+
+
+            # Create Linux binary
+            export OS=Linux
+            export GOOS=linux
+
+            DEPLOY_PATH="_bin/$BIN_NAME-$OS-$ARCH"
+            echo "  Create final Linux binary at: $DEPLOY_PATH"
+
+            go build \
+              -ldflags "-X $version_package.BuildNumber=$BITRISE_BUILD_NUMBER -X $version_package.Commit=$GIT_CLONE_COMMIT_HASH" \
+              -o "$DEPLOY_PATH"
+
+            envman add --key LINUX_DEPLOY_PATH --value $DEPLOY_PATH
+            cp $DEPLOY_PATH $BITRISE_DEPLOY_DIR/$BIN_NAME-$OS-$ARCH
+            echo "  Copy final Linux binary to: $BITRISE_DEPLOY_DIR/$BIN_NAME-$OS-$ARCH"
+
+  # ----------------------------------------------------------------
+  # --- workflows for Utility
+  godeps-update:
+    title: Godeps update
+    description: |
+      Used for updating bitrise dependencies with godep
+    steps:
+    - script:
+        title: Dependency update
+        inputs:
+        - content: |
+            #!/bin/bash
+            set -ex
+            go get -u -v github.com/tools/godep
+
+            rm -rf ./Godeps
+            rm -rf ./vendor
+
+            go get -t -d ./...
+            go get golang.org/x/sys/unix
+            go get github.com/davecgh/go-spew/spew
+            go get github.com/pmezard/go-difflib/difflib
+            godep save ./...
+
+  noop:
+    title: Noop
+    description: Empty workflow for quick testing
+
+  fail-test:
+    title: Fails
+    description: Workflow will fail
+    steps:
+    - script:
+        title: Success
+        inputs:
+        - content: exit 0
+    - script:
+        title: Fail wit exit code 2
+        inputs:
+        - content: exit 2
+    - script:
+        title: Skippable fail with exit code 2
+        is_always_run: true
+        is_skippable: true
+        inputs:
+        - content: exit 2
+    - script:
+        title: Skipping success
+        is_always_run: false
+        inputs:
+        - content: exit 0

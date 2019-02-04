@@ -1,0 +1,7 @@
+app:
+  build: .
+  volumes:
+    - .:/bitrise/go/src/github.com/bitrise-core/bitrise-init
+  environment:
+    CI: "true"
+    BITRISE_SOURCE_DIR: /bitrise/go/src/github.com/bitrise-core/bitrise-init
