@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2aa540c5a392849eaa3c5a81aee4e2a31025a5bfcf00c43351a97e830cf63d2a"
+  digest = "1:428773b794625b4e5e1415a8ab665a255088c4882c85b7ae8d2e4d114f6d401d"
   name = "github.com/bitrise-io/go-utils"
   packages = [
     "colorstring",
@@ -19,20 +19,20 @@
     "sliceutil",
     "urlutil",
   ]
-  pruneopts = ""
-  revision = "d1de0dbcb811588e61362aff67bb700b93c13c17"
+  pruneopts = "UT"
+  revision = "2a09aab8380d7842750328aebd5671bcccea89c8"
 
 [[projects]]
   branch = "master"
-  digest = "1:fb3cc9c055818a84aba159da735a24efce77453a904e7742141f2aa0359a6ae6"
+  digest = "1:f9749f95e34724e0bfb71a3bf0fa00e0e303d42f1de172bf134f013fa1e9dbb7"
   name = "github.com/bitrise-io/goinp"
   packages = ["goinp"]
-  pruneopts = ""
+  pruneopts = "UT"
   revision = "f451b19ba4d087d8272d411ad91af5f4218fd517"
 
 [[projects]]
   branch = "master"
-  digest = "1:189a7e7bbda8a5f93eb4931155d9dc88c30a050dd316f8f613a05a799e36c559"
+  digest = "1:65cd17acf7b05a2b288a9263cc985e42fb283abe63888fad636feaf277175600"
   name = "github.com/bitrise-tools/go-xamarin"
   packages = [
     "analyzers/project",
@@ -46,12 +46,12 @@
     "tools/nunit",
     "utility",
   ]
-  pruneopts = ""
+  pruneopts = "UT"
   revision = "60f614520f9dd2d58ea982488ed8e21ca2c5bb1d"
 
 [[projects]]
   branch = "master"
-  digest = "1:f3eb815b9c0b11d53813a09340e6fbdf6151aefc6b780a83b5a80471a189c11a"
+  digest = "1:0013f2739c2626fc52b4ee7dd2791b00597253b53c593a11f8c3e3724103121a"
   name = "github.com/bitrise-tools/go-xcode"
   packages = [
     "certificateutil",
@@ -63,110 +63,124 @@
     "utility",
     "xcarchive",
   ]
-  pruneopts = ""
-  revision = "07db8cf760f5213241e12c0595158aedce96669a"
-
-[[projects]]
-  digest = "1:0a39ec8bf5629610a4bc7873a92039ee509246da3cef1a0ea60f1ed7e5f9cea5"
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  pruneopts = ""
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
+  pruneopts = "UT"
+  revision = "8e44ecb550c0cadef602edda92e5c10476dd5daa"
 
 [[projects]]
   branch = "master"
-  digest = "1:e048ea497a949a07065a2076746a43629df92f2439ae5e2c476d1eb700052fa7"
+  digest = "1:f5d050443803354466260c17b1cc500558364967419d09b3b77e0c79c64c9d34"
+  name = "github.com/bitrise-tools/xcode-project"
+  packages = [
+    "serialized",
+    "xcodebuild",
+    "xcodeproj",
+    "xcscheme",
+    "xcworkspace",
+  ]
+  pruneopts = "UT"
+  revision = "476ea7a82b2ef7c77d0d41445afc94bdb1cda04d"
+
+[[projects]]
+  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  pruneopts = "UT"
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
+  branch = "master"
+  digest = "1:095c5b12709e45a61ff2820c2bf81c7de7a030629cb728fc7a2abec35b5cbadb"
   name = "github.com/fullsailor/pkcs7"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "UT"
   revision = "8306686428a5fe132eac8cb7c4848af725098bd4"
 
 [[projects]]
   digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
   name = "github.com/inconshreveable/mousetrap"
   packages = ["."]
-  pruneopts = ""
+  pruneopts = "UT"
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:edf55a9a482f7883632a230443fc11d09a5ddb1eadc6c9457c01c75b7625a406"
+  digest = "1:9729648bfd610b93e5636062a4925798e76399b121c0f9403d2b2ad4112545eb"
   name = "github.com/pkg/errors"
   packages = ["."]
-  pruneopts = ""
-  revision = "816c9085562cd7ee03e7f8188a1cfd942858cded"
+  pruneopts = "UT"
+  revision = "ffb6e22f01932bf7ac35e0bad9be11f01d1c8685"
 
 [[projects]]
-  digest = "1:256484dbbcd271f9ecebc6795b2df8cad4c458dd0f5fd82a8c2fa0c29f233411"
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
-  pruneopts = ""
+  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:29df111893b87bd947307aab294c042e900c2f29c53ad3896127955b4283728a"
+  digest = "1:6baa565fe16f8657cf93469b2b8a6c61a277827734400d27e44d589547297279"
   name = "github.com/ryanuber/go-glob"
   packages = ["."]
-  pruneopts = ""
-  revision = "572520ed46dbddaed19ea3d9541bdd0494163693"
-  version = "v0.1"
+  pruneopts = "UT"
+  revision = "51a8f68e6c24dc43f1e371749c89a267de4ebc53"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
-  digest = "1:04f9cbdaf9ddfd1fa3e4851a69a1b0bc254a034a0542c0134568de2f8abdc185"
+  digest = "1:efc0b1c2f3bff9854d96b12af5eb5fe35c97fa2e79c8efe091a8e38fd521bf23"
   name = "github.com/spf13/cobra"
   packages = ["."]
-  pruneopts = ""
-  revision = "a114f312e075f65bf30d6d9a1430113f857e543b"
+  pruneopts = "UT"
+  revision = "7547e83b2d85fd1893c7d76916f67689d761fecb"
 
 [[projects]]
-  digest = "1:8e243c568f36b09031ec18dff5f7d2769dcf5ca4d624ea511c8e3197dc3d352d"
+  digest = "1:c1b1102241e7f645bc8e0c22ae352e8f0dc6484b6cb4d132fa9f24174e0119e2"
   name = "github.com/spf13/pflag"
   packages = ["."]
-  pruneopts = ""
-  revision = "583c0c0531f06d5278b7d917446061adc344b5cd"
-  version = "v1.0.1"
+  pruneopts = "UT"
+  revision = "298182f68c66c05229eb03ac171abe6e309ee79a"
+  version = "v1.0.3"
 
 [[projects]]
   branch = "master"
-  digest = "1:bc2a12c8863e1080226b7bc69192efd6c37aaa9b85cec508b0a8f54fabb9bd9f"
+  digest = "1:eeb0a54ba70c22815143c2c3f104cb4f9ebe2060ba49780bd4895a0179b7aee9"
   name = "github.com/stretchr/testify"
   packages = [
     "assert",
     "require",
   ]
-  pruneopts = ""
-  revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
+  pruneopts = "UT"
+  revision = "363ebb24d041ccea8068222281c2e963e997b9dc"
 
 [[projects]]
   branch = "master"
-  digest = "1:e79c3d6b195477b429f017aaa02af135249bbdff31c9acbd8a93bb37a4ef7d3b"
+  digest = "1:fde12c4da6237363bf36b81b59aa36a43d28061167ec4acb0d41fc49464e28b9"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  pruneopts = ""
-  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+  pruneopts = "UT"
+  revision = "b8fe1690c61389d7d2a8074a507d1d40c5d30448"
 
 [[projects]]
   branch = "master"
-  digest = "1:880f5ae3ffdd8741fe179f0f70b46df57fcdd746f3a0e9d0e189bb6a241535e4"
+  digest = "1:a1914323eabb0da3b4392fb0d34b1ae5b6b531323daf4eeddc355d8000982052"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
-  pruneopts = ""
-  revision = "1b2967e3c290b7c545b3db0deeda16e9be4f98a2"
+  pruneopts = "UT"
+  revision = "41f3e6584952bb034a481797859f6ab34b6803bd"
 
 [[projects]]
   branch = "master"
-  digest = "1:cb91f4514dcec0fbc8e1af274856c50553f8088770c05982b76369759426c087"
+  digest = "1:c10265d5a71326618d37e97169eddb3582f78e8ac7dcf87403b4cf619efd519a"
   name = "howett.net/plist"
   packages = ["."]
-  pruneopts = ""
-  revision = "500bd5b9081b5957ac10389f86e069869f00c348"
+  pruneopts = "UT"
+  revision = "591f970eefbbeb04d7b37f334a0c4c3256e32876"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -194,6 +208,9 @@
     "github.com/bitrise-tools/go-xcode/profileutil",
     "github.com/bitrise-tools/go-xcode/utility",
     "github.com/bitrise-tools/go-xcode/xcarchive",
+    "github.com/bitrise-tools/xcode-project/xcodeproj",
+    "github.com/bitrise-tools/xcode-project/xcscheme",
+    "github.com/bitrise-tools/xcode-project/xcworkspace",
     "github.com/pkg/errors",
     "github.com/spf13/cobra",
     "github.com/stretchr/testify/require",

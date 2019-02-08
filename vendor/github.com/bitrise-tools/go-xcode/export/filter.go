@@ -138,6 +138,38 @@ func CreateNotXcodeManagedSelectableCodeSignGroupFilter() SelectableCodeSignGrou
 	}
 }
 
+// CreateXcodeManagedSelectableCodeSignGroupFilter ...
+func CreateXcodeManagedSelectableCodeSignGroupFilter() SelectableCodeSignGroupFilter {
+	return func(group *SelectableCodeSignGroup) bool {
+		log.Debugf("Xcode managed filter - removes profile if not xcode managed")
+
+		filteredBundleIDProfilesMap := map[string][]profileutil.ProvisioningProfileInfoModel{}
+
+		for bundleID, profiles := range group.BundleIDProfilesMap {
+			filteredProfiles := []profileutil.ProvisioningProfileInfoModel{}
+
+			for _, profile := range profiles {
+				if profile.IsXcodeManaged() {
+					filteredProfiles = append(filteredProfiles, profile)
+				}
+			}
+
+			if len(filteredProfiles) == 0 {
+				break
+			}
+
+			filteredBundleIDProfilesMap[bundleID] = filteredProfiles
+		}
+
+		if len(filteredBundleIDProfilesMap) == len(group.BundleIDProfilesMap) {
+			group.BundleIDProfilesMap = filteredBundleIDProfilesMap
+			return true
+		}
+
+		return false
+	}
+}
+
 // CreateExcludeProfileNameSelectableCodeSignGroupFilter ...
 func CreateExcludeProfileNameSelectableCodeSignGroupFilter(name string) SelectableCodeSignGroupFilter {
 	return func(group *SelectableCodeSignGroup) bool {

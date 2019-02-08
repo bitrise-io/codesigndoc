@@ -9,6 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
+	"github.com/bitrise-tools/codesigndoc/codesign"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/exportoptions"
@@ -121,27 +122,27 @@ func filterCertificates(isMacArchive bool, selectedExportMethod, selectedTeam st
 	switch selectedExportMethod {
 	case "development":
 		certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return !isDistributionCertificate(certInfo)
+			return !codesign.IsDistributionCertificate(certInfo)
 		})
 
 		log.Debugf("DeveloperDistribution certificates: %v\n", certsForSelectedExport)
 		break
 	case "installer":
 		certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedInstallerCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return isInstallerCertificate(certInfo)
+			return codesign.IsInstallerCertificate(certInfo)
 		})
 
 		log.Debugf("Installer certificates: %v\n", certsForSelectedExport)
 		break
 	default:
 		certsForSelectedExport = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return isDistributionCertificate(certInfo)
+			return codesign.IsDistributionCertificate(certInfo)
 		})
 		log.Debugf("Distribution certificates: %v\n", certsForSelectedExport)
 		break
 	}
 
-	filteredCertificatesByTeam := mapCertificatesByTeam(certsForSelectedExport)
+	filteredCertificatesByTeam := codesign.MapCertificatesByTeam(certsForSelectedExport)
 	log.Debugf("Filtered certificates (by distribution type) by team: %v\n", filteredCertificatesByTeam)
 
 	if len(filteredCertificatesByTeam) == 0 {
@@ -243,7 +244,7 @@ Would you like to use this team to export an ipa file?`, archiveCertificate.Team
 			return nil, fmt.Errorf("failed to read input: %s", err)
 		}
 
-		filteredInstallerCertificatesByTeam := mapCertificatesByTeam(installedInstallerCertificates)
+		filteredInstallerCertificatesByTeam := codesign.MapCertificatesByTeam(installedInstallerCertificates)
 		if !hasCertificateForDistType("installer", filteredInstallerCertificatesByTeam[selectedTeam]) {
 			log.Warnf("🚨   The selected team (%s) doesn't have installer certificate for MacOS app-store export", selectedTeam)
 			return selectedCertificates, nil
@@ -364,7 +365,7 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 
 		selectedBundleIDProfileMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 		for bundleID, profiles := range bundleIDProfilesMap {
-			profiles = filterLatestProfiles(profiles)
+			profiles = codesign.FilterLatestProfiles(profiles)
 			profileOptions := []string{}
 			for _, profile := range profiles {
 				profileOption := fmt.Sprintf("%s (%s)", profile.Name, profile.UUID)
@@ -508,17 +509,17 @@ func hasCertificateForDistType(exportMethod string, certificates []certificateut
 	switch exportMethod {
 	case "development":
 		developmentCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return !isDistributionCertificate(certInfo)
+			return !codesign.IsDistributionCertificate(certInfo)
 		})
 		return len(developmentCertificates) > 0
 	case "installer":
 		installerCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return isInstallerCertificate(certInfo)
+			return codesign.IsInstallerCertificate(certInfo)
 		})
 		return len(installerCertificates) > 0
 	default:
 		distributionCertificates := certificateutil.FilterCertificateInfoModelsByFilterFunc(certificates, func(certInfo certificateutil.CertificateInfoModel) bool {
-			return isDistributionCertificate(certInfo)
+			return codesign.IsDistributionCertificate(certInfo)
 		})
 		return len(distributionCertificates) > 0
 	}
@@ -567,7 +568,7 @@ func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.C
 		return nil, fmt.Errorf("no signing identity found")
 	}
 
-	certificate, err := findCertificate(archive.SigningIdentity(), installedCertificates)
+	certificate, err := codesign.FindCertificate(archive.SigningIdentity(), installedCertificates)
 	if err != nil {
 		return nil, err
 	}

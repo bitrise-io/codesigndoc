@@ -122,10 +122,18 @@ func (info ProvisioningProfileInfoModel) HasInstalledCertificate(installedCertif
 }
 
 // NewProvisioningProfileInfo ...
-func NewProvisioningProfileInfo(provisioningProfile pkcs7.PKCS7, profileType ProfileType) (ProvisioningProfileInfoModel, error) {
+func NewProvisioningProfileInfo(provisioningProfile pkcs7.PKCS7) (ProvisioningProfileInfoModel, error) {
 	var data plistutil.PlistData
 	if _, err := plist.Unmarshal(provisioningProfile.Content, &data); err != nil {
 		return ProvisioningProfileInfoModel{}, err
+	}
+
+	platform, _ := data.GetStringArray("Platform")
+	profileType := ProfileTypeMacOs
+	if len(platform) != 0 {
+		if strings.ToLower(platform[0]) == string(ProfileTypeIos) {
+			profileType = ProfileTypeIos
+		}
 	}
 
 	profile := PlistData(data)
@@ -141,7 +149,7 @@ func NewProvisioningProfileInfo(provisioningProfile pkcs7.PKCS7, profileType Pro
 		Type:                 profileType,
 	}
 
-	info.ExportType = profile.GetExportMethod(profileType)
+	info.ExportType = profile.GetExportMethod()
 
 	if devicesList := profile.GetProvisionedDevices(); devicesList != nil {
 		info.ProvisionedDevices = devicesList
@@ -171,13 +179,7 @@ func NewProvisioningProfileInfoFromFile(pth string) (ProvisioningProfileInfoMode
 		return ProvisioningProfileInfoModel{}, err
 	}
 	if provisioningProfile != nil {
-		profileType := ProfileTypeIos
-
-		if strings.HasSuffix(pth, ".provisionprofile") {
-			profileType = ProfileTypeMacOs
-		}
-
-		return NewProvisioningProfileInfo(*provisioningProfile, profileType)
+		return NewProvisioningProfileInfo(*provisioningProfile)
 	}
 	return ProvisioningProfileInfoModel{}, errors.New("failed to parse provisioning profile infos")
 }
@@ -192,7 +194,7 @@ func InstalledProvisioningProfileInfos(profileType ProfileType) ([]ProvisioningP
 	infos := []ProvisioningProfileInfoModel{}
 	for _, provisioningProfile := range provisioningProfiles {
 		if provisioningProfile != nil {
-			info, err := NewProvisioningProfileInfo(*provisioningProfile, profileType)
+			info, err := NewProvisioningProfileInfo(*provisioningProfile)
 			if err != nil {
 				return nil, err
 			}
@@ -212,13 +214,7 @@ func FindProvisioningProfileInfo(uuid string) (ProvisioningProfileInfoModel, str
 		return ProvisioningProfileInfoModel{}, "", nil
 	}
 
-	profileType := ProfileTypeIos
-
-	if strings.HasSuffix(pth, ".provisionprofile") {
-		profileType = ProfileTypeMacOs
-	}
-
-	info, err := NewProvisioningProfileInfo(*profile, profileType)
+	info, err := NewProvisioningProfileInfo(*profile)
 	if err != nil {
 		return ProvisioningProfileInfoModel{}, "", err
 	}

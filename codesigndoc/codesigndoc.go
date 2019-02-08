@@ -9,6 +9,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-tools/codesigndoc/bitriseio"
+	"github.com/bitrise-tools/codesigndoc/codesign"
 	"github.com/bitrise-tools/go-xcode/certificateutil"
 	"github.com/bitrise-tools/go-xcode/export"
 	"github.com/bitrise-tools/go-xcode/profileutil"
@@ -32,15 +33,15 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	}
 
 	// Set up the XcArchive type for certs and profiles.
-	certificateType := IOSCertificate
+	certificateType := codesign.IOSCertificate
 	profileType := profileutil.ProfileTypeIos
 	if isMacOs {
-		certificateType = MacOSCertificate
+		certificateType = codesign.MacOSCertificate
 		profileType = profileutil.ProfileTypeMacOs
 	}
 
 	// Certificates
-	certificates, err := installedCertificates(certificateType)
+	certificates, err := codesign.InstalledCertificates(certificateType)
 	if err != nil {
 		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
@@ -76,11 +77,11 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	fmt.Println()
 	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
 
-	if err := collectAndExportIdentities(certificatesToExport, outputDirPath, askForPassword); err != nil {
+	if err := codesign.CollectAndExportIdentities(certificatesToExport, outputDirPath, askForPassword); err != nil {
 		return false, false, err
 	}
 
-	if err := collectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
+	if err := codesign.CollectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
 		return false, false, err
 	}
 
