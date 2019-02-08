@@ -83,10 +83,12 @@ func collectExportCertificate(installedCertificates []certificateutil.Certificat
 
 		log.Debugf("selected export method: %v", selectedCodeSignMethod)
 
-		selectedCertificates, err = filterCertificates(selectedCodeSignMethod, "", selectedCertificates, installedCertificates)
+		certs, err := selectFilteredCertificates(selectedCodeSignMethod, "", installedCertificates)
 		if err != nil {
 			return nil, err
 		}
+
+		selectedCertificates = append(selectedCertificates, certs...)
 
 		fmt.Println()
 		question := `Do you want to collect another certificate?`
@@ -99,7 +101,8 @@ func collectExportCertificate(installedCertificates []certificateutil.Certificat
 	return selectedCertificates, nil
 }
 
-func filterCertificates(selectedCodeSignMethod, selectedTeam string, selectedCertificates []certificateutil.CertificateInfoModel, installedCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
+func selectFilteredCertificates(selectedCodeSignMethod, selectedTeam string, installedCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
+	var selectedCertificates []certificateutil.CertificateInfoModel
 	var certsForSelectedCodeSign []certificateutil.CertificateInfoModel
 	var err error
 	log.Debugf("InstalledCerts: %v\n", installedCertificates)
