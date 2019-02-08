@@ -94,7 +94,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		log.Infof("Scan the directory for solution files")
 		log.Warnf("You can specify the Xamarin Solution file to scan with the --file flag.")
 
-		solPaths, err := scanForProjectFiles(xamarinIDE)
+		solPaths, err := scanForProjectFiles(xamarinProjectType)
 		if err != nil {
 			log.Printf("Failed: %s", err)
 			fmt.Println()

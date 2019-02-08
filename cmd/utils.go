@@ -9,16 +9,16 @@ import (
 	"github.com/bitrise-core/bitrise-init/utility"
 )
 
-// IDEType ...
-type IDEType string
+// ProjectType ...
+type ProjectType int
 
 const (
-	xcodeIDE   IDEType = "iOS"
-	xamarinIDE IDEType = "xamarin"
+	iOSProjectType ProjectType = iota
+	xamarinProjectType
 )
 
 // Scans the root dir for the provided project files
-func scanForProjectFiles(ideType IDEType) ([]string, error) {
+func scanForProjectFiles(projectType ProjectType) ([]string, error) {
 	searchDir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -31,7 +31,7 @@ func scanForProjectFiles(ideType IDEType) ([]string, error) {
 
 	var paths []string
 	{
-		if ideType == xcodeIDE {
+		if projectType == iOSProjectType {
 			paths, err = ios.FilterRelevantWorkspaceFiles(fileList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
@@ -43,7 +43,7 @@ func scanForProjectFiles(ideType IDEType) ([]string, error) {
 					return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
 				}
 			}
-		} else if ideType == xamarinIDE {
+		} else if projectType == xamarinProjectType {
 			paths, err = xamarin.FilterSolutionFiles(fileList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
