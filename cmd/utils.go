@@ -34,13 +34,13 @@ func scanForProjectFiles(projectType ProjectType) ([]string, error) {
 		if projectType == iOSProjectType {
 			paths, err = ios.FilterRelevantWorkspaceFiles(fileList)
 			if err != nil {
-				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
+				return nil, fmt.Errorf("failed to search for workspace files, error: %s", err)
 			}
 
 			if len(paths) == 0 {
 				paths, err = ios.FilterRelevantProjectFiles(fileList)
 				if err != nil {
-					return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
+					return nil, fmt.Errorf("failed to search for project files, error: %s", err)
 				}
 			}
 		} else if projectType == xamarinProjectType {
