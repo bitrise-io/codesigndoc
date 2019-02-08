@@ -62,6 +62,40 @@ func initExportOutputDir() (string, error) {
 	return absExportOutputDirPath, nil
 }
 
+// findProject scans the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
+// If can't find any, ask the user to drag-and-drop the file
+func findProject() (string, error) {
+	var projpth string
+
+	projPaths, err := scanForProjectFiles(iOSProjectType)
+	if err != nil {
+		log.Printf("Failed: %s", err)
+		fmt.Println()
+
+		log.Infof("Provide the project file manually")
+		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
+the one you usually open in Xcode, then hit Enter.
+(Note: if you have a Workspace file you should most likely use that)`
+		projpth, err = goinp.AskForPath(askText)
+		if err != nil {
+			return "", fmt.Errorf("failed to read input: %s", err)
+		}
+	} else {
+		if len(projPaths) == 1 {
+			log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
+			projpth = projPaths[0]
+		} else {
+			log.Printf("Found multiple project file: %s.", path.Base(projpth))
+			projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
+			if err != nil {
+				return "", fmt.Errorf("failed to select project file: %s", err)
+			}
+		}
+	}
+
+	return projpth, nil
+}
+
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	absExportOutputDirPath, err := initExportOutputDir()
 	if err != nil {
@@ -82,37 +116,17 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
-		var projpth string
-
 		log.Infof("Scan the directory for project files")
 		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
 
-		projPaths, err := scanForProjectFiles(iOSProjectType)
+		projpth, err := findProject()
 		if err != nil {
-			log.Printf("Failed: %s", err)
-			fmt.Println()
-
-			log.Infof("Provide the project file manually")
-			askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
-the one you usually open in Xcode, then hit Enter.
-(Note: if you have a Workspace file you should most likely use that)`
-			projpth, err = goinp.AskForPath(askText)
-			if err != nil {
-				return fmt.Errorf("failed to read input: %s", err)
-			}
-		} else {
-			if len(projPaths) == 1 {
-				log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
-				projpth = projPaths[0]
-			} else {
-				log.Printf("Found multiple project file: %s.", path.Base(projpth))
-				projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
-				if err != nil {
-					return fmt.Errorf("failed to select project file: %s", err)
-				}
-			}
+			return err
 		}
 
+		//
+		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
+		// If can't find any, ask the user to drag-and-drop the file
 		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")
 	}
 	log.Debugf("projectPath: %s", projectPath)

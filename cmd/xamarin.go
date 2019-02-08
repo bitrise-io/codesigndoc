@@ -76,6 +76,8 @@ func archivableSolutionConfigNames(projectsByID map[string]project.Model) []stri
 	return archivableSolutionConfigNames
 }
 
+// findSolution scans the directory for Xamarin.Solution file first
+// If can't find any, ask the user to drag-and-drop the file
 func findSolution() (string, error) {
 	var solutionPth string
 	solPaths, err := scanForProjectFiles(xamarinProjectType)
@@ -122,6 +124,9 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		log.Infof("Scan the directory for solution files")
 		log.Warnf("You can specify the Xamarin Solution file to scan with the --file flag.")
 
+		//
+		// Scan the directory for Xamarin.Solution file first
+		// If can't find any, ask the user to drag-and-drop the file
 		xamarinCmd.SolutionFilePath, err = findSolution()
 		if err != nil {
 			return err
