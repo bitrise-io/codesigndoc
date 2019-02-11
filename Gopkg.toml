@@ -1,18 +1,23 @@
+
 [[constraint]]
+  branch = "master"
   name = "github.com/bitrise-io/go-utils"
-  branch = "master"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/bitrise-io/goinp"
-  branch = "master"
 
 [[constraint]]
+  branch = "master"
   name = "github.com/bitrise-tools/go-xamarin"
-  branch = "master"
 
 [[constraint]]
-  name = "github.com/bitrise-tools/go-xcode"
   branch = "master"
+  name = "github.com/bitrise-tools/go-xcode"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bitrise-tools/xcode-project"
 
 [[constraint]]
   name = "github.com/pkg/errors"
@@ -26,6 +31,11 @@
   name = "github.com/stretchr/testify"
   branch = "master"
 
+
 [[constraint]]
   name = "github.com/bitrise-core/bitrise-init"
-  version = "1.8.0"
+  master
+
+[prune]
+  go-tests = true
+  unused-packages = true

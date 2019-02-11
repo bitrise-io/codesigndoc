@@ -118,7 +118,7 @@ func (client *Client) GetUploadedProvisioningProfileUUIDby(profileSlug string) (
 		return "", err
 	}
 
-	data, err := profileutil.NewProvisioningProfileInfo(*plistData, profileutil.ProfileTypeIos)
+	data, err := profileutil.NewProvisioningProfileInfo(*plistData)
 	if err != nil {
 		return "", err
 	}
