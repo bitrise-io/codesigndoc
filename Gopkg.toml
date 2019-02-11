@@ -31,10 +31,9 @@
   name = "github.com/stretchr/testify"
   branch = "master"
 
-
 [[constraint]]
   name = "github.com/bitrise-core/bitrise-init"
-  master
+  branch = "master"
 
 [prune]
   go-tests = true

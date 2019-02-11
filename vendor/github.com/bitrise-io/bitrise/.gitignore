@@ -1,9 +1,0 @@
-_temp/
-_tmp/
-.bitrise
-.bitrise.secrets.yml
-_bin
-.envstore.yml
-_FAKE_HOME/
-.gows.user.yml
-.DS_Store
