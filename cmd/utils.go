@@ -9,16 +9,18 @@ import (
 	"github.com/bitrise-core/bitrise-init/utility"
 )
 
-// ProjectType ...
-type ProjectType int
+// projectType enum.
+// Could be iOSProjectType = 0
+// Or xamarinProjectType = 1
+type projectType int
 
 const (
-	iOSProjectType ProjectType = iota
+	iOSProjectType projectType = iota
 	xamarinProjectType
 )
 
 // Scans the root dir for the provided project files
-func scanForProjectFiles(projectType ProjectType) ([]string, error) {
+func scanForProjectFiles(projType projectType) ([]string, error) {
 	searchDir, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -31,7 +33,7 @@ func scanForProjectFiles(projectType ProjectType) ([]string, error) {
 
 	var paths []string
 	{
-		if projectType == iOSProjectType {
+		if projType == iOSProjectType {
 			paths, err = ios.FilterRelevantWorkspaceFiles(fileList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to search for workspace files, error: %s", err)
@@ -43,7 +45,7 @@ func scanForProjectFiles(projectType ProjectType) ([]string, error) {
 					return nil, fmt.Errorf("failed to search for project files, error: %s", err)
 				}
 			}
-		} else if projectType == xamarinProjectType {
+		} else if projType == xamarinProjectType {
 			paths, err = xamarin.FilterSolutionFiles(fileList)
 			if err != nil {
 				return nil, fmt.Errorf("failed to search for solution files, error: %s", err)
