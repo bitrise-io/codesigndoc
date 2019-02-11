@@ -80,17 +80,18 @@ the one you usually open in Xcode, then hit Enter.
 		if err != nil {
 			return "", fmt.Errorf("failed to read input: %s", err)
 		}
-	} else {
-		if len(projPaths) == 1 {
-			log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
-			projpth = projPaths[0]
-		} else {
-			log.Printf("Found multiple project file: %s.", path.Base(projpth))
-			projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
-			if err != nil {
-				return "", fmt.Errorf("failed to select project file: %s", err)
-			}
-		}
+		return projpth, err
+	}
+
+	if len(projPaths) == 1 {
+		log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
+		return projPaths[0], nil
+	}
+
+	log.Printf("Found multiple project file: %s.", path.Base(projpth))
+	projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
+	if err != nil {
+		return "", fmt.Errorf("failed to select project file: %s", err)
 	}
 
 	return projpth, nil
