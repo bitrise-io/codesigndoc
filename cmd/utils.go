@@ -3,10 +3,14 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/bitrise-core/bitrise-init/scanners/ios"
 	"github.com/bitrise-core/bitrise-init/scanners/xamarin"
 	"github.com/bitrise-core/bitrise-init/utility"
+	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/goinp/goinp"
 )
 
 // projectType enum.
@@ -59,4 +63,71 @@ func scanForProjectFiles(projType projectType) ([]string, error) {
 
 	}
 	return paths, nil
+}
+
+// findProject scans the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
+// If can't find any, ask the user to drag-and-drop the file
+func findXcodeProject() (string, error) {
+	var projpth string
+
+	projPaths, err := scanForProjectFiles(iOSProjectType)
+	if err != nil {
+		log.Printf("Failed: %s", err)
+		fmt.Println()
+
+		log.Infof("Provide the project file manually")
+		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
+the one you usually open in Xcode, then hit Enter.
+(Note: if you have a Workspace file you should most likely use that)`
+		projpth, err = goinp.AskForPath(askText)
+		if err != nil {
+			return "", fmt.Errorf("failed to read input: %s", err)
+		}
+		return projpth, err
+	}
+
+	if len(projPaths) == 1 {
+		log.Printf("Found one project file: %s.", path.Base(projPaths[0]))
+		return projPaths[0], nil
+	}
+
+	log.Printf("Found multiple project file: %s.", path.Base(projpth))
+	projpth, err = goinp.SelectFromStringsWithDefault("Select the project file you want to scan", 1, projPaths)
+	if err != nil {
+		return "", fmt.Errorf("failed to select project file: %s", err)
+	}
+
+	return projpth, nil
+}
+
+// findSolution scans the directory for Xamarin.Solution file first
+// If can't find any, ask the user to drag-and-drop the file
+func findXamarinSolution() (string, error) {
+	var solutionPth string
+	solPaths, err := scanForProjectFiles(xamarinProjectType)
+	if err != nil {
+		log.Printf("Failed: %s", err)
+		fmt.Println()
+
+		log.Infof("Provide the solution file manually")
+		askText := `Please drag-and-drop your Xamarin Solution (` + colorstring.Green(".sln") + `) file,
+and then hit Enter`
+		solutionPth, err = goinp.AskForPath(askText)
+		if err != nil {
+			return "", fmt.Errorf("failed to read input: %s", err)
+		}
+	} else {
+		if len(solPaths) == 1 {
+			log.Printf("Found one solution file: %s.", path.Base(solPaths[0]))
+			solutionPth = solPaths[0]
+		} else {
+			log.Printf("Found multiple solution file: %s.", path.Base(solutionPth))
+			solutionPth, err = goinp.SelectFromStringsWithDefault("Select the solution file you want to scan", 1, solPaths)
+			if err != nil {
+				return "", fmt.Errorf("failed to select solution file: %s", err)
+			}
+		}
+	}
+
+	return solutionPth, nil
 }
