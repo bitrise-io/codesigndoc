@@ -50,18 +50,20 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
-		askText := `Please drag-and-drop your Xcode Project (` + colorstring.Green(".xcodeproj") + `) or Workspace (` + colorstring.Green(".xcworkspace") + `) file, 
-the one you usually open in Xcode, then hit Enter.
-(Note: if you have a Workspace file you should most likely use that)`
-		projpth, err := goinp.AskForPath(askText)
+		log.Infof("Scan the directory for project files")
+		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
+
+		//
+		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
+		// If can't find any, ask the user to drag-and-drop the file
+		projpth, err := findXcodeProject()
 		if err != nil {
-			return fmt.Errorf("failed to read input: %s", err)
+			return err
 		}
 
 		projectPath = strings.Trim(strings.TrimSpace(projpth), "'\"")
 	}
 	log.Debugf("projectPath: %s", projectPath)
-
 	xcodeUITestsCmd := xcodeuitest.CommandModel{ProjectFilePath: projectPath}
 
 	schemeToUse := paramXcodeScheme
