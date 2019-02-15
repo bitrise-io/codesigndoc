@@ -83,7 +83,8 @@ the one you usually open in Xcode, then hit Enter.
 		if err != nil {
 			return "", fmt.Errorf("failed to read input: %s", err)
 		}
-		return projpth, err
+
+		return projpth, nil
 	}
 
 	if len(projPaths) == 1 {
