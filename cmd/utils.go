@@ -117,17 +117,19 @@ and then hit Enter`
 		if err != nil {
 			return "", fmt.Errorf("failed to read input: %s", err)
 		}
-	} else {
-		if len(solPaths) == 1 {
-			log.Printf("Found one solution file: %s.", path.Base(solPaths[0]))
-			solutionPth = solPaths[0]
-		} else {
-			log.Printf("Found multiple solution file: %s.", path.Base(solutionPth))
-			solutionPth, err = goinp.SelectFromStringsWithDefault("Select the solution file you want to scan", 1, solPaths)
-			if err != nil {
-				return "", fmt.Errorf("failed to select solution file: %s", err)
-			}
-		}
+
+		return solutionPth, nil
+	}
+
+	if len(solPaths) == 1 {
+		log.Printf("Found one solution file: %s.", path.Base(solPaths[0]))
+		return solPaths[0], nil
+	}
+
+	log.Printf("Found multiple solution file: %s.", path.Base(solutionPth))
+	solutionPth, err = goinp.SelectFromStringsWithDefault("Select the solution file you want to scan", 1, solPaths)
+	if err != nil {
+		return "", fmt.Errorf("failed to select solution file: %s", err)
 	}
 
 	return solutionPth, nil
