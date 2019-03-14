@@ -25,17 +25,61 @@ What this tool does:
 Just open up your `Terminal.app` on OS X, copy-paste this into it and hit Enter
 to run:
 
-For `Xcode` project (project or workspace):
+#### Xcode
+<details><summary>For Archiving & Exporting IPA for `Xcode` project (project or workspace):</summary>
+<p>
 
+Exporting the code signing files of the App target and it's dependent targets for the Archive and IPA generation (e.g: [Xcode Archive & Export for iOS](https://github.com/bitrise-io/steps-xcode-archive) step will need them):
 ```
 bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
 ```
+</p>
+</details>
 
-For `Xamarin` project (solution):
+
+<details><summary>For UI testing on real device for `Xcode` project (project or workspace) e.g: Xcode Build for testing for iOS & iOS Device Testing:</summary>
+<p>
+
+_Note: For UI testing you will need the code signing files for the App target and it's dependent targets and for the UI test targets too._\
+_So you will need to run the `install_wrap-xcode.sh ` and the `install_wrap-xcode-uitests.sh` as well._
+
+
+First you need to export the code signing files of the App target and it's dependent targets:
+```
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
+```
+---
+Secondly you need to export the code signing files of the UI test targets:
+
+```
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode-uitests.sh)"
+```
+
+If the UITest scanner cannot find the desired scheme, follow these steps:
+
+1. Make sure your scheme is valid for running a UITest.
+     - It has to contain a UITest target that is enabled to run.
+
+2. Refresh your project settings:
+     - Select the Generic iOS Device target for your scheme in Xcode.
+     - Clean your project: ⌘ Cmd + ↑ Shift + K.
+     - Run a build for testing: ⌘ Cmd + ↑ Shift + U.
+     - Run codesigndoc again.
+</p>
+</details>
+
+
+#### Xamarin
+<details><summary>For Archiving & Exporting IPA for `Xamarin` project (solution):</summary>
+<p>
 
 ```
 bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xamarin.sh)"
 ```
+</p>
+</details>
+
+----
 
 ### Manual install & run
 
@@ -49,6 +93,7 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesign
 3. run the `scan` command of the tool
    * if you followed the previous examples:
      * Xcode project scanner: `./codesigndoc scan xcode`
+     * Xcode project scanner for UI test targets: `./codesigndoc scan xcodeuitests`
      * Xamarin project scanner: `./codesigndoc scan xamarin`
 
 ## Manually finding the required base code signing files for an Xcode project or workspace
@@ -96,6 +141,18 @@ means that Xcode had to switch between code signing configurations to be able to
 create your archive. **All of the listed certificates & provisioning profiles
 have to be available to create an archive of your project** with your current
 code signing settings.
+
+## Troubleshooting the UITest scanner
+If the UITest scanner cannot find the desired scheme, follow these steps:
+
+1. Make sure your scheme is valid for running a UITest.
+     - It has to contain a UITest target that is enabled to run.
+
+2. Refresh your project settings:
+     - Select the Generic iOS Device target for your scheme in Xcode.
+     - Clean your project: ⌘ Cmd + ↑ Shift + K.
+     - Run a build for testing: ⌘ Cmd + ↑ Shift + U.
+     - Run codesigndoc again.
 
 ## Development
 
