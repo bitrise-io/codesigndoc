@@ -40,20 +40,25 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesign
 <details><summary>For UI testing on real device for `Xcode` project (project or workspace) e.g: Xcode Build for testing for iOS & iOS Device Testing:</summary>
 <p>
 
-_Note: For UI testing you will need the code signing files for the App target and it's dependent targets and for the UI test targets too._\
+---
+
+_Note: For UI testing you will need the code signing files for the App target and it's dependent targets and for the UI test targets too._
 _So you will need to run the `install_wrap-xcode.sh ` and the `install_wrap-xcode-uitests.sh` as well._
 
+---
 
 First you need to export the code signing files of the App target and it's dependent targets:
 ```
 bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
 ```
----
+
 Secondly you need to export the code signing files of the UI test targets:
 
 ```
 bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode-uitests.sh)"
 ```
+
+---
 
 If the UITest scanner cannot find the desired scheme, follow these steps:
 
