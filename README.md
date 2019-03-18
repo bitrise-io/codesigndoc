@@ -26,7 +26,7 @@ Just open up your `Terminal.app` on OS X, copy-paste this into it and hit Enter
 to run:
 
 #### Xcode
-<details><summary>For Archiving & Exporting IPA for `Xcode` project (project or workspace):</summary>
+<details ><summary>For Archiving & Exporting IPA for <code>Xcode</code> project (project or workspace):</summary>
 <p>
 
 Exporting the code signing files of the App target and it's dependent targets for the Archive and IPA generation (e.g: [Xcode Archive & Export for iOS](https://github.com/bitrise-io/steps-xcode-archive) step will need them):
@@ -37,7 +37,7 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesign
 </details>
 
 
-<details><summary>For UI testing on real device for `Xcode` project (project or workspace) e.g: Xcode Build for testing for iOS & iOS Device Testing:</summary>
+<details><summary>For UI testing on real device for <code>Xcode</code> project (project or workspace) e.g: <a href="https://github.com/bitrise-steplib/steps-xcode-build-for-test">Xcode Build for testing for iOS</a> & <a href="https://github.com/bitrise-steplib/steps-virtual-device-testing-for-ios">iOS Device Testing</a>:</summary>
 <p>
 
 ---
@@ -75,7 +75,7 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 
 
 #### Xamarin
-<details><summary>For Archiving & Exporting IPA for `Xamarin` project (solution):</summary>
+<details><summary>For Archiving & Exporting IPA for <code>Xamarin</code> project (solution):</summary>
 <p>
 
 ```
