@@ -184,7 +184,7 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 	C.CFDictionaryAddValue(queryDict, unsafe.Pointer(C.kSecReturnRef), unsafe.Pointer(C.kCFBooleanTrue))
 
 	var resultRefs C.CFTypeRef
-	osStatusCode := C.SecItemCopyMatching((_Ctype_CFDictionaryRef)(queryDict), &resultRefs)
+	osStatusCode := C.SecItemCopyMatching((C.CFDictionaryRef)(queryDict), &resultRefs)
 	if osStatusCode != C.errSecSuccess {
 		return nil, fmt.Errorf("Failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
 	}
