@@ -109,7 +109,7 @@ func NewIosWatchApplication(path string) (IosWatchApplication, error) {
 	}
 
 	extensions := []IosExtension{}
-	pattern := filepath.Join(path, "PlugIns/*.appex")
+	pattern := filepath.Join(utility.EscapeGlobPath(path), "PlugIns/*.appex")
 	pths, err := filepath.Glob(pattern)
 	if err != nil {
 		return IosWatchApplication{}, fmt.Errorf("failed to search for watch application's extensions using pattern: %s, error: %s", pattern, err)
@@ -145,7 +145,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 
 	var watchApp *IosWatchApplication
 	{
-		pattern := filepath.Join(path, "Watch/*.app")
+		pattern := filepath.Join(utility.EscapeGlobPath(path), "Watch/*.app")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return IosApplication{}, err
@@ -162,7 +162,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 
 	extensions := []IosExtension{}
 	{
-		pattern := filepath.Join(path, "PlugIns/*.appex")
+		pattern := filepath.Join(utility.EscapeGlobPath(path), "PlugIns/*.appex")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return IosApplication{}, fmt.Errorf("failed to search for watch application's extensions using pattern: %s, error: %s", pattern, err)
@@ -210,17 +210,19 @@ func NewIosArchive(path string) (IosArchive, error) {
 
 	application := IosApplication{}
 	{
-		pattern := filepath.Join(path, "Products/Applications/*.app")
-		pths, err := filepath.Glob(pattern)
-		if err != nil {
-			return IosArchive{}, err
-		}
-
 		appPath := ""
-		if len(pths) > 0 {
-			appPath = pths[0]
+		if appRelativePathToProducts, found := applicationFromPlist(infoPlist); found {
+			appPath = filepath.Join(path, "Products", appRelativePathToProducts)
 		} else {
-			return IosArchive{}, fmt.Errorf("failed to find main app, using pattern: %s", pattern)
+			var err error
+			if appPath, err = applicationFromArchive(path); err != nil {
+				return IosArchive{}, err
+			}
+		}
+		if exist, err := pathutil.IsPathExists(appPath); err != nil {
+			return IosArchive{}, fmt.Errorf("failed to check if app exists, path: %s, error: %s", appPath, err)
+		} else if !exist {
+			return IosArchive{}, fmt.Errorf("application not found on path: %s, error: %s", appPath, err)
 		}
 
 		app, err := NewIosApplication(appPath)
@@ -237,6 +239,25 @@ func NewIosArchive(path string) (IosArchive, error) {
 	}, nil
 }
 
+func applicationFromPlist(InfoPlist plistutil.PlistData) (string, bool) {
+	if properties, found := InfoPlist.GetMapStringInterface("ApplicationProperties"); found {
+		return properties.GetString("ApplicationPath")
+	}
+	return "", false
+}
+
+func applicationFromArchive(path string) (string, error) {
+	pattern := filepath.Join(utility.EscapeGlobPath(path), "Products/Applications/*.app")
+	pths, err := filepath.Glob(pattern)
+	if err != nil {
+		return "", err
+	}
+	if len(pths) == 0 {
+		return "", fmt.Errorf("failed to find main app, using pattern: %s", pattern)
+	}
+	return pths[0], nil
+}
+
 // IsXcodeManaged ...
 func (archive IosArchive) IsXcodeManaged() bool {
 	return archive.Application.ProvisioningProfile.IsXcodeManaged()
@@ -244,8 +265,7 @@ func (archive IosArchive) IsXcodeManaged() bool {
 
 // SigningIdentity ...
 func (archive IosArchive) SigningIdentity() string {
-	properties, found := archive.InfoPlist.GetMapStringInterface("ApplicationProperties")
-	if found {
+	if properties, found := archive.InfoPlist.GetMapStringInterface("ApplicationProperties"); found {
 		identity, _ := properties.GetString("SigningIdentity")
 		return identity
 	}
