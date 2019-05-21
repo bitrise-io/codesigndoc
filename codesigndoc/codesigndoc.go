@@ -4,17 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/bitrise-io/go-utils/command"
-	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/goinp/goinp"
 	"github.com/bitrise-io/codesigndoc/bitriseio"
 	"github.com/bitrise-io/codesigndoc/codesign"
+	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/export"
 	"github.com/bitrise-io/go-xcode/profileutil"
 	"github.com/bitrise-io/go-xcode/xcarchive"
+	"github.com/bitrise-io/goinp/goinp"
 )
 
 const collectCodesigningFilesInfo = `To collect available code sign files, we search for installed Provisioning Profiles:"
@@ -73,15 +72,23 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
+	// export code sign settings
+	fmt.Println()
+	fmt.Println()
+	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
+
+	identities, err := codesign.CollectAndExportIdentitiesAsReader(certificatesToExport, askForPassword)
+	if err != nil {
+		return false, false, err
+	}
+
+	provisioningProfiles, err := codesign.CollectAndExportProvisioningProfilesAsReader(profilesToExport)
+	if err != nil {
+		return false, false, err
+	}
+
 	// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 	// Used to upload artifacts from as part of an other CLI tool
-	if strings.TrimSpace(personalAccessToken) != "" {
-		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, certificatesOnly, outputDirPath)
-		if err != nil {
-			return false, false, err
-		}
-		return certsUploaded, provProfilesUploaded, nil
-	}
 
 	// export code sign settings
 	fmt.Println()

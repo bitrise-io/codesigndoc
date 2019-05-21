@@ -1,11 +1,9 @@
 package osxkeychain
 
 import (
-	"bytes"
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"io"
 	"unsafe"
 
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -84,7 +82,7 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 }
 
 // ExportFromKeychainToBuffer ...
-func ExportFromKeychainToBuffer(itemRefsToExport []C.CFTypeRef, outputFilePath string, isAskForPassword bool) (io.Reader, error) {
+func ExportFromKeychainToBuffer(itemRefsToExport []C.CFTypeRef, isAskForPassword bool) ([]byte, error) {
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
 
@@ -136,7 +134,7 @@ func ExportFromKeychainToBuffer(itemRefsToExport []C.CFTypeRef, outputFilePath s
 	}
 	log.Debugf("Export - success")
 
-	return bytes.NewReader(dataBytes), nil
+	return dataBytes, nil
 }
 
 func convertCFDataRefToGoBytes(cfdata C.CFDataRef) []byte {

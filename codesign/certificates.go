@@ -17,6 +17,12 @@ const (
 	MacOSInstallerCertificate
 )
 
+// Certificates contains all of the certificates as io.Reader, besides an array of the certificate infos
+type Certificates struct {
+	Certificates []certificateutil.CertificateInfoModel
+	Contents     []byte
+}
+
 var (
 	iOSCertificateNames = []string{
 		"iPhone Developer",    //type: "iOS Development"

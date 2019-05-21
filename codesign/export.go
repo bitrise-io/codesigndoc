@@ -4,11 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"path/filepath"
 
+	"github.com/bitrise-io/codesigndoc/osxkeychain"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/codesigndoc/osxkeychain"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
 )
@@ -73,10 +74,10 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	return nil
 }
 
-// CollectAndExportIdentitiesAsReader exports the given certificates into the given directory as a single .p12 file
-func CollectAndExportIdentitiesAsReader(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (io.Reader, error) {
+// CollectAndExportIdentitiesAsReader exports the given certificates merged in a single .p12 file, as an io.Reader
+func CollectAndExportIdentitiesAsReader(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (Certificates, error) {
 	if len(certificates) == 0 {
-		return nil, nil
+		return Certificates{}, nil
 	}
 
 	fmt.Println()
@@ -96,11 +97,11 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 		log.Printf("searching for Identity: %s", certificate.CommonName)
 		identityRef, err := osxkeychain.FindAndValidateIdentity(certificate.CommonName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to export, error: %s", err)
+			return Certificates{}, fmt.Errorf("failed to export, error: %s", err)
 		}
 
 		if identityRef == nil {
-			return nil, errors.New("identity not found in the keychain, or it was invalid (expired)")
+			return Certificates{}, errors.New("identity not found in the keychain, or it was invalid (expired)")
 		}
 
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
@@ -126,11 +127,25 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
 	fmt.Println()
 
-	identities, err := osxkeychain.ExportFromKeychain(identityKechainRefs, isAskForPassword)
+	identities, err := osxkeychain.ExportFromKeychainToBuffer(identityKechainRefs, isAskForPassword)
 	if err != nil {
-		return nil, fmt.Errorf("failed to export from Keychain: %s", err)
+		return Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
-	return identities, nil
+	return Certificates{
+		Certificates: certificates,
+		Contents:     identities,
+	}, nil
+}
+
+// WriteIdentities writes identities to a file path
+func WriteIdentities(identites io.Reader, absExportOutputDirPath string) error {
+	var contents []byte
+	if _, err := identites.Read(contents); err != nil {
+		return fmt.Errorf("failed to read identities, error: %s", err)
+	}
+
+	ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), contents, 0666)
+	return nil
 }
 
 // CollectAndExportProvisioningProfiles copies the give profiles into the given directory
@@ -163,5 +178,60 @@ func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 		}
 	}
 
+	return nil
+}
+
+// CollectAndExportProvisioningProfilesAsReader returns provisioning profies as an io.Reader array
+func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
+	if len(profiles) == 0 {
+		return nil, nil
+	}
+
+	log.Infof("Required Provisioning Profiles (%d)", len(profiles))
+	for _, profile := range profiles {
+		log.Printf("- %s (UUID: %s)", profile.Name, profile.UUID)
+	}
+
+	fmt.Println()
+	log.Infof("Exporting Provisioning Profiles...")
+
+	var exportedProfiles []profileutil.ProvisioningProfileInfoModel
+	for _, profile := range profiles {
+		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
+		provisioningProfile, pth, err := profileutil.FindProvisioningProfile(profile.UUID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to find Provisioning Profile: %s", err)
+		}
+		log.Printf("file found at: %s", pth)
+		exportedProfile, err := profileutil.NewProvisioningProfileInfo(*provisioningProfile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
+		}
+		exportedProfiles = append(exportedProfiles, exportedProfile)
+	}
+
+	return exportedProfiles, nil
+}
+
+// WriteProvisioningProfiles writes provisioning profiles to the filesystem
+func WriteProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel, absExportOutputDirPath string) error {
+	fmt.Println()
+	log.Infof("Exporting Provisioning Profiles...")
+
+	for _, profile := range profiles {
+		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
+		_, pth, err := profileutil.FindProvisioningProfileInfo(profile.UUID)
+		if err != nil {
+			return fmt.Errorf("failed to find Provisioning Profile: %s", err)
+		}
+
+		log.Printf("file found at: %s", pth)
+
+		exportFileName := profileExportFileName(profile, pth)
+		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
+		if err := command.RunCommand("cp", pth, exportPth); err != nil {
+			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s", pth, exportPth, err)
+		}
+	}
 	return nil
 }
