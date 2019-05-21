@@ -51,7 +51,7 @@ func (e ArchiveError) Error() string {
 First of all ` + colorstring.Red("please make sure that you can Archive your app from "+e.tool+".") + `
 codesigndoc only works if you can archive your app from ` + string(e.tool) + `.
 If you can, and you get a valid .ipa/.app file if you export from ` + string(e.tool) + `,
-` + colorstring.Red("please create an issue") + ` on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues
+` + colorstring.Red("please create an issue") + ` on GitHub at: https://github.com/bitrise-io/codesigndoc/issues
 with as many details & logs as you can share!
 ------------------------------
 
@@ -76,7 +76,7 @@ First of all, check the selected scheme in ` + string(e.tool) + `:
 After this ` + colorstring.Red("please make sure that you can run build-for-testing for your app from "+e.tool+".") + `
 codesigndoc only works if you can run build-for-testing for your app from ` + string(e.tool) + `.
 For this run a ` + colorstring.Red("clean") + ` in your ` + string(e.tool) + `, after that, run a ` + colorstring.Red("build-for-testing") + ` for your app in ` + string(e.tool) + `.
-If you can, and you get a valid *-Runner.app file, ` + colorstring.Red("please create an issue") + ` on GitHub at: https://github.com/bitrise-tools/codesigndoc/issues
+If you can, and you get a valid *-Runner.app file, ` + colorstring.Red("please create an issue") + ` on GitHub at: https://github.com/bitrise-io/codesigndoc/issues
 with as many details & logs as you can share!
 ------------------------------
 `

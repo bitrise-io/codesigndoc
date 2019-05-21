@@ -11,9 +11,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/bitriseio/bitrise"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/codesigndoc/bitriseio/bitrise"
+	"github.com/bitrise-io/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // UploadCodesigningFiles ...

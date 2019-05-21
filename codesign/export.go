@@ -8,9 +8,9 @@ import (
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-tools/codesigndoc/osxkeychain"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/codesigndoc/osxkeychain"
+	"github.com/bitrise-io/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // CollectAndExportIdentities exports the given certificates into the given directory as a single .p12 file

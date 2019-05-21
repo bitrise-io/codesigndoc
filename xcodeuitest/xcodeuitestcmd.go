@@ -11,9 +11,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
-	"github.com/bitrise-tools/xcode-project/xcodeproj"
-	"github.com/bitrise-tools/xcode-project/xcscheme"
-	"github.com/bitrise-tools/xcode-project/xcworkspace"
+	"github.com/bitrise-io/xcode-project/xcodeproj"
+	"github.com/bitrise-io/xcode-project/xcscheme"
+	"github.com/bitrise-io/xcode-project/xcworkspace"
 )
 
 // CommandModel ...

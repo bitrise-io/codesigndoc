@@ -1,8 +1,8 @@
 package codesigndoc
 
 import (
-	"github.com/bitrise-tools/go-xcode/plistutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/plistutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // Archive ...

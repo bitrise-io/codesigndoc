@@ -9,12 +9,12 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesign"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/export"
-	"github.com/bitrise-tools/go-xcode/exportoptions"
-	"github.com/bitrise-tools/go-xcode/profileutil"
-	"github.com/bitrise-tools/go-xcode/xcarchive"
+	"github.com/bitrise-io/codesigndoc/codesign"
+	"github.com/bitrise-io/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/export"
+	"github.com/bitrise-io/go-xcode/exportoptions"
+	"github.com/bitrise-io/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/xcarchive"
 )
 
 // extractCertificatesAndProfiles returns the certificates and provisioning profiles of the given codesign group

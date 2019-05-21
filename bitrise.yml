@@ -4,7 +4,7 @@ default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 app:
   envs:
   - BITRISE_BIN_NAME: codesigndoc
-  - GITHUB_RELEASES_URL: https://github.com/bitrise-tools/${BITRISE_BIN_NAME}/releases
+  - GITHUB_RELEASES_URL: https://github.com/bitrise-io/${BITRISE_BIN_NAME}/releases
 
 workflows:
   test:  

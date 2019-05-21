@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/bitrise-tools/codesigndoc/version"
+	"github.com/bitrise-io/codesigndoc/version"
 	"github.com/spf13/cobra"
 )
 

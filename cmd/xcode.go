@@ -11,9 +11,9 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesigndoc"
-	"github.com/bitrise-tools/codesigndoc/xcode"
-	"github.com/bitrise-tools/go-xcode/utility"
+	"github.com/bitrise-io/codesigndoc/codesigndoc"
+	"github.com/bitrise-io/codesigndoc/xcode"
+	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/spf13/cobra"
 )
 

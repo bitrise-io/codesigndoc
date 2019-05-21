@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // profileExportFileName creates a file name for the given profile with pattern: uuid.escaped_profile_name.[mobileprovision|provisionprofile]

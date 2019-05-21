@@ -6,7 +6,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // RegisterProvisioningProfileData ...

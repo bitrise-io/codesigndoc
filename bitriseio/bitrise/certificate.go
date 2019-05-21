@@ -7,7 +7,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/certificateutil"
 )
 
 // RegisterIdentityData ...

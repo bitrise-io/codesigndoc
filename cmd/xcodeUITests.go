@@ -9,9 +9,9 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesigndocuitests"
-	"github.com/bitrise-tools/codesigndoc/xcodeuitest"
-	"github.com/bitrise-tools/go-xcode/utility"
+	"github.com/bitrise-io/codesigndoc/codesigndocuitests"
+	"github.com/bitrise-io/codesigndoc/xcodeuitest"
+	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/spf13/cobra"
 )
 
