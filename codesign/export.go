@@ -3,6 +3,7 @@ package codesign
 import (
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/command"
@@ -70,6 +71,66 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	}
 
 	return nil
+}
+
+// CollectAndExportIdentitiesAsReader exports the given certificates into the given directory as a single .p12 file
+func CollectAndExportIdentitiesAsReader(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (io.Reader, error) {
+	if len(certificates) == 0 {
+		return nil, nil
+	}
+
+	fmt.Println()
+	fmt.Println()
+	log.Infof("Required Identities/Certificates (%d)", len(certificates))
+	for _, certificate := range certificates {
+		log.Printf("- %s", certificate.CommonName)
+	}
+
+	fmt.Println()
+	log.Infof("Exporting the Identities (Certificates):")
+
+	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
+	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
+
+	for _, certificate := range certificates {
+		log.Printf("searching for Identity: %s", certificate.CommonName)
+		identityRef, err := osxkeychain.FindAndValidateIdentity(certificate.CommonName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to export, error: %s", err)
+		}
+
+		if identityRef == nil {
+			return nil, errors.New("identity not found in the keychain, or it was invalid (expired)")
+		}
+
+		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
+	}
+
+	identityKechainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
+	for _, aIdentityWithRefItm := range identitiesWithKeychainRefs {
+		fmt.Println("exporting Identity:", aIdentityWithRefItm.Label)
+		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
+	}
+
+	fmt.Println()
+	if isAskForPassword {
+		log.Infof("Exporting from Keychain")
+		log.Warnf(" You'll be asked to provide a Passphrase for the .p12 file!")
+	} else {
+		log.Warnf("Exporting from Keychain using empty Passphrase...")
+		log.Printf("This means that if you want to import the file the passphrase at import should be left empty,")
+		log.Printf("you don't have to type in anything, just leave the passphrase input empty.")
+	}
+	fmt.Println()
+	log.Warnf("You'll most likely see popups one for each Identity from Keychain,")
+	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
+	fmt.Println()
+
+	identities, err := osxkeychain.ExportFromKeychain(identityKechainRefs, isAskForPassword)
+	if err != nil {
+		return nil, fmt.Errorf("failed to export from Keychain: %s", err)
+	}
+	return identities, nil
 }
 
 // CollectAndExportProvisioningProfiles copies the give profiles into the given directory

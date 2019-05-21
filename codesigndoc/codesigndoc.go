@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
@@ -70,6 +71,16 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
 	if err != nil {
 		return false, false, err
+	}
+
+	// Upload automatically if token is provided as CLI paramter, do not export to filesystem
+	// Used to upload artifacts from as part of an other CLI tool
+	if strings.TrimSpace(personalAccessToken) != "" {
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, certificatesOnly, outputDirPath)
+		if err != nil {
+			return false, false, err
+		}
+		return certsUploaded, provProfilesUploaded, nil
 	}
 
 	// export code sign settings
