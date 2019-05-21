@@ -18,16 +18,16 @@ and export the require code signing files.`,
 }
 
 var (
-	isAllowExport    = false
-	isAskForPassword = false
-	certificatesOnly = false
+	isAskForPassword    bool
+	certificatesOnly    bool
+	personalAccessToken string
 )
 
 func init() {
 	RootCmd.AddCommand(scanCmd)
-	scanCmd.PersistentFlags().BoolVar(&isAllowExport, "allow-export", false, "Automatically allow export of discovered files")
 	scanCmd.PersistentFlags().BoolVar(&isAskForPassword, "ask-pass", false, "Ask for .p12 password, instead of using an empty password")
 	scanCmd.PersistentFlags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
+	scanCmd.PersistentFlags().String("token", &personalAccessToken, "Personal access token. If provided, will automatically upload artifacts to bitrise.io.")
 }
 
 // Tool ...
