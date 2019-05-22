@@ -6,16 +6,16 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/bitrise-io/codesigndoc/codesigndoc"
+	"github.com/bitrise-io/codesigndoc/xamarin"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-io/codesigndoc/codesigndoc"
-	"github.com/bitrise-io/codesigndoc/xamarin"
 	"github.com/bitrise-io/go-xamarin/analyzers/project"
 	"github.com/bitrise-io/go-xamarin/analyzers/solution"
 	"github.com/bitrise-io/go-xamarin/builder"
 	"github.com/bitrise-io/go-xamarin/constants"
+	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
 
@@ -179,7 +179,14 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath,
+		absExportOutputDirPath,
+		certificatesOnly,
+		isAskForPassword,
+		codesigndoc.UploadConfig{
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
+		})
 	if err != nil {
 		return err
 	}

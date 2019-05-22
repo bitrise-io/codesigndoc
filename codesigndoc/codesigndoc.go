@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/bitrise-io/codesigndoc/bitriseio/bitrise"
 
 	"github.com/bitrise-io/codesigndoc/bitriseio"
 	"github.com/bitrise-io/codesigndoc/codesign"
@@ -23,9 +26,20 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 - which matches to the selected export method"
 `
 
+// UploadConfig contains configuration to automatically upload artifacts to bitrise.io
+type UploadConfig struct {
+	PersonalAccessToken string
+	AppSlug             string
+}
+
+func (config *UploadConfig) isValid() bool {
+	return (strings.TrimSpace(config.PersonalAccessToken) != "") &&
+		(strings.TrimSpace(config.AppSlug) != "")
+}
+
 // ExportCodesignFiles exports the codesigning files required to create an xcode archive
 // and exports the codesigning files for the specified export method
-func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly bool, askForPassword bool) (bool, bool, error) {
+func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly bool, askForPassword bool, uploadConfig UploadConfig) (bool, bool, error) {
 	// Find out the XcArchive type
 	isMacOs, err := xcarchive.IsMacOS(archivePath)
 	if err != nil {
@@ -87,20 +101,17 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
-	// Upload automatically if token is provided as CLI paramter, do not export to filesystem
-	// Used to upload artifacts from as part of an other CLI tool
+	log.Warnf("UploadConfig %+v", uploadConfig)
+	if uploadConfig.isValid() {
+		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
+		// Used to upload artifacts as part of an other CLI tool
+		client, err := bitrise.NewClientAsStream(uploadConfig.PersonalAccessToken)
+		if err != nil {
+			return false, false, err
+		}
+		client.SetSelectedAppSlug(uploadConfig.AppSlug)
 
-	// export code sign settings
-	fmt.Println()
-	fmt.Println()
-	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
-
-	if err := codesign.CollectAndExportIdentities(certificatesToExport, outputDirPath, askForPassword); err != nil {
-		return false, false, err
-	}
-
-	if err := codesign.CollectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
-		return false, false, err
+		return bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles, certificatesOnly)
 	}
 
 	provProfilesUploaded := (len(profilesToExport) == 0)
@@ -127,6 +138,12 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		}
 	}
 
+	if err := codesign.WriteIdentities(identities.Contents, outputDirPath); err != nil {
+		return false, false, err
+	}
+	if err := codesign.WriteProvisioningProfiles(provisioningProfiles, outputDirPath); err != nil {
+		return false, false, err
+	}
 	fmt.Println()
 	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
 

@@ -3,7 +3,6 @@ package codesign
 import (
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -138,14 +137,8 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 }
 
 // WriteIdentities writes identities to a file path
-func WriteIdentities(identites io.Reader, absExportOutputDirPath string) error {
-	var contents []byte
-	if _, err := identites.Read(contents); err != nil {
-		return fmt.Errorf("failed to read identities, error: %s", err)
-	}
-
-	ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), contents, 0666)
-	return nil
+func WriteIdentities(identites []byte, absExportOutputDirPath string) error {
+	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identites, 0666)
 }
 
 // CollectAndExportProvisioningProfiles copies the give profiles into the given directory

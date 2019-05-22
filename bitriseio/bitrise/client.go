@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -119,6 +120,64 @@ func NewClient(accessToken string) (*Client, []Application, error) {
 	return client, apps, nil
 }
 
+// NewClientAsStream ...
+func NewClientAsStream(accessToken string) (*Client, error) {
+	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
+	return client, nil
+}
+
+// GetAppList returns the list of apps for the given access token
+func (client *Client) GetAppList() ([]Application, error) {
+	var apps []Application
+
+	log.Infof("Fetching your application list from Bitrise...")
+
+	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debugf("\nRequest URL: %s", requestURL)
+
+	// Response struct
+	var appListResponse MyAppsResponse
+	stillPaging := true
+	var next string
+
+	for stillPaging {
+		headers := client.headers
+
+		request, err := createRequest(http.MethodGet, requestURL, headers, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(next) > 0 {
+			quearryValues := request.URL.Query()
+			quearryValues.Add("next", next)
+			request.URL.RawQuery = quearryValues.Encode()
+		}
+
+		// Perform request
+		response, _, err := RunRequest(client, request, &appListResponse)
+		if err != nil {
+			return nil, err
+		}
+
+		appListResponse = *response.(*MyAppsResponse)
+		apps = append(apps, appListResponse.Data...)
+
+		if len(appListResponse.Paging.Next) > 0 {
+			next = appListResponse.Paging.Next
+			appListResponse = MyAppsResponse{}
+		} else {
+			stillPaging = false
+		}
+	}
+
+	return apps, nil
+}
+
 // SetSelectedAppSlug ...
 func (client *Client) SetSelectedAppSlug(slug string) {
 	client.selectedAppSlug = slug
@@ -172,6 +231,16 @@ func createUploadRequest(requestMethod string, url string, headers map[string]st
 	}
 
 	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(content))
+	if err != nil {
+		return nil, err
+	}
+	addHeaders(req, headers)
+
+	return req, nil
+}
+
+func createUploadRequestAsStream(requestMethod string, url string, headers map[string]string, content io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodPut, url, content)
 	if err != nil {
 		return nil, err
 	}

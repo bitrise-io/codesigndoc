@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/codesigndoc/codesigndoc"
+	"github.com/bitrise-io/codesigndoc/xcode"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-io/codesigndoc/codesigndoc"
-	"github.com/bitrise-io/codesigndoc/xcode"
 	"github.com/bitrise-io/go-xcode/utility"
+	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
 
@@ -29,9 +29,12 @@ var xcodeCmd = &cobra.Command{
 }
 
 var (
-	paramXcodeProjectFilePath = ""
-	paramXcodeScheme          = ""
-	paramXcodebuildSDK        = ""
+	paramXcodeProjectFilePath string
+	paramXcodeScheme          string
+	paramXcodebuildSDK        string
+	personalAccessToken       string
+	appSlug                   string
+	exportToDirectory         bool
 )
 
 func init() {
@@ -40,6 +43,10 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
+	// Flags used to automatically upload artifacts
+	xcodeCmd.Flags().BoolVar(&exportToDirectory, "output-files", true, "Set wether to export artifacts to a local directory.")
+	xcodeCmd.Flags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. In case app-slug parameter is also provided, will automatically upload artifacts to bitrise.io.")
+	xcodeCmd.Flags().StringVar(&appSlug, "app-slug", "", "App Slug. In case auth-token parameter is also provided, will automatically upload artifacts to bitrise.io.")
 }
 
 func initExportOutputDir() (string, error) {
@@ -151,7 +158,14 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath,
+		absExportOutputDirPath,
+		certificatesOnly,
+		isAskForPassword,
+		codesigndoc.UploadConfig{
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
+		})
 	if err != nil {
 		return err
 	}

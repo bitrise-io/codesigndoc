@@ -1,6 +1,7 @@
 package bitrise
 
 import (
+	"io"
 	"math/big"
 	"net/http"
 	"path/filepath"
@@ -223,6 +224,22 @@ func (client *Client) UploadIdentity(uploadURL string, uploadFileName string, ou
 	filePth := filepath.Join(outputDirPath, exportFileName)
 
 	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = RunRequest(client, request, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// UploadIdentityAsStream ...
+func (client *Client) UploadIdentityAsStream(uploadURL string, uploadFileName string, exportFileName string, content io.Reader) error {
+	log.Printf("Upload %s to Bitrise...", exportFileName)
+
+	request, err := createUploadRequestAsStream(http.MethodPut, uploadURL, nil, content)
 	if err != nil {
 		return err
 	}

@@ -5,13 +5,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/codesigndoc/codesigndoc"
+
+	"github.com/bitrise-io/codesigndoc/codesigndocuitests"
+	"github.com/bitrise-io/codesigndoc/xcodeuitest"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-io/codesigndoc/codesigndocuitests"
-	"github.com/bitrise-io/codesigndoc/xcodeuitest"
 	"github.com/bitrise-io/go-xcode/utility"
+	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
 
@@ -133,7 +135,14 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	certsUploaded, provProfilesUploaded, err := codesigndocuitests.ExportCodesignFiles(buildForTestingPath,
+		absExportOutputDirPath,
+		certificatesOnly,
+		isAskForPassword,
+		codesigndoc.UploadConfig{
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
+		})
 	if err != nil {
 		return err
 	}
