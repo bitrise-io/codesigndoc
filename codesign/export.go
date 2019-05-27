@@ -132,8 +132,8 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 		return Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
 	return Certificates{
-		Certificates: certificates,
-		Contents:     identities,
+		Info:    certificates,
+		Content: identities,
 	}, nil
 }
 
@@ -212,8 +212,8 @@ func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.Provisi
 		}
 
 		exportedProfiles = append(exportedProfiles, ProvisioningProfile{
-			Info:     exportedProfile,
-			Contents: contents,
+			Info:    exportedProfile,
+			Content: contents,
 		})
 	}
 	return exportedProfiles, nil
@@ -250,7 +250,7 @@ func WriteProvisioningProfilesAsStream(profiles []ProvisioningProfile, absExport
 	for _, profile := range profiles {
 		exportFileName := ProfileExportFileNameNoPath(profile.Info)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
-		if err := ioutil.WriteFile(exportPth, profile.Contents, 0600); err != nil {
+		if err := ioutil.WriteFile(exportPth, profile.Content, 0600); err != nil {
 			return fmt.Errorf("failed to write file, error: %s", err)
 		}
 	}

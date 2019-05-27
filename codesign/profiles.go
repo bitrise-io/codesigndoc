@@ -10,8 +10,8 @@ import (
 
 // ProvisioningProfile contains parsed data in the provisioning profile and the original profile file contents
 type ProvisioningProfile struct {
-	Info     profileutil.ProvisioningProfileInfoModel
-	Contents []byte
+	Info    profileutil.ProvisioningProfileInfoModel
+	Content []byte
 }
 
 // profileExportFileName creates a file name for the given profile with pattern: uuid.escaped_profile_name.[mobileprovision|provisionprofile]

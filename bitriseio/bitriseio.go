@@ -52,8 +52,8 @@ func UploadCodesigningFiles(certificates []certificateutil.CertificateInfoModel,
 	return certsUploaded, provProfilesUploaded, nil
 }
 
-// SetupClient asks for access token and app, returns a bitrise client
-func SetupClient() (*bitrise.Client, error) {
+// GetInteractiveConfigClient asks for access token and app, returns a bitrise client
+func GetInteractiveConfigClient() (*bitrise.Client, error) {
 	accessToken, err := askAccessToken()
 	if err != nil {
 		return nil, err
@@ -280,7 +280,7 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesToUpload []codesign.ProvisioningProfile) error {
 	for _, profile := range profilesToUpload {
 		exportFileName := codesign.ProfileExportFileNameNoPath(profile.Info)
-		exportSize := int64(len(profile.Contents))
+		exportSize := int64(len(profile.Content))
 
 		log.Debugf("\n%s size: %d", exportFileName, exportSize)
 
@@ -289,7 +289,7 @@ func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesT
 			return err
 		}
 
-		if err := bitriseClient.UploadProvisioningProfileAsStream(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Contents)); err != nil {
+		if err := bitriseClient.UploadProvisioningProfileAsStream(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Content)); err != nil {
 			return err
 		}
 
@@ -341,13 +341,13 @@ func uploadExportedIdentityAsStream(bitriseClient *bitrise.Client, certificates 
 	fmt.Println()
 	log.Infof("Uploading certificate...")
 
-	shouldUploadIdentities, err := shouldUploadCertificates(bitriseClient, certificates.Certificates)
+	shouldUploadIdentities, err := shouldUploadCertificates(bitriseClient, certificates.Info)
 	if err != nil {
 		return false, err
 	}
 
 	if shouldUploadIdentities {
-		if err := uploadIdentityAsStream(bitriseClient, certificates.Contents); err != nil {
+		if err := uploadIdentityAsStream(bitriseClient, certificates.Content); err != nil {
 			return false, err
 		}
 	} else {

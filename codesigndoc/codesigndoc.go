@@ -121,7 +121,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		if shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin); err != nil {
 			return false, false, err
 		} else if shouldUpload {
-			client, err = bitriseio.SetupClient()
+			client, err = bitriseio.GetInteractiveConfigClient()
 		}
 	}
 
@@ -135,7 +135,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	}
 
 	if strings.TrimSpace(outputDirPath) != "" {
-		if err := codesign.WriteIdentities(identities.Contents, outputDirPath); err != nil {
+		if err := codesign.WriteIdentities(identities.Content, outputDirPath); err != nil {
 			return false, false, err
 		}
 		if err := codesign.WriteProvisioningProfilesAsStream(provisioningProfiles, outputDirPath); err != nil {
