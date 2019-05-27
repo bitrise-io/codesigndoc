@@ -86,17 +86,22 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
+	return UploadAndWriteCodesignFiles(certificatesToExport, profilesToExport, outputDirPath, certificatesOnly, askForPassword, uploadConfig)
+}
+
+// UploadAndWriteCodesignFiles uploads codesign files to bitrise.io and saves them to output folder
+func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, outputDirPath string, certificatesOnly bool, askForPassword bool, uploadConfig UploadConfig) (bool, bool, error) {
 	// export code sign settings
 	fmt.Println()
 	fmt.Println()
 	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
 
-	identities, err := codesign.CollectAndExportIdentitiesAsReader(certificatesToExport, askForPassword)
+	identities, err := codesign.CollectAndExportIdentitiesAsReader(certificates, askForPassword)
 	if err != nil {
 		return false, false, err
 	}
 
-	provisioningProfiles, err := codesign.CollectAndExportProvisioningProfilesAsReader(profilesToExport)
+	provisioningProfiles, err := codesign.CollectAndExportProvisioningProfilesAsReader(profiles)
 	if err != nil {
 		return false, false, err
 	}
@@ -125,8 +130,8 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		}
 	}
 
-	provProfilesUploaded := (len(profilesToExport) == 0)
-	certsUploaded := (len(certificatesToExport) == 0)
+	provProfilesUploaded := (len(profiles) == 0)
+	certsUploaded := (len(certificates) == 0)
 	if client != nil {
 		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles, certificatesOnly)
 		if err != nil {
