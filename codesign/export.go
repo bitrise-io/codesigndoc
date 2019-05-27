@@ -1,6 +1,7 @@
 package codesign
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -175,7 +176,7 @@ func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 }
 
 // CollectAndExportProvisioningProfilesAsReader returns provisioning profies as an io.Reader array
-func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.ProvisioningProfileInfoModel) ([]profileutil.ProvisioningProfileInfoModel, error) {
+func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.ProvisioningProfileInfoModel) ([]ProvisioningProfile, error) {
 	if len(profiles) == 0 {
 		return nil, nil
 	}
@@ -188,7 +189,7 @@ func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.Provisi
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
 
-	var exportedProfiles []profileutil.ProvisioningProfileInfoModel
+	var exportedProfiles []ProvisioningProfile
 	for _, profile := range profiles {
 		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
 		provisioningProfile, pth, err := profileutil.FindProvisioningProfile(profile.UUID)
@@ -196,13 +197,25 @@ func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.Provisi
 			return nil, fmt.Errorf("failed to find Provisioning Profile: %s", err)
 		}
 		log.Printf("file found at: %s", pth)
+
 		exportedProfile, err := profileutil.NewProvisioningProfileInfo(*provisioningProfile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
 		}
-		exportedProfiles = append(exportedProfiles, exportedProfile)
-	}
+		if bytes.Compare(profile.Content(), exportedProfile.Content()) != 0 {
+			return nil, fmt.Errorf("Profile found in the archive does not match found profile")
+		}
 
+		contents, err := ioutil.ReadFile(pth)
+		if err != nil {
+			return nil, fmt.Errorf("could not read provisioning profile file, error: %s", err)
+		}
+
+		exportedProfiles = append(exportedProfiles, ProvisioningProfile{
+			Info:     exportedProfile,
+			Contents: contents,
+		})
+	}
 	return exportedProfiles, nil
 }
 
@@ -224,6 +237,21 @@ func WriteProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoMod
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
 		if err := command.RunCommand("cp", pth, exportPth); err != nil {
 			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s", pth, exportPth, err)
+		}
+	}
+	return nil
+}
+
+// WriteProvisioningProfilesAsStream writes provisioning profiles to the filesystem
+func WriteProvisioningProfilesAsStream(profiles []ProvisioningProfile, absExportOutputDirPath string) error {
+	fmt.Println()
+	log.Infof("Exporting Provisioning Profiles...")
+
+	for _, profile := range profiles {
+		exportFileName := ProfileExportFileNameNoPath(profile.Info)
+		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
+		if err := ioutil.WriteFile(exportPth, profile.Contents, 0600); err != nil {
+			return fmt.Errorf("failed to write file, error: %s", err)
 		}
 	}
 	return nil

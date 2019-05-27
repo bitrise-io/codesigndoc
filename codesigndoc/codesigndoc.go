@@ -101,7 +101,6 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
-	log.Warnf("UploadConfig %+v", uploadConfig)
 	if uploadConfig.isValid() {
 		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 		// Used to upload artifacts as part of an other CLI tool
@@ -138,19 +137,21 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		}
 	}
 
-	if err := codesign.WriteIdentities(identities.Contents, outputDirPath); err != nil {
-		return false, false, err
-	}
-	if err := codesign.WriteProvisioningProfiles(provisioningProfiles, outputDirPath); err != nil {
-		return false, false, err
-	}
-	fmt.Println()
-	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+	if strings.TrimSpace(outputDirPath) != "" {
+		if err := codesign.WriteIdentities(identities.Contents, outputDirPath); err != nil {
+			return false, false, err
+		}
+		if err := codesign.WriteProvisioningProfilesAsStream(provisioningProfiles, outputDirPath); err != nil {
+			return false, false, err
+		}
+		fmt.Println()
+		log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
 
-	if err := command.RunCommand("open", outputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
-	} else {
-		fmt.Println("Opened the directory in Finder.")
+		if err := command.RunCommand("open", outputDirPath); err != nil {
+			log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
+		} else {
+			fmt.Println("Opened the directory in Finder.")
+		}
 	}
 
 	return certsUploaded, provProfilesUploaded, nil

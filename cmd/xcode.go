@@ -34,7 +34,7 @@ var (
 	paramXcodebuildSDK        string
 	personalAccessToken       string
 	appSlug                   string
-	exportToDirectory         bool
+	isWriteFiles              bool
 )
 
 func init() {
@@ -44,7 +44,7 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
 	// Flags used to automatically upload artifacts
-	xcodeCmd.Flags().BoolVar(&exportToDirectory, "output-files", true, "Set wether to export artifacts to a local directory.")
+	xcodeCmd.Flags().BoolVar(&isWriteFiles, "write-files", true, "Set wether to export artifacts to a local directory.")
 	xcodeCmd.Flags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. In case app-slug parameter is also provided, will automatically upload artifacts to bitrise.io.")
 	xcodeCmd.Flags().StringVar(&appSlug, "app-slug", "", "App Slug. In case auth-token parameter is also provided, will automatically upload artifacts to bitrise.io.")
 }
@@ -69,9 +69,13 @@ func initExportOutputDir() (string, error) {
 }
 
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath, err := initExportOutputDir()
-	if err != nil {
-		return fmt.Errorf("failed to prepare Export directory: %s", err)
+	absExportOutputDirPath := ""
+	if isWriteFiles {
+		var err error
+		absExportOutputDirPath, err = initExportOutputDir()
+		if err != nil {
+			return fmt.Errorf("failed to prepare Export directory: %s", err)
+		}
 	}
 
 	// Output tools versions
@@ -83,7 +87,6 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 	fmt.Println()
 
-	xcodebuildOutput := ""
 	xcodeCmd := xcode.CommandModel{}
 
 	projectPath := paramXcodeProjectFilePath
@@ -137,11 +140,11 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
-	archivePath, buildLog, err := xcodeCmd.GenerateArchive()
-	xcodebuildOutput = buildLog
-	// save the xcodebuild output into a debug log file
-	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-	{
+
+	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
+	if isWriteFiles {
+		// save the xcodebuild output into a debug log file
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)

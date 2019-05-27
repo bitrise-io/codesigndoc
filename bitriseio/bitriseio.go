@@ -74,7 +74,7 @@ func SetupClient() (*bitrise.Client, error) {
 }
 
 // UploadCodesigningFilesAsStream ...
-func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates codesign.Certificates, profiles []profileutil.ProvisioningProfileInfoModel, certsOnly bool) (bool, bool, error) {
+func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates codesign.Certificates, profiles []codesign.ProvisioningProfile, certsOnly bool) (bool, bool, error) {
 	var provProfilesUploaded bool
 	if !certsOnly {
 		var err error
@@ -153,11 +153,11 @@ func uploadExportedProvProfiles(bitriseClient *bitrise.Client, profilesToExport 
 	return true, nil
 }
 
-func uploadExportedProvProfilesAsStream(bitriseClient *bitrise.Client, profilesToExport []profileutil.ProvisioningProfileInfoModel) (bool, error) {
+func uploadExportedProvProfilesAsStream(bitriseClient *bitrise.Client, profilesToExport []codesign.ProvisioningProfile) (bool, error) {
 	fmt.Println()
 	log.Infof("Uploading provisioning profiles...")
 
-	profilesToUpload, err := filterAlreadyUploadedProvProfiles(bitriseClient, profilesToExport)
+	profilesToUpload, err := filterAlreadyUploadedProvProfilesAsStream(bitriseClient, profilesToExport)
 	if err != nil {
 		return false, err
 	}
@@ -197,6 +197,38 @@ func filterAlreadyUploadedProvProfiles(client *bitrise.Client, localProfiles []p
 		contains, _ := uploadedProfileUUIDList[localProfile.UUID]
 		if contains {
 			log.Warnf("Already on Bitrise: - %s - (UUID: %s) ", localProfile.Name, localProfile.UUID)
+		} else {
+			profilesToUpload = append(profilesToUpload, localProfile)
+		}
+	}
+
+	return profilesToUpload, nil
+}
+
+func filterAlreadyUploadedProvProfilesAsStream(client *bitrise.Client, localProfiles []codesign.ProvisioningProfile) ([]codesign.ProvisioningProfile, error) {
+	log.Printf("Looking for provisioning profile duplicates on Bitrise...")
+
+	uploadedProfileUUIDList := map[string]bool{}
+	var profilesToUpload []codesign.ProvisioningProfile
+
+	uploadedProfInfoList, err := client.FetchProvisioningProfiles()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, uploadedProfileInfo := range uploadedProfInfoList {
+		uploadedProfileUUID, err := client.GetUploadedProvisioningProfileUUIDby(uploadedProfileInfo.Slug)
+		if err != nil {
+			return nil, err
+		}
+
+		uploadedProfileUUIDList[uploadedProfileUUID] = true
+	}
+
+	for _, localProfile := range localProfiles {
+		contains, _ := uploadedProfileUUIDList[localProfile.Info.UUID]
+		if contains {
+			log.Warnf("Already on Bitrise: - %s - (UUID: %s) ", localProfile.Info.Name, localProfile.Info.UUID)
 		} else {
 			profilesToUpload = append(profilesToUpload, localProfile)
 		}
@@ -245,10 +277,10 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 	return nil
 }
 
-func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesToUpload []profileutil.ProvisioningProfileInfoModel) error {
+func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesToUpload []codesign.ProvisioningProfile) error {
 	for _, profile := range profilesToUpload {
-		exportFileName := provProfileExportFileNameNoPath(profile)
-		exportSize := int64(len(profile.Content()))
+		exportFileName := codesign.ProfileExportFileNameNoPath(profile.Info)
+		exportSize := int64(len(profile.Contents))
 
 		log.Debugf("\n%s size: %d", exportFileName, exportSize)
 
@@ -257,7 +289,7 @@ func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesT
 			return err
 		}
 
-		if err := bitriseClient.UploadProvisioningProfileAsStream(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Content())); err != nil {
+		if err := bitriseClient.UploadProvisioningProfileAsStream(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Contents)); err != nil {
 			return err
 		}
 
@@ -278,21 +310,6 @@ func provProfileExportFileName(info profileutil.ProvisioningProfileInfoModel, pa
 	safeTitle := replaceRexp.ReplaceAllString(info.Name, "")
 	extension := ".mobileprovision"
 	if strings.HasSuffix(path, ".provisionprofile") {
-		extension = ".provisionprofile"
-	}
-
-	return info.UUID + "." + safeTitle + extension
-}
-
-func provProfileExportFileNameNoPath(info profileutil.ProvisioningProfileInfoModel) string {
-	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
-	if err != nil {
-		log.Warnf("Invalid regex, error: %s", err)
-		return ""
-	}
-	safeTitle := replaceRexp.ReplaceAllString(info.Name, "")
-	extension := ".mobileprovision"
-	if info.Type == profileutil.ProfileTypeMacOs {
 		extension = ".provisionprofile"
 	}
 
