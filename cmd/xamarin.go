@@ -179,10 +179,14 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath,
-		absExportOutputDirPath,
-		certificatesOnly,
+	certificatesToExport, profilesToExport, err := codesigndoc.CollectCodesignFiles(archivePath, certificatesOnly)
+	if err != nil {
+		return err
+	}
+	certsUploaded, provProfilesUploaded, err := codesigndoc.UploadAndWriteCodesignFiles(certificatesToExport,
+		profilesToExport,
 		isAskForPassword,
+		absExportOutputDirPath,
 		codesigndoc.UploadConfig{
 			PersonalAccessToken: personalAccessToken,
 			AppSlug:             appSlug,

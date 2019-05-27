@@ -74,9 +74,9 @@ func GetInteractiveConfigClient() (*bitrise.Client, error) {
 }
 
 // UploadCodesigningFilesAsStream ...
-func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates codesign.Certificates, profiles []codesign.ProvisioningProfile, certsOnly bool) (bool, bool, error) {
+func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates codesign.Certificates, profiles []codesign.ProvisioningProfile) (bool, bool, error) {
 	var provProfilesUploaded bool
-	if !certsOnly {
+	if len(profiles) != 0 {
 		var err error
 		provProfilesUploaded, err = uploadExportedProvProfilesAsStream(client, profiles)
 		if err != nil {

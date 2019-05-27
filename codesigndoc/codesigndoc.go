@@ -37,13 +37,13 @@ func (config *UploadConfig) isValid() bool {
 		(strings.TrimSpace(config.AppSlug) != "")
 }
 
-// ExportCodesignFiles exports the codesigning files required to create an xcode archive
-// and exports the codesigning files for the specified export method
-func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly bool, askForPassword bool, uploadConfig UploadConfig) (bool, bool, error) {
+// CollectCodesignFiles collects the codesigning files required to create an xcode archive
+// and filers them for the specified export method
+func CollectCodesignFiles(archivePath string, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 	// Find out the XcArchive type
 	isMacOs, err := xcarchive.IsMacOS(archivePath)
 	if err != nil {
-		return false, false, err
+		return nil, nil, err
 	}
 
 	// Set up the XcArchive type for certs and profiles.
@@ -57,12 +57,12 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	// Certificates
 	certificates, err := codesign.InstalledCertificates(certificateType)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
 	installerCertificates, err := certificateutil.InstalledInstallerCertificateInfos()
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
 	log.Debugf("Installed certificates:")
@@ -73,7 +73,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	// Profiles
 	profiles, err := profileutil.InstalledProvisioningProfileInfos(profileType)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed provisioning profiles, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed provisioning profiles, error: %s", err)
 	}
 
 	log.Debugf("Installed profiles:")
@@ -81,21 +81,15 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		log.Debugf(profileInfo.String(certificates...))
 	}
 
-	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
-	if err != nil {
-		return false, false, err
-	}
-
-	return UploadAndWriteCodesignFiles(certificatesToExport, profilesToExport, outputDirPath, certificatesOnly, askForPassword, uploadConfig)
-}
-
-// UploadAndWriteCodesignFiles uploads codesign files to bitrise.io and saves them to output folder
-func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, outputDirPath string, certificatesOnly bool, askForPassword bool, uploadConfig UploadConfig) (bool, bool, error) {
 	// export code sign settings
 	fmt.Println()
 	fmt.Println()
 	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
+	return getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
+}
 
+// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
+func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, outputDirPath string, uploadConfig UploadConfig) (bool, bool, error) {
 	identities, err := codesign.CollectAndExportIdentitiesAsReader(certificates, askForPassword)
 	if err != nil {
 		return false, false, err
@@ -119,7 +113,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 
 	if client == nil {
 		uploadConfirmMsg := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
-		if certificatesOnly {
+		if len(provisioningProfiles) == 0 {
 			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
 		}
 		fmt.Println()
@@ -133,7 +127,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	provProfilesUploaded := (len(profiles) == 0)
 	certsUploaded := (len(certificates) == 0)
 	if client != nil {
-		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles, certificatesOnly)
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles)
 		if err != nil {
 			return false, false, err
 		}
