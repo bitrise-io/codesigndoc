@@ -5,14 +5,97 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/bitrise-io/codesigndoc/bitriseio"
+	"github.com/bitrise-io/codesigndoc/bitriseio/bitrise"
+	"github.com/bitrise-io/codesigndoc/models"
 	"github.com/bitrise-io/codesigndoc/osxkeychain"
+	"github.com/bitrise-io/codesigndoc/utility"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
+	"github.com/bitrise-io/goinp/goinp"
 )
+
+// UploadConfig contains configuration to automatically upload artifacts to bitrise.io
+type UploadConfig struct {
+	PersonalAccessToken string
+	AppSlug             string
+}
+
+func (config *UploadConfig) isValid() bool {
+	return (strings.TrimSpace(config.PersonalAccessToken) != "") &&
+		(strings.TrimSpace(config.AppSlug) != "")
+}
+
+// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
+func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, outputDirPath string, uploadConfig UploadConfig) (bool, bool, error) {
+	identities, err := CollectAndExportIdentitiesAsReader(certificates, askForPassword)
+	if err != nil {
+		return false, false, err
+	}
+
+	provisioningProfiles, err := CollectAndExportProvisioningProfilesAsReader(profiles)
+	if err != nil {
+		return false, false, err
+	}
+
+	var client *bitrise.Client
+	if uploadConfig.isValid() {
+		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
+		// Used to upload artifacts as part of an other CLI tool
+		client, err = bitrise.NewClientAsStream(uploadConfig.PersonalAccessToken)
+		if err != nil {
+			return false, false, err
+		}
+		client.SetSelectedAppSlug(uploadConfig.AppSlug)
+	}
+
+	if client == nil {
+		uploadConfirmMsg := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
+		if len(provisioningProfiles) == 0 {
+			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
+		}
+		fmt.Println()
+		if shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin); err != nil {
+			return false, false, err
+		} else if shouldUpload {
+			client, err = bitriseio.GetInteractiveConfigClient()
+		}
+	}
+
+	provProfilesUploaded := (len(profiles) == 0)
+	certsUploaded := (len(certificates) == 0)
+	if client != nil {
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles)
+		if err != nil {
+			return false, false, err
+		}
+	}
+
+	if strings.TrimSpace(outputDirPath) != "" {
+		if err := WriteIdentities(identities.Content, outputDirPath); err != nil {
+			return false, false, err
+		}
+		if err := WriteProvisioningProfilesAsStream(provisioningProfiles, outputDirPath); err != nil {
+			return false, false, err
+		}
+		fmt.Println()
+		log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
+
+		if err := command.RunCommand("open", outputDirPath); err != nil {
+			log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
+		} else {
+			fmt.Println("Opened the directory in Finder.")
+		}
+	}
+
+	return certsUploaded, provProfilesUploaded, nil
+}
 
 // CollectAndExportIdentities exports the given certificates into the given directory as a single .p12 file
 func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, absExportOutputDirPath string, isAskForPassword bool) error {
@@ -75,9 +158,9 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 }
 
 // CollectAndExportIdentitiesAsReader exports the given certificates merged in a single .p12 file, as an io.Reader
-func CollectAndExportIdentitiesAsReader(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (Certificates, error) {
+func CollectAndExportIdentitiesAsReader(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
 	if len(certificates) == 0 {
-		return Certificates{}, nil
+		return models.Certificates{}, nil
 	}
 
 	fmt.Println()
@@ -97,11 +180,11 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 		log.Printf("searching for Identity: %s", certificate.CommonName)
 		identityRef, err := osxkeychain.FindAndValidateIdentity(certificate.CommonName)
 		if err != nil {
-			return Certificates{}, fmt.Errorf("failed to export, error: %s", err)
+			return models.Certificates{}, fmt.Errorf("failed to export, error: %s", err)
 		}
 
 		if identityRef == nil {
-			return Certificates{}, errors.New("identity not found in the keychain, or it was invalid (expired)")
+			return models.Certificates{}, errors.New("identity not found in the keychain, or it was invalid (expired)")
 		}
 
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
@@ -129,9 +212,9 @@ func CollectAndExportIdentitiesAsReader(certificates []certificateutil.Certifica
 
 	identities, err := osxkeychain.ExportFromKeychainToBuffer(identityKechainRefs, isAskForPassword)
 	if err != nil {
-		return Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
+		return models.Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
-	return Certificates{
+	return models.Certificates{
 		Info:    certificates,
 		Content: identities,
 	}, nil
@@ -176,7 +259,7 @@ func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 }
 
 // CollectAndExportProvisioningProfilesAsReader returns provisioning profies as an io.Reader array
-func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.ProvisioningProfileInfoModel) ([]ProvisioningProfile, error) {
+func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
 	if len(profiles) == 0 {
 		return nil, nil
 	}
@@ -189,7 +272,7 @@ func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.Provisi
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
 
-	var exportedProfiles []ProvisioningProfile
+	var exportedProfiles []models.ProvisioningProfile
 	for _, profile := range profiles {
 		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
 		provisioningProfile, pth, err := profileutil.FindProvisioningProfile(profile.UUID)
@@ -211,7 +294,7 @@ func CollectAndExportProvisioningProfilesAsReader(profiles []profileutil.Provisi
 			return nil, fmt.Errorf("could not read provisioning profile file, error: %s", err)
 		}
 
-		exportedProfiles = append(exportedProfiles, ProvisioningProfile{
+		exportedProfiles = append(exportedProfiles, models.ProvisioningProfile{
 			Info:    exportedProfile,
 			Content: contents,
 		})
@@ -243,12 +326,12 @@ func WriteProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoMod
 }
 
 // WriteProvisioningProfilesAsStream writes provisioning profiles to the filesystem
-func WriteProvisioningProfilesAsStream(profiles []ProvisioningProfile, absExportOutputDirPath string) error {
+func WriteProvisioningProfilesAsStream(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
 
 	for _, profile := range profiles {
-		exportFileName := ProfileExportFileNameNoPath(profile.Info)
+		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
 		if err := ioutil.WriteFile(exportPth, profile.Content, 0600); err != nil {
 			return fmt.Errorf("failed to write file, error: %s", err)

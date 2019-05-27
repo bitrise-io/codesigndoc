@@ -7,7 +7,6 @@ import (
 
 	"github.com/bitrise-io/codesigndoc/bitriseio"
 	"github.com/bitrise-io/codesigndoc/codesign"
-	"github.com/bitrise-io/codesigndoc/codesigndoc"
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-xcode/certificateutil"
@@ -24,7 +23,7 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 
 // ExportCodesignFiles exports the codesigning files for the UITests-Runner.app
 // and exports the codesigning files for the specified export method
-func ExportCodesignFiles(buildPath, outputDirPath string, certificatesOnly bool, askForPassword bool, uploadConfig codesigndoc.UploadConfig) (bool, bool, error) {
+func ExportCodesignFiles(buildPath, outputDirPath string, certificatesOnly bool, askForPassword bool) (bool, bool, error) {
 	// Find out the XcArchive type
 	certificateType := codesign.IOSCertificate
 	profileType := profileutil.ProfileTypeIos

@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/codesigndoc/bitriseio/bitrise"
-	"github.com/bitrise-io/codesigndoc/codesign"
+	"github.com/bitrise-io/codesigndoc/models"
+	"github.com/bitrise-io/codesigndoc/utility"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/sliceutil"
@@ -74,7 +75,7 @@ func GetInteractiveConfigClient() (*bitrise.Client, error) {
 }
 
 // UploadCodesigningFilesAsStream ...
-func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates codesign.Certificates, profiles []codesign.ProvisioningProfile) (bool, bool, error) {
+func UploadCodesigningFilesAsStream(client *bitrise.Client, certificates models.Certificates, profiles []models.ProvisioningProfile) (bool, bool, error) {
 	var provProfilesUploaded bool
 	if len(profiles) != 0 {
 		var err error
@@ -153,7 +154,7 @@ func uploadExportedProvProfiles(bitriseClient *bitrise.Client, profilesToExport 
 	return true, nil
 }
 
-func uploadExportedProvProfilesAsStream(bitriseClient *bitrise.Client, profilesToExport []codesign.ProvisioningProfile) (bool, error) {
+func uploadExportedProvProfilesAsStream(bitriseClient *bitrise.Client, profilesToExport []models.ProvisioningProfile) (bool, error) {
 	fmt.Println()
 	log.Infof("Uploading provisioning profiles...")
 
@@ -205,11 +206,11 @@ func filterAlreadyUploadedProvProfiles(client *bitrise.Client, localProfiles []p
 	return profilesToUpload, nil
 }
 
-func filterAlreadyUploadedProvProfilesAsStream(client *bitrise.Client, localProfiles []codesign.ProvisioningProfile) ([]codesign.ProvisioningProfile, error) {
+func filterAlreadyUploadedProvProfilesAsStream(client *bitrise.Client, localProfiles []models.ProvisioningProfile) ([]models.ProvisioningProfile, error) {
 	log.Printf("Looking for provisioning profile duplicates on Bitrise...")
 
 	uploadedProfileUUIDList := map[string]bool{}
-	var profilesToUpload []codesign.ProvisioningProfile
+	var profilesToUpload []models.ProvisioningProfile
 
 	uploadedProfInfoList, err := client.FetchProvisioningProfiles()
 	if err != nil {
@@ -277,9 +278,9 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 	return nil
 }
 
-func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesToUpload []codesign.ProvisioningProfile) error {
+func uploadProvisioningProfilesAsStream(bitriseClient *bitrise.Client, profilesToUpload []models.ProvisioningProfile) error {
 	for _, profile := range profilesToUpload {
-		exportFileName := codesign.ProfileExportFileNameNoPath(profile.Info)
+		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)
 		exportSize := int64(len(profile.Content))
 
 		log.Debugf("\n%s size: %d", exportFileName, exportSize)
@@ -337,7 +338,7 @@ func uploadExportedIdentity(bitriseClient *bitrise.Client, certificatesToExport 
 	return true, err
 }
 
-func uploadExportedIdentityAsStream(bitriseClient *bitrise.Client, certificates codesign.Certificates) (bool, error) {
+func uploadExportedIdentityAsStream(bitriseClient *bitrise.Client, certificates models.Certificates) (bool, error) {
 	fmt.Println()
 	log.Infof("Uploading certificate...")
 

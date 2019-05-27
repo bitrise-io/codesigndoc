@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/codesigndoc"
 	"github.com/bitrise-io/codesigndoc/xamarin"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -183,11 +184,11 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	certsUploaded, provProfilesUploaded, err := codesigndoc.UploadAndWriteCodesignFiles(certificatesToExport,
+	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
 		absExportOutputDirPath,
-		codesigndoc.UploadConfig{
+		codesign.UploadConfig{
 			PersonalAccessToken: personalAccessToken,
 			AppSlug:             appSlug,
 		})

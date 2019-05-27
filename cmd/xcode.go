@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/codesigndoc"
 	"github.com/bitrise-io/codesigndoc/xcode"
 	"github.com/bitrise-io/go-utils/colorstring"
@@ -165,11 +166,11 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	certsUploaded, provProfilesUploaded, err := codesigndoc.UploadAndWriteCodesignFiles(certificatesToExport,
+	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
 		absExportOutputDirPath,
-		codesigndoc.UploadConfig{
+		codesign.UploadConfig{
 			PersonalAccessToken: personalAccessToken,
 			AppSlug:             appSlug,
 		})
