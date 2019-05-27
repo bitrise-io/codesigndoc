@@ -101,37 +101,34 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		return false, false, err
 	}
 
+	var client *bitrise.Client
 	if uploadConfig.isValid() {
 		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 		// Used to upload artifacts as part of an other CLI tool
-		client, err := bitrise.NewClientAsStream(uploadConfig.PersonalAccessToken)
+		client, err = bitrise.NewClientAsStream(uploadConfig.PersonalAccessToken)
 		if err != nil {
 			return false, false, err
 		}
 		client.SetSelectedAppSlug(uploadConfig.AppSlug)
+	}
 
-		return bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles, certificatesOnly)
+	if client == nil {
+		uploadConfirmMsg := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
+		if certificatesOnly {
+			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
+		}
+		fmt.Println()
+		if shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin); err != nil {
+			return false, false, err
+		} else if shouldUpload {
+			client, err = bitriseio.SetupClient()
+		}
 	}
 
 	provProfilesUploaded := (len(profilesToExport) == 0)
 	certsUploaded := (len(certificatesToExport) == 0)
-
-	var shouldUpload bool
-	if !certificatesOnly {
-		fmt.Println()
-		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the provisioning profiles and certificates to Bitrise?", os.Stdin)
-		if err != nil {
-			return false, false, err
-		}
-	} else {
-		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the certificates to Bitrise?", os.Stdin)
-		if err != nil {
-			return false, false, err
-		}
-	}
-
-	if shouldUpload {
-		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, certificatesOnly, outputDirPath)
+	if client != nil {
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles, certificatesOnly)
 		if err != nil {
 			return false, false, err
 		}
