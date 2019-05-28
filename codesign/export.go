@@ -34,12 +34,12 @@ func (config *UploadConfig) isValid() bool {
 
 // UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
 func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, outputDirPath string, uploadConfig UploadConfig) (bool, bool, error) {
-	identities, err := CollectAndExportIdentities(certificates, askForPassword)
+	identities, err := collectAndExportIdentities(certificates, askForPassword)
 	if err != nil {
 		return false, false, err
 	}
 
-	provisioningProfiles, err := CollectAndExportProvisioningProfiles(profiles)
+	provisioningProfiles, err := collectAndExportProvisioningProfiles(profiles)
 	if err != nil {
 		return false, false, err
 	}
@@ -78,10 +78,10 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	}
 
 	if strings.TrimSpace(outputDirPath) != "" {
-		if err := WriteIdentities(identities.Content, outputDirPath); err != nil {
+		if err := writeIdentities(identities.Content, outputDirPath); err != nil {
 			return false, false, err
 		}
-		if err := WriteProvisioningProfiles(provisioningProfiles, outputDirPath); err != nil {
+		if err := writeProvisioningProfiles(provisioningProfiles, outputDirPath); err != nil {
 			return false, false, err
 		}
 		fmt.Println()
@@ -97,8 +97,8 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	return certsUploaded, provProfilesUploaded, nil
 }
 
-// CollectAndExportIdentities exports the given certificates merged in a single .p12 file, as an io.Reader
-func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
+// collectAndExportIdentities exports the given certificates merged in a single .p12 file, as an io.Reader
+func collectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
 	if len(certificates) == 0 {
 		return models.Certificates{}, nil
 	}
@@ -160,13 +160,13 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	}, nil
 }
 
-// WriteIdentities writes identities to a file path
-func WriteIdentities(identites []byte, absExportOutputDirPath string) error {
+// writeIdentities writes identities to a file path
+func writeIdentities(identites []byte, absExportOutputDirPath string) error {
 	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identites, 0666)
 }
 
-// CollectAndExportProvisioningProfiles returns provisioning profies as an io.Reader array
-func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
+// collectAndExportProvisioningProfiles returns provisioning profies as an io.Reader array
+func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
 	if len(profiles) == 0 {
 		return nil, nil
 	}
@@ -209,8 +209,8 @@ func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 	return exportedProfiles, nil
 }
 
-// WriteProvisioningProfiles writes provisioning profiles to the filesystem
-func WriteProvisioningProfiles(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
+// writeProvisioningProfiles writes provisioning profiles to the filesystem
+func writeProvisioningProfiles(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
 
