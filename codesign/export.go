@@ -150,7 +150,7 @@ func collectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
 	fmt.Println()
 
-	identities, err := osxkeychain.ExportFromKeychainToBuffer(identityKechainRefs, isAskForPassword)
+	identities, err := osxkeychain.ExportFromKeychain(identityKechainRefs, isAskForPassword)
 	if err != nil {
 		return models.Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
