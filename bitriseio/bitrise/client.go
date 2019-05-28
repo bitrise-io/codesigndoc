@@ -66,59 +66,6 @@ type Client struct {
 	client          http.Client
 }
 
-// NewClientWithInteractiveAppSlug ...
-func NewClientWithInteractiveAppSlug(accessToken string) (*Client, []Application, error) {
-	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
-	var apps []Application
-
-	log.Infof("Fetching your application list from Bitrise...")
-
-	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	log.Debugf("\nRequest URL: %s", requestURL)
-
-	// Response struct
-	var appListResponse MyAppsResponse
-	stillPaging := true
-	var next string
-
-	for stillPaging {
-		headers := client.headers
-
-		request, err := createRequest(http.MethodGet, requestURL, headers, nil)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if len(next) > 0 {
-			quearryValues := request.URL.Query()
-			quearryValues.Add("next", next)
-			request.URL.RawQuery = quearryValues.Encode()
-		}
-
-		// Perform request
-		response, _, err := RunRequest(client, request, &appListResponse)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		appListResponse = *response.(*MyAppsResponse)
-		apps = append(apps, appListResponse.Data...)
-
-		if len(appListResponse.Paging.Next) > 0 {
-			next = appListResponse.Paging.Next
-			appListResponse = MyAppsResponse{}
-		} else {
-			stillPaging = false
-		}
-	}
-
-	return client, apps, nil
-}
-
 // NewClient ...
 func NewClient(accessToken string) (*Client, error) {
 	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}

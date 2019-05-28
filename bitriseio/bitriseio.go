@@ -23,7 +23,12 @@ func GetInteractiveConfigClient() (*bitrise.Client, error) {
 		return nil, err
 	}
 
-	client, appList, err := bitrise.NewClientWithInteractiveAppSlug(accessToken)
+	client, err := bitrise.NewClient(accessToken)
+	if err != nil {
+		return nil, err
+	}
+
+	appList, err := client.GetAppList()
 	if err != nil {
 		return nil, err
 	}
