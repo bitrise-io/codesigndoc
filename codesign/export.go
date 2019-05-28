@@ -71,7 +71,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	provProfilesUploaded := (len(profiles) == 0)
 	certsUploaded := (len(certificates) == 0)
 	if client != nil {
-		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFilesAsStream(client, identities, provisioningProfiles)
+		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
 		if err != nil {
 			return false, false, err
 		}
