@@ -3,7 +3,6 @@ package bitrise
 import (
 	"io"
 	"net/http"
-	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/urlutil"
@@ -216,31 +215,10 @@ func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, ex
 }
 
 // UploadProvisioningProfile ...
-func (client *Client) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
-	log.Printf("Upload %s to Bitrise...", exportFileName)
-
-	filePth := filepath.Join(outputDirPath, exportFileName)
-
-	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
-	if err != nil {
-		return err
-	}
-
-	//
-	// Perform request
-	_, _, err = RunRequest(client, request, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// UploadProvisioningProfileAsStream ...
-func (client *Client) UploadProvisioningProfileAsStream(uploadURL string, uploadFileName string, content io.Reader) error {
+func (client *Client) UploadProvisioningProfile(uploadURL string, uploadFileName string, content io.Reader) error {
 	log.Printf("Upload %s to Bitrise...", uploadFileName)
 
-	request, err := createUploadRequestAsStream(http.MethodPut, uploadURL, nil, content)
+	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, content)
 	if err != nil {
 		return err
 	}

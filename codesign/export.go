@@ -48,7 +48,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	if uploadConfig.isValid() {
 		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 		// Used to upload artifacts as part of an other CLI tool
-		client, err = bitrise.NewClientAsStream(uploadConfig.PersonalAccessToken)
+		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)
 		if err != nil {
 			return false, false, err
 		}

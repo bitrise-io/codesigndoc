@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -67,8 +66,8 @@ type Client struct {
 	client          http.Client
 }
 
-// NewClient ...
-func NewClient(accessToken string) (*Client, []Application, error) {
+// NewClientWithInteractiveAppSlug ...
+func NewClientWithInteractiveAppSlug(accessToken string) (*Client, []Application, error) {
 	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
 	var apps []Application
 
@@ -120,8 +119,8 @@ func NewClient(accessToken string) (*Client, []Application, error) {
 	return client, apps, nil
 }
 
-// NewClientAsStream ...
-func NewClientAsStream(accessToken string) (*Client, error) {
+// NewClient ...
+func NewClient(accessToken string) (*Client, error) {
 	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
 	return client, nil
 }
@@ -216,30 +215,7 @@ func RunRequest(client *Client, req *http.Request, requestResponse interface{}) 
 	return requestResponse, responseBody, nil
 }
 
-func createUploadRequest(requestMethod string, url string, headers map[string]string, filePth string) (*http.Request, error) {
-	var content []byte
-
-	f, err := os.Open(filePth)
-	if err != nil {
-		return nil, err
-
-	}
-
-	content, err = ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(content))
-	if err != nil {
-		return nil, err
-	}
-	addHeaders(req, headers)
-
-	return req, nil
-}
-
-func createUploadRequestAsStream(requestMethod string, url string, headers map[string]string, content io.Reader) (*http.Request, error) {
+func createUploadRequest(requestMethod string, url string, headers map[string]string, content io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPut, url, content)
 	if err != nil {
 		return nil, err

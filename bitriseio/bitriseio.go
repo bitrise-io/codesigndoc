@@ -23,7 +23,7 @@ func GetInteractiveConfigClient() (*bitrise.Client, error) {
 		return nil, err
 	}
 
-	client, appList, err := bitrise.NewClient(accessToken)
+	client, appList, err := bitrise.NewClientWithInteractiveAppSlug(accessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +161,7 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 			return err
 		}
 
-		if err := bitriseClient.UploadProvisioningProfileAsStream(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Content)); err != nil {
+		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Content)); err != nil {
 			return err
 		}
 
@@ -247,7 +247,7 @@ func uploadIdentity(bitriseClient *bitrise.Client, identities []byte) error {
 		return err
 	}
 
-	if err := bitriseClient.UploadIdentityAsStream(certificateResponseData.UploadURL, certificateResponseData.UploadFileName, identitiesName, bytes.NewReader(identities)); err != nil {
+	if err := bitriseClient.UploadIdentity(certificateResponseData.UploadURL, certificateResponseData.UploadFileName, identitiesName, bytes.NewReader(identities)); err != nil {
 		return err
 	}
 

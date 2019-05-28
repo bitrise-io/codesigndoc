@@ -1,7 +1,7 @@
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/bitrise-core/bitrise-init"
+  name = "github.com/bitrise-io/bitrise-init"
+  version = "2.1.0"
 
 [[constraint]]
   branch = "master"
@@ -11,7 +11,7 @@
   branch = "master"
   name = "github.com/bitrise-io/go-xamarin"
 
-[[override]]
+[[constraint]]
   branch = "master"
   name = "github.com/bitrise-io/go-xcode"
 

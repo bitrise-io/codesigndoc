@@ -2,18 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:d7b6233569ad1a767426a148d85b3c4cba0fe16de74403cf69fc3221c10d79ad"
-  name = "github.com/bitrise-core/bitrise-init"
-  packages = [
-    "scanners/ios",
-    "scanners/xamarin",
-    "utility",
-  ]
-  pruneopts = "UT"
-  revision = "1e39bdac80b8db8e4fcf0bac16f27369df08fc15"
-
-[[projects]]
   digest = "1:59664077e5eba703425d438e1c9d6f4aeaaf485814cedcae5d9c05cd093f0664"
   name = "github.com/bitrise-io/bitrise"
   packages = ["models"]
@@ -22,10 +10,11 @@
   version = "1.29.0"
 
 [[projects]]
-  digest = "1:a1d7bf8e244616eb7b922f83c9fb3c11f5cb1f97ed6eee5eff6891a10cace117"
+  digest = "1:5601a0fd753306423d79a8f518d47919f8463d03edfb16dbcb48434404cb0b51"
   name = "github.com/bitrise-io/bitrise-init"
   packages = [
     "models",
+    "scanners/ios",
     "scanners/xamarin",
     "steps",
     "utility",
@@ -105,11 +94,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f9749f95e34724e0bfb71a3bf0fa00e0e303d42f1de172bf134f013fa1e9dbb7"
+  digest = "1:094419e25266ad87ac9eec38043f314f474c81f6b1bb7f4ca11cc7fe5a5d9c2d"
   name = "github.com/bitrise-io/goinp"
   packages = ["goinp"]
   pruneopts = "UT"
-  revision = "f451b19ba4d087d8272d411ad91af5f4218fd517"
+  revision = "c9a4dac0f9b3539bbbeb10eece5c3f03d0ec3ea0"
 
 [[projects]]
   branch = "master"
@@ -218,14 +207,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:76a8f15384d51164875fe295559d2e5a8180d67312bb040d0509b5b1114c0267"
+  digest = "1:107a534dfc1cd42e4f9fc48f335a9af498c99dd43118f925be74c153d1c9a7e2"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "8097e1b27ff5e40620836729a9584e91b094b062"
+  revision = "adf421d2caf4ffcf74142ff5fb9ee323b21a819e"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -262,9 +251,9 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/bitrise-core/bitrise-init/scanners/ios",
-    "github.com/bitrise-core/bitrise-init/scanners/xamarin",
-    "github.com/bitrise-core/bitrise-init/utility",
+    "github.com/bitrise-io/bitrise-init/scanners/ios",
+    "github.com/bitrise-io/bitrise-init/scanners/xamarin",
+    "github.com/bitrise-io/bitrise-init/utility",
     "github.com/bitrise-io/go-utils/colorstring",
     "github.com/bitrise-io/go-utils/command",
     "github.com/bitrise-io/go-utils/fileutil",
