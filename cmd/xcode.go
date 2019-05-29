@@ -33,9 +33,6 @@ var (
 	paramXcodeProjectFilePath string
 	paramXcodeScheme          string
 	paramXcodebuildSDK        string
-	personalAccessToken       string
-	appSlug                   string
-	isWriteFiles              bool
 )
 
 func init() {
@@ -44,10 +41,6 @@ func init() {
 	xcodeCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
-	// Flags used to automatically upload artifacts
-	xcodeCmd.Flags().BoolVar(&isWriteFiles, "write-files", true, "Set wether to export artifacts to a local directory.")
-	xcodeCmd.Flags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. In case app-slug parameter is also provided, will automatically upload artifacts to bitrise.io.")
-	xcodeCmd.Flags().StringVar(&appSlug, "app-slug", "", "App Slug. In case auth-token parameter is also provided, will automatically upload artifacts to bitrise.io.")
 }
 
 func initExportOutputDir() (string, error) {
@@ -55,10 +48,10 @@ func initExportOutputDir() (string, error) {
 	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
 	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
 	if err != nil {
-		return absExportOutputDirPath, fmt.Errorf("Failed to determin Absolute path of export dir: %s", confExportOutputDirPath)
+		return absExportOutputDirPath, fmt.Errorf("Failed to determine absolute path of export dir: %s", confExportOutputDirPath)
 	}
 	if exist, err := pathutil.IsDirExists(absExportOutputDirPath); err != nil {
-		return absExportOutputDirPath, fmt.Errorf("Failed to determin whether the export directory already exists: %s", err)
+		return absExportOutputDirPath, fmt.Errorf("Failed to determine whether the export directory already exists: %s", err)
 	} else if !exist {
 		if err := os.Mkdir(absExportOutputDirPath, 0777); err != nil {
 			return absExportOutputDirPath, fmt.Errorf("Failed to create export output directory at path: %s | error: %s", absExportOutputDirPath, err)
@@ -162,6 +155,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
+	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
 	certificatesToExport, profilesToExport, err := codesigndoc.CollectCodesignFiles(archivePath, certificatesOnly)
 	if err != nil {
 		return err

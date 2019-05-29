@@ -114,26 +114,28 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
-	buildForTestingPath, buildLog, err := xcodeUITestsCmd.RunBuildForTesting()
-	xcodebuildOutput := buildLog
-	// save the xcodebuild output into a debug log file
-	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-	{
-		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
-		} else if err != nil {
-			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
-			log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
-			fmt.Println()
-			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
-			fmt.Println()
+	buildForTestingPath, xcodebuildOutput, err := xcodeUITestsCmd.RunBuildForTesting()
+	if isWriteFiles {
+		// save the xcodebuild output into a debug log file
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+		{
+			log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+			if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
+				log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
+			} else if err != nil {
+				log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
+				log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
+				fmt.Println()
+				log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
+				fmt.Println()
+			}
 		}
 	}
 	if err != nil {
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
+	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
 	certificatesToExport, profilesToExport, err := codesigndocuitests.CollectCodesignFiles(buildForTestingPath, certificatesOnly)
 	if err != nil {
 		return err

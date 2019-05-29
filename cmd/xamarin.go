@@ -159,27 +159,29 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Println()
 	log.Printf(`🔦  Running a Build, to get all the required code signing settings...`)
-	archivePath, xamLogOut, err := xamarinCmd.GenerateArchive()
-	logOutput := xamLogOut
-	// save the xamarin output into a debug log file
-	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
-	{
-		log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(logOutputFilePath, logOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, logWriteErr)
-		} else if err != nil {
-			log.Warnf("Please check the logfile (%s) to see what caused the error", logOutputFilePath)
-			log.Warnf(`and make sure that you can "Archive for Publishing" this project from Xamarin!`)
-			fmt.Println()
-			log.Infof("Open the project: %s", xamarinCmd.SolutionFilePath)
-			log.Infof(`And do "Archive for Publishing", after selecting the Configuration+Platform: %s|%s`, xamarinCmd.Configuration, xamarinCmd.Platform)
-			fmt.Println()
+	archivePath, logOutput, err := xamarinCmd.GenerateArchive()
+	if isWriteFiles {
+		// save the xamarin output into a debug log file
+		logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
+		{
+			log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
+			if logWriteErr := fileutil.WriteStringToFile(logOutputFilePath, logOutput); logWriteErr != nil {
+				log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, logWriteErr)
+			} else if err != nil {
+				log.Warnf("Please check the logfile (%s) to see what caused the error", logOutputFilePath)
+				log.Warnf(`and make sure that you can "Archive for Publishing" this project from Xamarin!`)
+				fmt.Println()
+				log.Infof("Open the project: %s", xamarinCmd.SolutionFilePath)
+				log.Infof(`And do "Archive for Publishing", after selecting the Configuration+Platform: %s|%s`, xamarinCmd.Configuration, xamarinCmd.Platform)
+				fmt.Println()
+			}
 		}
 	}
 	if err != nil {
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
+	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
 	certificatesToExport, profilesToExport, err := codesigndoc.CollectCodesignFiles(archivePath, certificatesOnly)
 	if err != nil {
 		return err
