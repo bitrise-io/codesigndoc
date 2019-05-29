@@ -135,15 +135,23 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
+	var isLogFileWritten bool
+	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
-	if isWriteFiles {
-		// save the xcodebuild output into a debug log file
-		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+	if isWriteFiles { // save the xcodebuild output into a debug log file
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
-		} else if err != nil {
+		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		} else {
+			isLogFileWritten = true
+		}
+	}
+	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+		fmt.Println()
+		if isLogFileWritten {
 			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
 			log.Warnf("and make sure that you can Archive this project from Xcode!")
 			fmt.Println()
@@ -151,10 +159,6 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 			log.Printf("and Archive, using the Scheme: %s", xcodeCmd.Scheme)
 			fmt.Println()
 		}
-	}
-	if err != nil {
-		log.Warnf("Last lines of build log:")
-		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 20))
 		return ArchiveError{toolXcode, err.Error()}
 	}
 

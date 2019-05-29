@@ -30,11 +30,11 @@ func init() {
 	RootCmd.AddCommand(scanCmd)
 	scanCmd.PersistentFlags().BoolVar(&isAskForPassword, "ask-pass", false, "Ask for .p12 password, instead of using an empty password")
 	scanCmd.PersistentFlags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
-	xcodeCmd.Flags().BoolVar(&isWriteFiles, "write-files", true, "Set wether to export artifacts to a local directory.")
+	scanCmd.PersistentFlags().BoolVar(&isWriteFiles, "write-files", true, "Set wether to export artifacts to a local directory.")
 
 	// Flags used to automatically upload artifacts
-	xcodeCmd.Flags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. Requires the app-slug paramater to be also set. Will upload codesigning files automatically if provided.")
-	xcodeCmd.Flags().StringVar(&appSlug, "app-slug", "", "App Slug. Requires the auth-token parameter to be also set. Will upload codesigning files automatically if provided.")
+	scanCmd.PersistentFlags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. Requires the app-slug paramater to be also set. Will upload codesigning files automatically if provided.")
+	scanCmd.PersistentFlags().StringVar(&appSlug, "app-slug", "", "App Slug. Requires the auth-token parameter to be also set. Will upload codesigning files automatically if provided.")
 }
 
 // Tool ...

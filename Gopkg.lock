@@ -10,6 +10,7 @@
   version = "1.29.0"
 
 [[projects]]
+  branch = "master"
   digest = "1:5601a0fd753306423d79a8f518d47919f8463d03edfb16dbcb48434404cb0b51"
   name = "github.com/bitrise-io/bitrise-init"
   packages = [
@@ -21,7 +22,6 @@
   ]
   pruneopts = "UT"
   revision = "1e39bdac80b8db8e4fcf0bac16f27369df08fc15"
-  version = "2.1.0"
 
 [[projects]]
   branch = "master"
@@ -33,7 +33,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f832af3bef6a14d66bfab71441117c074c4688580891e4f26fcbf01ed16afc3e"
+  digest = "1:9ba5ce6c71278d885bd68577a221efac5800b6c2dabdd0a48ba64f94b1979c01"
   name = "github.com/bitrise-io/go-utils"
   packages = [
     "colorstring",
@@ -50,6 +50,7 @@
     "progress",
     "retry",
     "sliceutil",
+    "stringutil",
     "urlutil",
   ]
   pruneopts = "UT"
@@ -207,14 +208,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:107a534dfc1cd42e4f9fc48f335a9af498c99dd43118f925be74c153d1c9a7e2"
+  digest = "1:820be5471f9063bf539a8e4acfcf71151c832932c6ae6aab5aa0e8957e5af173"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "adf421d2caf4ffcf74142ff5fb9ee323b21a819e"
+  revision = "cc920278c2cc35e068854c6a2ab722b2302c7002"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"
@@ -262,6 +263,7 @@
     "github.com/bitrise-io/go-utils/progress",
     "github.com/bitrise-io/go-utils/retry",
     "github.com/bitrise-io/go-utils/sliceutil",
+    "github.com/bitrise-io/go-utils/stringutil",
     "github.com/bitrise-io/go-utils/urlutil",
     "github.com/bitrise-io/go-xamarin/analyzers/project",
     "github.com/bitrise-io/go-xamarin/analyzers/solution",

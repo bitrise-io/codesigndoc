@@ -1,7 +1,7 @@
 
 [[constraint]]
+  branch = "master"
   name = "github.com/bitrise-io/bitrise-init"
-  version = "2.1.0"
 
 [[constraint]]
   branch = "master"

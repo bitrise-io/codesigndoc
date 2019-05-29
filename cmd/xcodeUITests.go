@@ -118,26 +118,29 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
+	var isLogFileWritten bool
+	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+
 	buildForTestingPath, xcodebuildOutput, err := xcodeUITestsCmd.RunBuildForTesting()
-	if isWriteFiles {
-		// save the xcodebuild output into a debug log file
-		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-		{
-			log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-			if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
-				log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
-			} else if err != nil {
-				log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
-				log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
-				fmt.Println()
-				log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
-				fmt.Println()
-			}
+	if isWriteFiles { // save the xcodebuild output into a debug log file
+		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		} else {
+			isLogFileWritten = true
 		}
 	}
 	if err != nil {
 		log.Warnf("Last lines of build log:")
-		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 20))
+		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+		fmt.Println()
+		if isLogFileWritten {
+			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
+			log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
+			fmt.Println()
+			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
+			fmt.Println()
+		}
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
