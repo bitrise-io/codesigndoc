@@ -27,11 +27,6 @@ type UploadConfig struct {
 	AppSlug             string
 }
 
-func (config *UploadConfig) isValid() bool {
-	return (strings.TrimSpace(config.PersonalAccessToken) != "") &&
-		(strings.TrimSpace(config.AppSlug) != "")
-}
-
 // UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
 func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, outputDirPath string, uploadConfig UploadConfig) (bool, bool, error) {
 	identities, err := collectAndExportIdentities(certificates, askForPassword)
@@ -45,7 +40,12 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	}
 
 	var client *bitrise.Client
-	if uploadConfig.isValid() {
+	if uploadConfig.PersonalAccessToken != "" && uploadConfig.AppSlug == "" ||
+		uploadConfig.PersonalAccessToken == "" && uploadConfig.AppSlug != "" {
+		log.Warnf(`Both auth-token and app-slug need to be set for automatic upload.
+		Proceeding with interactive prompts for personal access token and app slug.`)
+	}
+	if uploadConfig.PersonalAccessToken != "" && uploadConfig.AppSlug != "" {
 		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 		// Used to upload artifacts as part of an other CLI tool
 		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)

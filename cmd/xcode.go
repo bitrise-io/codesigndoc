@@ -171,8 +171,8 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		isAskForPassword,
 		absExportOutputDirPath,
 		codesign.UploadConfig{
-			PersonalAccessToken: personalAccessToken,
-			AppSlug:             appSlug,
+			PersonalAccessToken: strings.TrimSpace(personalAccessToken),
+			AppSlug:             strings.TrimSpace(appSlug),
 		})
 	if err != nil {
 		return err
