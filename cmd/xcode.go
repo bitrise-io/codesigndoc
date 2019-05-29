@@ -65,11 +65,10 @@ func initExportOutputDir() (string, error) {
 }
 
 func scanXcodeProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath := ""
+	var absExportOutputDirPath string
 	if isWriteFiles {
 		var err error
-		absExportOutputDirPath, err = initExportOutputDir()
-		if err != nil {
+		if absExportOutputDirPath, err = initExportOutputDir(); err != nil {
 			return fmt.Errorf("failed to prepare Export directory: %s", err)
 		}
 	}

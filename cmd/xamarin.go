@@ -78,9 +78,12 @@ func archivableSolutionConfigNames(projectsByID map[string]project.Model) []stri
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath, err := initExportOutputDir()
-	if err != nil {
-		return fmt.Errorf("failed to prepare Export directory: %s", err)
+	var absExportOutputDirPath string
+	if isWriteFiles {
+		var err error
+		if absExportOutputDirPath, err = initExportOutputDir(); err != nil {
+			return fmt.Errorf("failed to prepare Export directory: %s", err)
+		}
 	}
 
 	xamarinCmd := xamarin.CommandModel{}
@@ -96,8 +99,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		//
 		// Scan the directory for Xamarin.Solution file first
 		// If can't find any, ask the user to drag-and-drop the file
-		xamarinCmd.SolutionFilePath, err = findXamarinSolution()
-		if err != nil {
+		var err error
+		if xamarinCmd.SolutionFilePath, err = findXamarinSolution(); err != nil {
 			return err
 		}
 	}

@@ -36,9 +36,12 @@ func init() {
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath, err := initExportOutputDir()
-	if err != nil {
-		return fmt.Errorf("failed to prepare Export directory: %s", err)
+	var absExportOutputDirPath string
+	if isWriteFiles {
+		var err error
+		if absExportOutputDirPath, err = initExportOutputDir(); err != nil {
+			return fmt.Errorf("failed to prepare Export directory: %s", err)
+		}
 	}
 
 	// Output tools versions
