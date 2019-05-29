@@ -12,6 +12,7 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-xamarin/analyzers/project"
 	"github.com/bitrise-io/go-xamarin/analyzers/solution"
 	"github.com/bitrise-io/go-xamarin/builder"
@@ -178,6 +179,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(logOutput, 20))
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 

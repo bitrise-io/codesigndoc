@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/go-utils/stringutil"
+
 	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/codesigndoc"
 	"github.com/bitrise-io/codesigndoc/xcode"
@@ -152,6 +154,8 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 20))
 		return ArchiveError{toolXcode, err.Error()}
 	}
 

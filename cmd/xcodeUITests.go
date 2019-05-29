@@ -11,6 +11,7 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
@@ -132,6 +133,8 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 		}
 	}
 	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 20))
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
