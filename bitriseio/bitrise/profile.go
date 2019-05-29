@@ -215,15 +215,12 @@ func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, ex
 }
 
 // UploadProvisioningProfile ...
-func (client *Client) UploadProvisioningProfile(uploadURL string, uploadFileName string, content io.Reader) error {
-	log.Printf("Upload %s to Bitrise...", uploadFileName)
-
+func (client *Client) UploadProvisioningProfile(uploadURL string, content io.Reader) error {
 	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, content)
 	if err != nil {
 		return err
 	}
 
-	//
 	// Perform request
 	_, _, err = RunRequest(client, request, nil)
 	if err != nil {

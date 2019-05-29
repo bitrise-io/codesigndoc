@@ -217,9 +217,7 @@ func (client *Client) RegisterIdentity(certificateSize int64) (RegisterIdentityD
 }
 
 // UploadIdentity ...
-func (client *Client) UploadIdentity(uploadURL string, uploadFileName string, exportFileName string, content io.Reader) error {
-	log.Printf("Upload %s to Bitrise...", exportFileName)
-
+func (client *Client) UploadIdentity(uploadURL string, content io.Reader) error {
 	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, content)
 	if err != nil {
 		return err

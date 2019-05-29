@@ -166,7 +166,8 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 			return err
 		}
 
-		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, provProfSlugResponseData.UploadFileName, bytes.NewReader(profile.Content)); err != nil {
+		log.Printf("Uploading %s to Bitrise...", provProfSlugResponseData.UploadFileName)
+		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, bytes.NewReader(profile.Content)); err != nil {
 			return err
 		}
 
@@ -242,17 +243,16 @@ func shouldUploadCertificates(client *bitrise.Client, certificatesToExport []cer
 }
 
 func uploadIdentity(bitriseClient *bitrise.Client, identities []byte) error {
-	const identitiesName = "Identities.p12"
 	identitiesSize := int64(len(identities))
-
-	log.Debugf("\n%s size: %d", identitiesName, identitiesSize)
+	log.Debugf("\nIdentities size: %d", identitiesSize)
 
 	certificateResponseData, err := bitriseClient.RegisterIdentity(identitiesSize)
 	if err != nil {
 		return err
 	}
 
-	if err := bitriseClient.UploadIdentity(certificateResponseData.UploadURL, certificateResponseData.UploadFileName, identitiesName, bytes.NewReader(identities)); err != nil {
+	log.Printf("Uploading %s to Bitrise...", certificateResponseData.UploadFileName)
+	if err := bitriseClient.UploadIdentity(certificateResponseData.UploadURL, bytes.NewReader(identities)); err != nil {
 		return err
 	}
 
