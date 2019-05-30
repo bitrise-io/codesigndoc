@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -36,12 +37,9 @@ func init() {
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
-	var absExportOutputDirPath string
-	if isWriteFiles {
-		var err error
-		if absExportOutputDirPath, err = initExportOutputDir(); err != nil {
-			return fmt.Errorf("failed to prepare Export directory: %s", err)
-		}
+	absExportOutputDirPath, err := absOutputDir()
+	if err != nil {
+		return err
 	}
 
 	// Output tools versions
@@ -122,7 +120,10 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 
 	buildForTestingPath, xcodebuildOutput, err := xcodeUITestsCmd.RunBuildForTesting()
-	if isWriteFiles { // save the xcodebuild output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways { // save the xcodebuild output into a debug log file
+		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create output directory, error: %s", err)
+		}
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
@@ -152,7 +153,10 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
-		absExportOutputDirPath,
+		codesign.WriteFilesConfig{
+			WriteFiles:       writeFiles,
+			AbsOutputDirPath: absExportOutputDirPath,
+		},
 		codesign.UploadConfig{
 			PersonalAccessToken: personalAccessToken,
 			AppSlug:             appSlug,

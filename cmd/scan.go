@@ -3,9 +3,16 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/spf13/cobra"
+)
+
+const (
+	appSlugFlag    = "app-slug"
+	authTokenFlag  = "auth-token"
+	writeFilesFlag = "write-files"
 )
 
 // scanCmd represents the scan command
@@ -15,12 +22,45 @@ var scanCmd = &cobra.Command{
 	Long: `Scan a project's code signing settings,
 and export the require code signing files.`,
 	TraverseChildren: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		switch cmd.Flag(writeFilesFlag).Value.String() {
+		case "":
+			{
+				writeFiles = codesign.WriteFilesAlways
+			}
+		case string(codesign.WriteFilesAlways):
+			{
+				writeFiles = codesign.WriteFilesAlways
+			}
+		case string(codesign.WriteFilesFallback):
+			{
+				writeFiles = codesign.WriteFilesFallback
+			}
+		case string(codesign.WriteFilesDisabled):
+			{
+				writeFiles = codesign.WriteFilesDisabled
+			}
+		default:
+			{
+				return fmt.Errorf("invalid value for write-files paramter. Valid values: 'always','fallback','disabled'")
+			}
+		}
+		log.Printf("File output level: %s", writeFiles)
+
+		appSlug := cmd.Flag(appSlugFlag).Value.String()
+		authToken := cmd.Flag(authTokenFlag).Value.String()
+		if appSlug != "" && authToken == "" ||
+			appSlug == "" && authToken != "" {
+			return fmt.Errorf("both %s and %s are required to be set for automatic upload", appSlugFlag, authTokenFlag)
+		}
+		return nil
+	},
 }
 
 var (
 	isAskForPassword bool
 	certificatesOnly bool
-	isWriteFiles     bool
+	writeFiles       codesign.WriteFilesLevel
 
 	personalAccessToken string
 	appSlug             string
@@ -30,11 +70,11 @@ func init() {
 	RootCmd.AddCommand(scanCmd)
 	scanCmd.PersistentFlags().BoolVar(&isAskForPassword, "ask-pass", false, "Ask for .p12 password, instead of using an empty password")
 	scanCmd.PersistentFlags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
-	scanCmd.PersistentFlags().BoolVar(&isWriteFiles, "write-files", true, "Set wether to export artifacts to a local directory.")
-
+	var writeFilesRaw string
+	scanCmd.PersistentFlags().StringVar(&writeFilesRaw, writeFilesFlag, "", "Set wether to export artifacts to a local directory.")
 	// Flags used to automatically upload artifacts
-	scanCmd.PersistentFlags().StringVar(&personalAccessToken, "auth-token", "", "Personal access token. Requires the app-slug paramater to be also set. Will upload codesigning files automatically if provided.")
-	scanCmd.PersistentFlags().StringVar(&appSlug, "app-slug", "", "App Slug. Requires the auth-token parameter to be also set. Will upload codesigning files automatically if provided.")
+	scanCmd.PersistentFlags().StringVar(&personalAccessToken, authTokenFlag, "", "Personal access token. Requires the app-slug paramater to be also set. Will upload codesigning files automatically if provided.")
+	scanCmd.PersistentFlags().StringVar(&appSlug, appSlugFlag, "", "App Slug. Requires the auth-token parameter to be also set. Will upload codesigning files automatically if provided.")
 }
 
 // Tool ...

@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
@@ -78,12 +79,9 @@ func archivableSolutionConfigNames(projectsByID map[string]project.Model) []stri
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
-	var absExportOutputDirPath string
-	if isWriteFiles {
-		var err error
-		if absExportOutputDirPath, err = initExportOutputDir(); err != nil {
-			return fmt.Errorf("failed to prepare Export directory: %s", err)
-		}
+	absExportOutputDirPath, err := absOutputDir()
+	if err != nil {
+		return err
 	}
 
 	xamarinCmd := xamarin.CommandModel{}
@@ -167,7 +165,10 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
 
 	archivePath, logOutput, err := xamarinCmd.GenerateArchive()
-	if isWriteFiles { // save the xamarin output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways { // save the xamarin output into a debug log file
+		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create output directory, error: %s", err)
+		}
 		log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
 		if err := fileutil.WriteStringToFile(logOutputFilePath, logOutput); err != nil {
 			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, err)
@@ -198,7 +199,10 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
-		absExportOutputDirPath,
+		codesign.WriteFilesConfig{
+			WriteFiles:       writeFiles,
+			AbsOutputDirPath: absExportOutputDirPath,
+		},
 		codesign.UploadConfig{
 			PersonalAccessToken: personalAccessToken,
 			AppSlug:             appSlug,
