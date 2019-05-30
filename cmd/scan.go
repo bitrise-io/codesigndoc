@@ -42,7 +42,7 @@ and export the require code signing files.`,
 			}
 		default:
 			{
-				return fmt.Errorf("invalid value for write-files paramter. Valid values: 'always','fallback','disabled'")
+				return fmt.Errorf("invalid value for %s flag. Valid values: 'always', 'fallback', 'disabled'", writeFilesFlag)
 			}
 		}
 		log.Printf("File output level: %s", writeFiles)
