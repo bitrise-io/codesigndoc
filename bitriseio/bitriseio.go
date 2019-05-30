@@ -167,7 +167,7 @@ func uploadProvisioningProfiles(bitriseClient *bitrise.Client, profilesToUpload 
 		}
 
 		log.Printf("Uploading %s to Bitrise...", provProfSlugResponseData.UploadFileName)
-		if err := bitriseClient.UploadProvisioningProfile(provProfSlugResponseData.UploadURL, bytes.NewReader(profile.Content)); err != nil {
+		if err := bitriseClient.UploadArtifact(provProfSlugResponseData.UploadURL, bytes.NewReader(profile.Content)); err != nil {
 			return err
 		}
 
@@ -252,7 +252,7 @@ func uploadIdentity(bitriseClient *bitrise.Client, identities []byte) error {
 	}
 
 	log.Printf("Uploading %s to Bitrise...", certificateResponseData.UploadFileName)
-	if err := bitriseClient.UploadIdentity(certificateResponseData.UploadURL, bytes.NewReader(identities)); err != nil {
+	if err := bitriseClient.UploadArtifact(certificateResponseData.UploadURL, bytes.NewReader(identities)); err != nil {
 		return err
 	}
 

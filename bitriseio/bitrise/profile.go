@@ -1,7 +1,6 @@
 package bitrise
 
 import (
-	"io"
 	"net/http"
 
 	"github.com/bitrise-io/go-utils/log"
@@ -212,22 +211,6 @@ func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, ex
 
 	requestResponse = *response.(*RegisterProvisioningProfileResponse)
 	return requestResponse.Data, nil
-}
-
-// UploadProvisioningProfile ...
-func (client *Client) UploadProvisioningProfile(uploadURL string, content io.Reader) error {
-	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, content)
-	if err != nil {
-		return err
-	}
-
-	// Perform request
-	_, _, err = RunRequest(client, request, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // ConfirmProvisioningProfileUpload ...

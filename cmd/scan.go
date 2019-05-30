@@ -29,25 +29,23 @@ and export the require code signing files.`,
 			{
 				writeFiles = codesign.WriteFilesAlways
 			}
-		case string(codesign.WriteFilesAlways):
+		case "always":
 			{
 				writeFiles = codesign.WriteFilesAlways
 			}
-		case string(codesign.WriteFilesFallback):
+		case "fallback":
 			{
 				writeFiles = codesign.WriteFilesFallback
 			}
-		case string(codesign.WriteFilesDisabled):
+		case "disable":
 			{
 				writeFiles = codesign.WriteFilesDisabled
 			}
 		default:
 			{
-				return fmt.Errorf("invalid value for %s flag. Valid values: 'always', 'fallback', 'disabled'", writeFilesFlag)
+				return fmt.Errorf("invalid value for %s flag. Valid values: 'always', 'fallback', 'disable'", writeFilesFlag)
 			}
 		}
-		log.Printf("File output level: %s", writeFiles)
-
 		appSlug := cmd.Flag(appSlugFlag).Value.String()
 		authToken := cmd.Flag(authTokenFlag).Value.String()
 		if appSlug != "" && authToken == "" ||

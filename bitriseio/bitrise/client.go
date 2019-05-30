@@ -129,6 +129,21 @@ func (client *Client) SetSelectedAppSlug(slug string) {
 	client.selectedAppSlug = slug
 }
 
+// UploadArtifact ...
+func (client *Client) UploadArtifact(uploadURL string, content io.Reader) error {
+	request, err := http.NewRequest(http.MethodPut, uploadURL, content)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = RunRequest(client, request, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RunRequest ...
 func RunRequest(client *Client, req *http.Request, requestResponse interface{}) (interface{}, []byte, error) {
 	var responseBody []byte
@@ -160,16 +175,6 @@ func RunRequest(client *Client, req *http.Request, requestResponse interface{}) 
 	}
 
 	return requestResponse, responseBody, nil
-}
-
-func createUploadRequest(requestMethod string, url string, headers map[string]string, content io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(http.MethodPut, url, content)
-	if err != nil {
-		return nil, err
-	}
-	addHeaders(req, headers)
-
-	return req, nil
 }
 
 func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {

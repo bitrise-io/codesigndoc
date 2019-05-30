@@ -33,17 +33,17 @@ type WriteFilesConfig struct {
 }
 
 // WriteFilesLevel describes if codesigning files should be written to the output directory
-type WriteFilesLevel string
+type WriteFilesLevel int
 
 const (
 	// Invalid represents an invalid value
-	Invalid WriteFilesLevel = "invalid"
+	Invalid WriteFilesLevel = iota
 	// WriteFilesAlways writes build logs and codesigning files always
-	WriteFilesAlways WriteFilesLevel = "always"
+	WriteFilesAlways
 	// WriteFilesFallback writes artifacts when upload was not chosen or failed
-	WriteFilesFallback WriteFilesLevel = "fallback"
+	WriteFilesFallback
 	// WriteFilesDisabled does not write any files
-	WriteFilesDisabled WriteFilesLevel = "disabled"
+	WriteFilesDisabled
 )
 
 // ExportReport describes the output of codesigning files export

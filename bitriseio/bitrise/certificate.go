@@ -1,7 +1,6 @@
 package bitrise
 
 import (
-	"io"
 	"math/big"
 	"net/http"
 
@@ -214,20 +213,6 @@ func (client *Client) RegisterIdentity(certificateSize int64) (RegisterIdentityD
 
 	requestResponse = *response.(*RegisterIdentityResponse)
 	return requestResponse.Data, nil
-}
-
-// UploadIdentity ...
-func (client *Client) UploadIdentity(uploadURL string, content io.Reader) error {
-	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, content)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = RunRequest(client, request, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // ConfirmIdentityUpload ...
