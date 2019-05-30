@@ -93,6 +93,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 					log.Errorf("Failed to write output files: %s", err)
 				}
 			}
+			return certificatesUploaded, profilesUploaded, err
 		}
 	}
 
@@ -106,22 +107,24 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 }
 
 func writeFiles(identities models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig) error {
+	if err := os.MkdirAll(writeFilesConfig.AbsOutputDirPath, 0700); err != nil {
+		return fmt.Errorf("failed to create output directory for codesigning files, error: %s", err)
+	}
+
 	entries, err := ioutil.ReadDir(writeFilesConfig.AbsOutputDirPath)
 	if err != nil && err != os.ErrNotExist {
 		return fmt.Errorf("failed to check output directory contents, error: %s", err)
 	}
+	containsArtifacts := false
 	for _, entry := range entries {
-		containsArtifacts := false
 		if !entry.IsDir() && (path.Ext(entry.Name()) != ".log") {
 			containsArtifacts = true
 			break
 		}
-		if containsArtifacts {
-			log.Warnf("Export output directory exists and is not empty.")
-		}
 	}
-	if err := os.MkdirAll(writeFilesConfig.AbsOutputDirPath, 0700); err != nil {
-		return fmt.Errorf("failed to create output directory for codesigning files, error: %s", err)
+	if containsArtifacts {
+		fmt.Println()
+		log.Warnf("Export output directory exists and is not empty.")
 	}
 
 	if err := writeIdentities(identities.Content, writeFilesConfig.AbsOutputDirPath); err != nil {
