@@ -75,35 +75,28 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
 		}
 		fmt.Println()
-		if shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin); err != nil {
-			return false, false, err
-		} else if shouldUpload {
-			client, err = bitriseio.GetInteractiveConfigClient()
-		}
-	}
-
-	var certificatesUploaded = (len(certificates) == 0)
-	var profilesUploaded = (len(profiles) == 0)
-	if client != nil {
-		var err error
-		certificatesUploaded, profilesUploaded, err = bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
+		shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin)
 		if err != nil {
-			if writeFilesConfig.WriteFiles == WriteFilesFallback {
-				if err := writeFiles(identities, provisioningProfiles, writeFilesConfig); err != nil {
-					log.Errorf("Failed to write output files: %s", err)
-				}
+			return false, false, err
+		}
+		if shouldUpload {
+			if client, err = bitriseio.GetInteractiveConfigClient(); err != nil {
+				return false, false, err
 			}
-			return certificatesUploaded, profilesUploaded, err
 		}
 	}
 
 	if writeFilesConfig.WriteFiles == WriteFilesAlways ||
-		writeFilesConfig.WriteFiles == WriteFilesFallback {
+		writeFilesConfig.WriteFiles == WriteFilesFallback && client == nil {
 		if err := writeFiles(identities, provisioningProfiles, writeFilesConfig); err != nil {
-			return certificatesUploaded, profilesUploaded, err
+			return false, false, err
 		}
 	}
-	return certificatesUploaded, profilesUploaded, nil
+
+	if client == nil {
+		return (len(certificates) == 0), (len(profiles) == 0), nil
+	}
+	return bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
 }
 
 func writeFiles(identities models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig) error {
