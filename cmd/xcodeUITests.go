@@ -150,7 +150,7 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
+	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
 		codesign.WriteFilesConfig{
@@ -165,6 +165,6 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	printFinished(provProfilesUploaded, certsUploaded)
+	printFinished(exportResult, absExportOutputDirPath)
 	return nil
 }

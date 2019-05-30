@@ -14,7 +14,6 @@ import (
 	"github.com/bitrise-io/codesigndoc/models"
 	"github.com/bitrise-io/codesigndoc/osxkeychain"
 	"github.com/bitrise-io/codesigndoc/utility"
-	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
@@ -47,15 +46,22 @@ const (
 	WriteFilesDisabled WriteFilesLevel = "disabled"
 )
 
+// ExportReport describes the output of codesigning files export
+type ExportReport struct {
+	CertificatesUploaded         bool
+	ProvisioningProfilesUploaded bool
+	CodesignFilesWritten         bool
+}
+
 // UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
-func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (bool, bool, error) {
+func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (ExportReport, error) {
 	identities, err := collectAndExportIdentities(certificates, askForPassword)
 	if err != nil {
-		return false, false, err
+		return ExportReport{}, err
 	}
 	provisioningProfiles, err := collectAndExportProvisioningProfiles(profiles)
 	if err != nil {
-		return false, false, err
+		return ExportReport{}, err
 	}
 
 	var client *bitrise.Client
@@ -65,7 +71,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 		// Used to upload artifacts as part of an other CLI tool
 		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)
 		if err != nil {
-			return false, false, err
+			return ExportReport{}, err
 		}
 		client.SetSelectedAppSlug(uploadConfig.AppSlug)
 	}
@@ -77,26 +83,38 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 		fmt.Println()
 		shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin)
 		if err != nil {
-			return false, false, err
+			return ExportReport{}, err
 		}
 		if shouldUpload {
 			if client, err = bitriseio.GetInteractiveConfigClient(); err != nil {
-				return false, false, err
+				return ExportReport{}, err
 			}
 		}
 	}
 
+	var filesWritten bool
 	if writeFilesConfig.WriteFiles == WriteFilesAlways ||
 		writeFilesConfig.WriteFiles == WriteFilesFallback && client == nil {
 		if err := writeFiles(identities, provisioningProfiles, writeFilesConfig); err != nil {
-			return false, false, err
+			return ExportReport{}, err
 		}
+		filesWritten = true
 	}
 
 	if client == nil {
-		return (len(certificates) == 0), (len(profiles) == 0), nil
+		return ExportReport{
+			CertificatesUploaded:         len(certificates) == 0,
+			ProvisioningProfilesUploaded: len(profiles) == 0,
+			CodesignFilesWritten:         filesWritten,
+		}, nil
 	}
-	return bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
+
+	certificatesUploaded, profilesUploaded, err := bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
+	return ExportReport{
+		CertificatesUploaded:         certificatesUploaded,
+		ProvisioningProfilesUploaded: profilesUploaded,
+		CodesignFilesWritten:         filesWritten,
+	}, err
 }
 
 func writeFiles(identities models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig) error {
@@ -125,14 +143,6 @@ func writeFiles(identities models.Certificates, provisioningProfiles []models.Pr
 	}
 	if err := writeProvisioningProfiles(provisioningProfiles, writeFilesConfig.AbsOutputDirPath); err != nil {
 		return err
-	}
-	fmt.Println()
-	log.Successf("Exports finished you can find the exported files at: %s", writeFilesConfig.AbsOutputDirPath)
-
-	if err := command.RunCommand("open", writeFilesConfig.AbsOutputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", writeFilesConfig.AbsOutputDirPath)
-	} else {
-		fmt.Println("Opened the directory in Finder.")
 	}
 	return nil
 }

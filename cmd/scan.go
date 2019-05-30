@@ -5,6 +5,7 @@ import (
 
 	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/go-utils/colorstring"
+	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/spf13/cobra"
 )
@@ -129,14 +130,25 @@ with as many details & logs as you can share!
 `
 }
 
-func printFinished(provProfilesUploaded bool, certsUploaded bool) {
+func printFinished(exportResult codesign.ExportReport, absOutputDir string) {
+	if exportResult.CodesignFilesWritten {
+		fmt.Println()
+		log.Successf("Exports finished you can find the exported files at: %s", absOutputDir)
+
+		if err := command.RunCommand("open", absOutputDir); err != nil {
+			log.Errorf("Failed to open the export directory in Finder: %s", absOutputDir)
+		} else {
+			fmt.Println("Opened the directory in Finder.")
+		}
+	}
+
 	fmt.Println()
 	log.Successf("That's all.")
 
-	if !provProfilesUploaded && !certsUploaded {
+	if !exportResult.ProvisioningProfilesUploaded && !exportResult.CertificatesUploaded {
 		log.Warnf("You just have to upload the found certificates (.p12) and provisioning profiles (.mobileprovision) and you'll be good to go!")
 		fmt.Println()
-	} else if !certsUploaded {
+	} else if !exportResult.CertificatesUploaded {
 		log.Warnf("You just have to upload the found certificates (.p12) and you'll be good to go!")
 		fmt.Println()
 	}

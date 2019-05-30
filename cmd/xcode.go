@@ -158,7 +158,7 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
+	exoprtResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
 		codesign.WriteFilesConfig{
@@ -166,13 +166,13 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 			AbsOutputDirPath: absExportOutputDirPath,
 		},
 		codesign.UploadConfig{
-			PersonalAccessToken: strings.TrimSpace(personalAccessToken),
-			AppSlug:             strings.TrimSpace(appSlug),
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
 		})
 	if err != nil {
 		return err
 	}
 
-	printFinished(provProfilesUploaded, certsUploaded)
+	printFinished(exoprtResult, absExportOutputDirPath)
 	return nil
 }

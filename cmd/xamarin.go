@@ -196,7 +196,7 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	certsUploaded, provProfilesUploaded, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
+	exoprtResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
 		profilesToExport,
 		isAskForPassword,
 		codesign.WriteFilesConfig{
@@ -211,6 +211,6 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	printFinished(provProfilesUploaded, certsUploaded)
+	printFinished(exoprtResult, absExportOutputDirPath)
 	return nil
 }
