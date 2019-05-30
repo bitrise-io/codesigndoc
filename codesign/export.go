@@ -261,9 +261,6 @@ func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 
 // writeProvisioningProfiles writes provisioning profiles to the filesystem
 func writeProvisioningProfiles(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
-	fmt.Println()
-	log.Infof("Exporting Provisioning Profiles...")
-
 	for _, profile := range profiles {
 		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
