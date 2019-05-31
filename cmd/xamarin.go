@@ -165,7 +165,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
 
 	archivePath, logOutput, err := xamarinCmd.GenerateArchive()
-	if writeFiles == codesign.WriteFilesAlways { // save the xamarin output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways ||
+		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xamarin output into a debug log file
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}

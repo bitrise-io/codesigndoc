@@ -25,10 +25,6 @@ and export the require code signing files.`,
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		switch cmd.Flag(writeFilesFlag).Value.String() {
-		case "":
-			{
-				writeFiles = codesign.WriteFilesAlways
-			}
 		case "always":
 			{
 				writeFiles = codesign.WriteFilesAlways
@@ -50,7 +46,7 @@ and export the require code signing files.`,
 		authToken := cmd.Flag(authTokenFlag).Value.String()
 		if appSlug != "" && authToken == "" ||
 			appSlug == "" && authToken != "" {
-			return fmt.Errorf("both %s and %s are required to be set for automatic upload", appSlugFlag, authTokenFlag)
+			return fmt.Errorf("both or none flags %s and %s are required to be set", appSlugFlag, authTokenFlag)
 		}
 		return nil
 	},
@@ -69,11 +65,15 @@ func init() {
 	RootCmd.AddCommand(scanCmd)
 	scanCmd.PersistentFlags().BoolVar(&isAskForPassword, "ask-pass", false, "Ask for .p12 password, instead of using an empty password")
 	scanCmd.PersistentFlags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
-	var writeFilesRaw string
-	scanCmd.PersistentFlags().StringVar(&writeFilesRaw, writeFilesFlag, "", "Set wether to export artifacts to a local directory.")
-	// Flags used to automatically upload artifacts
-	scanCmd.PersistentFlags().StringVar(&personalAccessToken, authTokenFlag, "", "Personal access token. Requires the app-slug paramater to be also set. Will upload codesigning files automatically if provided.")
-	scanCmd.PersistentFlags().StringVar(&appSlug, appSlugFlag, "", "App Slug. Requires the auth-token parameter to be also set. Will upload codesigning files automatically if provided.")
+	scanCmd.PersistentFlags().String(writeFilesFlag, "always", `Set wether to export build logs and codesigning files to the ./codesigndoc_exports directory. Defaults to "always". Valid values: "always", "fallback", "disable".
+- always: Writes artifacts in every case.
+- fallback: Does not write artifacts if the automatic upload option is chosen interactively or by providing the auth-token and app-slug flag. Writes build log only on failure.
+- disabled: Do not write any files to the export directory.`)
+	// Flags used to automatically upload artifacts.
+	scanCmd.PersistentFlags().StringVar(&personalAccessToken, authTokenFlag, "", `Bitrise personal access token. By default codesigndoc will ask for it interactively.
+Will upload codesigning files automatically if provided. Requires the app-slug paramater to be also set.`)
+	scanCmd.PersistentFlags().StringVar(&appSlug, appSlugFlag, "", `Bitrise app slug. By default codesigndoc will ask for it interactively.
+Will upload codesigning files automatically if provided. Requires the auth-token parameter to be also set.`)
 }
 
 // Tool ...

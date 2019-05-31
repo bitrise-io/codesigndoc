@@ -127,7 +127,8 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
 
-	if writeFiles == codesign.WriteFilesAlways { // save the xcodebuild output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways ||
+		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
