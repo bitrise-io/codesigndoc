@@ -163,12 +163,10 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 
 ### Create a new release
 
-1. bump the version in `version/version.go`
-1. run `releaseman create-changelog --version THE.NEW.VERSION` (with the right
-   version number of course)
-1. commit the CHANGELOG
-1. run `gows bitrise run create-release`
-1. commit the changes
-1. tag the release: `git tag THE.NEW.VERSION`
-1. push the changes: `git push && git push origin tags/THE.NEW.VERSION`
-1. create the release on GitHub, and upload the new version's binary
+1. Merge all changes to master
+1. Bump the version in `version/version.go`
+1. Merge the version change to master
+1. Push version tag to master
+1. Download from GitHub and test the new release
+1. Run `bitrise run update-wrapper-versions`
+1. Merge the updated wrapper versions
