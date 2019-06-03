@@ -163,10 +163,10 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 
 ### Create a new release
 
-1. Merge all changes to master
-1. Bump the version in `version/version.go`
-1. Merge the version change to master
-1. Push version tag to master
-1. Download from GitHub and test the new release
-1. Run `bitrise run update-wrapper-versions`
-1. Merge the updated wrapper versions
+1. Merge all changes to master.
+1. Increase the version in `version/version.go`.
+1. Merge the version change to master.
+1. Push version tag to master.
+1. Download from GitHub and test the new release.
+1. Run `bitrise run update-wrapper-versions`.
+1. Merge the updated wrapper versions.
