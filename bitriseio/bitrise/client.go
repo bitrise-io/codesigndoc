@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -67,15 +67,20 @@ type Client struct {
 }
 
 // NewClient ...
-func NewClient(accessToken string) (*Client, []Application, error) {
+func NewClient(accessToken string) (*Client, error) {
 	client := &Client{accessToken, "", map[string]string{"Authorization": "token " + accessToken}, http.Client{}}
+	return client, nil
+}
+
+// GetAppList returns the list of apps for the given access token
+func (client *Client) GetAppList() ([]Application, error) {
 	var apps []Application
 
 	log.Infof("Fetching your application list from Bitrise...")
 
 	requestURL, err := urlutil.Join(baseURL, appsEndPoint)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	log.Debugf("\nRequest URL: %s", requestURL)
@@ -90,7 +95,7 @@ func NewClient(accessToken string) (*Client, []Application, error) {
 
 		request, err := createRequest(http.MethodGet, requestURL, headers, nil)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		if len(next) > 0 {
@@ -102,7 +107,7 @@ func NewClient(accessToken string) (*Client, []Application, error) {
 		// Perform request
 		response, _, err := RunRequest(client, request, &appListResponse)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		appListResponse = *response.(*MyAppsResponse)
@@ -116,12 +121,27 @@ func NewClient(accessToken string) (*Client, []Application, error) {
 		}
 	}
 
-	return client, apps, nil
+	return apps, nil
 }
 
 // SetSelectedAppSlug ...
 func (client *Client) SetSelectedAppSlug(slug string) {
 	client.selectedAppSlug = slug
+}
+
+// UploadArtifact ...
+func (client *Client) UploadArtifact(uploadURL string, content io.Reader) error {
+	request, err := http.NewRequest(http.MethodPut, uploadURL, content)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = RunRequest(client, request, nil)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // RunRequest ...
@@ -155,29 +175,6 @@ func RunRequest(client *Client, req *http.Request, requestResponse interface{}) 
 	}
 
 	return requestResponse, responseBody, nil
-}
-
-func createUploadRequest(requestMethod string, url string, headers map[string]string, filePth string) (*http.Request, error) {
-	var content []byte
-
-	f, err := os.Open(filePth)
-	if err != nil {
-		return nil, err
-
-	}
-
-	content, err = ioutil.ReadAll(f)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(content))
-	if err != nil {
-		return nil, err
-	}
-	addHeaders(req, headers)
-
-	return req, nil
 }
 
 func createRequest(requestMethod string, url string, headers map[string]string, fields map[string]interface{}) (*http.Request, error) {

@@ -16,7 +16,7 @@ echo " => Downloading version: ${version_to_use}"
 
 scan_command_to_use="xamarin"
 
-codesigndoc_download_url="https://github.com/bitrise-tools/codesigndoc/releases/download/${version_to_use}/codesigndoc-Darwin-x86_64"
+codesigndoc_download_url="https://github.com/bitrise-io/codesigndoc/releases/download/${version_to_use}/codesigndoc-Darwin-x86_64"
 echo " => Downloading codesigndoc from (${codesigndoc_download_url}) to (${codesigndoc_bin_path}) ..."
 curl -fL --progress-bar --output "${codesigndoc_bin_path}" "$codesigndoc_download_url"
 echo " => Making it executable ..."

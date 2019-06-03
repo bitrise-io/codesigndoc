@@ -2,11 +2,10 @@ package bitrise
 
 import (
 	"net/http"
-	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
 // RegisterProvisioningProfileData ...
@@ -212,27 +211,6 @@ func (client *Client) RegisterProvisioningProfile(provisioningProfSize int64, ex
 
 	requestResponse = *response.(*RegisterProvisioningProfileResponse)
 	return requestResponse.Data, nil
-}
-
-// UploadProvisioningProfile ...
-func (client *Client) UploadProvisioningProfile(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
-	log.Printf("Upload %s to Bitrise...", exportFileName)
-
-	filePth := filepath.Join(outputDirPath, exportFileName)
-
-	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
-	if err != nil {
-		return err
-	}
-
-	//
-	// Perform request
-	_, _, err = RunRequest(client, request, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // ConfirmProvisioningProfileUpload ...

@@ -5,9 +5,9 @@ import (
 	"os"
 	"path"
 
-	"github.com/bitrise-core/bitrise-init/scanners/ios"
-	"github.com/bitrise-core/bitrise-init/scanners/xamarin"
-	"github.com/bitrise-core/bitrise-init/utility"
+	"github.com/bitrise-io/bitrise-init/scanners/ios"
+	"github.com/bitrise-io/bitrise-init/scanners/xamarin"
+	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/goinp/goinp"

@@ -2,16 +2,19 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
+	"github.com/bitrise-io/codesigndoc/codesigndocuitests"
+	"github.com/bitrise-io/codesigndoc/xcodeuitest"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesigndocuitests"
-	"github.com/bitrise-tools/codesigndoc/xcodeuitest"
-	"github.com/bitrise-tools/go-xcode/utility"
 	"github.com/spf13/cobra"
 )
 
@@ -34,9 +37,9 @@ func init() {
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath, err := initExportOutputDir()
+	absExportOutputDirPath, err := absOutputDir()
 	if err != nil {
-		return fmt.Errorf("failed to prepare Export directory: %s", err)
+		return err
 	}
 
 	// Output tools versions
@@ -113,31 +116,56 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
-	buildForTestingPath, buildLog, err := xcodeUITestsCmd.RunBuildForTesting()
-	xcodebuildOutput := buildLog
-	// save the xcodebuild output into a debug log file
+	var isLogFileWritten bool
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-	{
+
+	buildForTestingPath, xcodebuildOutput, err := xcodeUITestsCmd.RunBuildForTesting()
+	if writeFiles == codesign.WriteFilesAlways ||
+		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
+		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create output directory, error: %s", err)
+		}
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, logWriteErr)
-		} else if err != nil {
+		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		} else {
+			isLogFileWritten = true
+		}
+	}
+	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+		fmt.Println()
+		if isLogFileWritten {
 			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
 			log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
 			fmt.Println()
 			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
 			fmt.Println()
 		}
-	}
-	if err != nil {
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndocuitests.ExportCodesignFiles(buildForTestingPath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
+	certificatesToExport, profilesToExport, err := codesigndocuitests.CollectCodesignFiles(buildForTestingPath, certificatesOnly)
+	if err != nil {
+		return err
+	}
+	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
+		profilesToExport,
+		isAskForPassword,
+		codesign.WriteFilesConfig{
+			WriteFiles:       writeFiles,
+			AbsOutputDirPath: absExportOutputDirPath,
+		},
+		codesign.UploadConfig{
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
+		})
 	if err != nil {
 		return err
 	}
 
-	printFinished(provProfilesUploaded, certsUploaded)
+	printFinished(exportResult, absExportOutputDirPath)
 	return nil
 }

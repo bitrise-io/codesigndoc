@@ -3,11 +3,10 @@ package bitrise
 import (
 	"math/big"
 	"net/http"
-	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/urlutil"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/certificateutil"
 )
 
 // RegisterIdentityData ...
@@ -214,24 +213,6 @@ func (client *Client) RegisterIdentity(certificateSize int64) (RegisterIdentityD
 
 	requestResponse = *response.(*RegisterIdentityResponse)
 	return requestResponse.Data, nil
-}
-
-// UploadIdentity ...
-func (client *Client) UploadIdentity(uploadURL string, uploadFileName string, outputDirPath string, exportFileName string) error {
-	log.Printf("Upload %s to Bitrise...", exportFileName)
-
-	filePth := filepath.Join(outputDirPath, exportFileName)
-
-	request, err := createUploadRequest(http.MethodPut, uploadURL, nil, filePth)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = RunRequest(client, request, nil)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // ConfirmIdentityUpload ...

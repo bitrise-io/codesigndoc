@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"unsafe"
 
-	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/certificateutil"
 )
 
 /*
@@ -21,7 +20,7 @@ import (
 import "C"
 
 // ExportFromKeychain ...
-func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, isAskForPassword bool) error {
+func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, isAskForPassword bool) ([]byte, error) {
 	passphraseCString := C.CString("")
 	defer C.free(unsafe.Pointer(passphraseCString))
 
@@ -61,7 +60,7 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 		&exportedData)
 
 	if status != C.errSecSuccess {
-		return fmt.Errorf("SecItemExport: error (OSStatus): %d", status)
+		return nil, fmt.Errorf("SecItemExport: error (OSStatus): %d", status)
 	}
 	// exportedData now contains your PKCS12 data
 	//  make sure it'll be released properly!
@@ -69,16 +68,11 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, outputFilePath string, i
 
 	dataBytes := convertCFDataRefToGoBytes(exportedData)
 	if dataBytes == nil || len(dataBytes) < 1 {
-		return errors.New("ExportFromKeychain: failed to convert export data - nil or empty")
+		return nil, errors.New("ExportFromKeychain: failed to convert export data - nil or empty")
 	}
-
-	if err := fileutil.WriteBytesToFile(outputFilePath, dataBytes); err != nil {
-		return fmt.Errorf("ExportFromKeychain: failed to write into file: %s", err)
-	}
-
 	log.Debugf("Export - success")
 
-	return nil
+	return dataBytes, nil
 }
 
 func convertCFDataRefToGoBytes(cfdata C.CFDataRef) []byte {

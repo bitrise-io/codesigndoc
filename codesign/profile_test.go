@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
 	"github.com/stretchr/testify/require"
 )
 

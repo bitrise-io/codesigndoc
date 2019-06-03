@@ -31,7 +31,7 @@ to run:
 
 Exporting the code signing files of the App target and it's dependent targets for the Archive and IPA generation (e.g: [Xcode Archive & Export for iOS](https://github.com/bitrise-io/steps-xcode-archive) step will need them):
 ```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
 ```
 </p>
 </details>
@@ -49,13 +49,13 @@ _So you will need to run the `install_wrap-xcode.sh ` and the `install_wrap-xcod
 
 First you need to export the code signing files of the App target and it's dependent targets:
 ```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc/master/_scripts/install_wrap-xcode.sh)"
 ```
 
 Secondly you need to export the code signing files of the UI test targets:
 
 ```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xcode-uitests.sh)"
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc/master/_scripts/install_wrap-xcode-uitests.sh)"
 ```
 
 ---
@@ -79,7 +79,7 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 <p>
 
 ```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesigndoc/master/_scripts/install_wrap-xamarin.sh)"
+bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc/master/_scripts/install_wrap-xamarin.sh)"
 ```
 </p>
 </details>
@@ -91,7 +91,7 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-tools/codesign
 1. download the current release - it's a single, stand-alone binary
    * example (**don't forget to replace the `VERSIONNUMBER` in the URL!**):
      `curl -sfL
-     https://github.com/bitrise-tools/codesigndoc/releases/download/VERSIONNUMBER/codesigndoc-Darwin-x86_64 >
+     https://github.com/bitrise-io/codesigndoc/releases/download/VERSIONNUMBER/codesigndoc-Darwin-x86_64 >
      ./codesigndoc`
 2. `chmod +x` it, so you can run it
    * if you followed the previous example: `chmod +x ./codesigndoc`

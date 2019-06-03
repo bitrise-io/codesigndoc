@@ -3,17 +3,13 @@ package codesigndoc
 import (
 	"errors"
 	"fmt"
-	"os"
 
-	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/bitriseio"
-	"github.com/bitrise-tools/codesigndoc/codesign"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/export"
-	"github.com/bitrise-tools/go-xcode/profileutil"
-	"github.com/bitrise-tools/go-xcode/xcarchive"
+	"github.com/bitrise-io/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/export"
+	"github.com/bitrise-io/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/xcarchive"
 )
 
 const collectCodesigningFilesInfo = `To collect available code sign files, we search for installed Provisioning Profiles:"
@@ -23,13 +19,13 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 - which matches to the selected export method"
 `
 
-// ExportCodesignFiles exports the codesigning files required to create an xcode archive
-// and exports the codesigning files for the specified export method
-func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly bool, askForPassword bool) (bool, bool, error) {
+// CollectCodesignFiles collects the codesigning files required to create an xcode archive
+// and filers them for the specified export method
+func CollectCodesignFiles(archivePath string, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 	// Find out the XcArchive type
 	isMacOs, err := xcarchive.IsMacOS(archivePath)
 	if err != nil {
-		return false, false, err
+		return nil, nil, err
 	}
 
 	// Set up the XcArchive type for certs and profiles.
@@ -43,12 +39,12 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	// Certificates
 	certificates, err := codesign.InstalledCertificates(certificateType)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
 	installerCertificates, err := certificateutil.InstalledInstallerCertificateInfos()
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed code signing identities, error: %s", err)
 	}
 
 	log.Debugf("Installed certificates:")
@@ -59,7 +55,7 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 	// Profiles
 	profiles, err := profileutil.InstalledProvisioningProfileInfos(profileType)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to list installed provisioning profiles, error: %s", err)
+		return nil, nil, fmt.Errorf("failed to list installed provisioning profiles, error: %s", err)
 	}
 
 	log.Debugf("Installed profiles:")
@@ -67,58 +63,11 @@ func ExportCodesignFiles(archivePath, outputDirPath string, certificatesOnly boo
 		log.Debugf(profileInfo.String(certificates...))
 	}
 
-	certificatesToExport, profilesToExport, err := getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
-	if err != nil {
-		return false, false, err
-	}
-
 	// export code sign settings
 	fmt.Println()
 	fmt.Println()
 	log.Printf("🔦  Analyzing the archive, to get export code signing settings...")
-
-	if err := codesign.CollectAndExportIdentities(certificatesToExport, outputDirPath, askForPassword); err != nil {
-		return false, false, err
-	}
-
-	if err := codesign.CollectAndExportProvisioningProfiles(profilesToExport, outputDirPath); err != nil {
-		return false, false, err
-	}
-
-	provProfilesUploaded := (len(profilesToExport) == 0)
-	certsUploaded := (len(certificatesToExport) == 0)
-
-	var shouldUpload bool
-	if !certificatesOnly {
-		fmt.Println()
-		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the provisioning profiles and certificates to Bitrise?", os.Stdin)
-		if err != nil {
-			return false, false, err
-		}
-	} else {
-		shouldUpload, err = goinp.AskForBoolFromReader("Do you want to upload the certificates to Bitrise?", os.Stdin)
-		if err != nil {
-			return false, false, err
-		}
-	}
-
-	if shouldUpload {
-		certsUploaded, provProfilesUploaded, err = bitriseio.UploadCodesigningFiles(certificatesToExport, profilesToExport, certificatesOnly, outputDirPath)
-		if err != nil {
-			return false, false, err
-		}
-	}
-
-	fmt.Println()
-	log.Successf("Exports finished you can find the exported files at: %s", outputDirPath)
-
-	if err := command.RunCommand("open", outputDirPath); err != nil {
-		log.Errorf("Failed to open the export directory in Finder: %s", outputDirPath)
-	} else {
-		fmt.Println("Opened the directory in Finder.")
-	}
-
-	return certsUploaded, provProfilesUploaded, nil
+	return getFilesToExport(archivePath, certificates, installerCertificates, profiles, certificatesOnly)
 }
 
 func getFilesToExport(archivePath string, installedCertificates []certificateutil.CertificateInfoModel, installedInstallerCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {

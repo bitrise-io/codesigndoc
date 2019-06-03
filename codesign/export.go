@@ -1,21 +1,156 @@
 package codesign
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"path/filepath"
 
-	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/codesigndoc/bitriseio"
+	"github.com/bitrise-io/codesigndoc/bitriseio/bitrise"
+	"github.com/bitrise-io/codesigndoc/models"
+	"github.com/bitrise-io/codesigndoc/osxkeychain"
+	"github.com/bitrise-io/codesigndoc/utility"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-tools/codesigndoc/osxkeychain"
-	"github.com/bitrise-tools/go-xcode/certificateutil"
-	"github.com/bitrise-tools/go-xcode/profileutil"
+	"github.com/bitrise-io/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/profileutil"
+	"github.com/bitrise-io/goinp/goinp"
 )
 
-// CollectAndExportIdentities exports the given certificates into the given directory as a single .p12 file
-func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, absExportOutputDirPath string, isAskForPassword bool) error {
+// UploadConfig contains configuration to automatically upload artifacts to bitrise.io
+type UploadConfig struct {
+	PersonalAccessToken string
+	AppSlug             string
+}
+
+// WriteFilesConfig controls writing artifacts as files
+type WriteFilesConfig struct {
+	WriteFiles       WriteFilesLevel
+	AbsOutputDirPath string
+}
+
+// WriteFilesLevel describes if codesigning files should be written to the output directory
+type WriteFilesLevel int
+
+const (
+	// Invalid represents an invalid value
+	Invalid WriteFilesLevel = iota
+	// WriteFilesAlways writes build logs and codesigning files always
+	WriteFilesAlways
+	// WriteFilesFallback writes artifacts when upload was not chosen or failed
+	WriteFilesFallback
+	// WriteFilesDisabled does not write any files
+	WriteFilesDisabled
+)
+
+// ExportReport describes the output of codesigning files export
+type ExportReport struct {
+	CertificatesUploaded         bool
+	ProvisioningProfilesUploaded bool
+	CodesignFilesWritten         bool
+}
+
+// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
+func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (ExportReport, error) {
+	identities, err := collectAndExportIdentities(certificates, askForPassword)
+	if err != nil {
+		return ExportReport{}, err
+	}
+	provisioningProfiles, err := collectAndExportProvisioningProfiles(profiles)
+	if err != nil {
+		return ExportReport{}, err
+	}
+
+	var client *bitrise.Client
+	// both or none CLI flags are required
+	if uploadConfig.PersonalAccessToken != "" && uploadConfig.AppSlug != "" {
+		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
+		// Used to upload artifacts as part of an other CLI tool
+		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)
+		if err != nil {
+			return ExportReport{}, err
+		}
+		client.SetSelectedAppSlug(uploadConfig.AppSlug)
+	}
+	if client == nil {
+		uploadConfirmMsg := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
+		if len(provisioningProfiles) == 0 {
+			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
+		}
+		fmt.Println()
+		shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin)
+		if err != nil {
+			return ExportReport{}, err
+		}
+		if shouldUpload {
+			if client, err = bitriseio.GetInteractiveConfigClient(); err != nil {
+				return ExportReport{}, err
+			}
+		}
+	}
+
+	var filesWritten bool
+	if writeFilesConfig.WriteFiles == WriteFilesAlways ||
+		writeFilesConfig.WriteFiles == WriteFilesFallback && client == nil {
+		if err := writeFiles(identities, provisioningProfiles, writeFilesConfig); err != nil {
+			return ExportReport{}, err
+		}
+		filesWritten = true
+	}
+
+	if client == nil {
+		return ExportReport{
+			CertificatesUploaded:         len(certificates) == 0,
+			ProvisioningProfilesUploaded: len(profiles) == 0,
+			CodesignFilesWritten:         filesWritten,
+		}, nil
+	}
+
+	certificatesUploaded, profilesUploaded, err := bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
+	return ExportReport{
+		CertificatesUploaded:         certificatesUploaded,
+		ProvisioningProfilesUploaded: profilesUploaded,
+		CodesignFilesWritten:         filesWritten,
+	}, err
+}
+
+func writeFiles(identities models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig) error {
+	if err := os.MkdirAll(writeFilesConfig.AbsOutputDirPath, 0700); err != nil {
+		return fmt.Errorf("failed to create output directory for codesigning files, error: %s", err)
+	}
+
+	entries, err := ioutil.ReadDir(writeFilesConfig.AbsOutputDirPath)
+	if err != nil && err != os.ErrNotExist {
+		return fmt.Errorf("failed to check output directory contents, error: %s", err)
+	}
+	containsArtifacts := false
+	for _, entry := range entries {
+		if !entry.IsDir() && (path.Ext(entry.Name()) != ".log") {
+			containsArtifacts = true
+			break
+		}
+	}
+	if containsArtifacts {
+		fmt.Println()
+		log.Warnf("Export output directory exists and is not empty.")
+	}
+
+	if err := writeIdentities(identities.Content, writeFilesConfig.AbsOutputDirPath); err != nil {
+		return err
+	}
+	if err := writeProvisioningProfiles(provisioningProfiles, writeFilesConfig.AbsOutputDirPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+// collectAndExportIdentities exports the given certificates merged in a single .p12 file
+func collectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
 	if len(certificates) == 0 {
-		return nil
+		return models.Certificates{}, nil
 	}
 
 	fmt.Println()
@@ -35,11 +170,11 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 		log.Printf("searching for Identity: %s", certificate.CommonName)
 		identityRef, err := osxkeychain.FindAndValidateIdentity(certificate.CommonName)
 		if err != nil {
-			return fmt.Errorf("failed to export, error: %s", err)
+			return models.Certificates{}, fmt.Errorf("failed to export, error: %s", err)
 		}
 
 		if identityRef == nil {
-			return errors.New("identity not found in the keychain, or it was invalid (expired)")
+			return models.Certificates{}, errors.New("identity not found in the keychain, or it was invalid (expired)")
 		}
 
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
@@ -65,17 +200,25 @@ func CollectAndExportIdentities(certificates []certificateutil.CertificateInfoMo
 	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
 	fmt.Println()
 
-	if err := osxkeychain.ExportFromKeychain(identityKechainRefs, filepath.Join(absExportOutputDirPath, "Identities.p12"), isAskForPassword); err != nil {
-		return fmt.Errorf("failed to export from Keychain: %s", err)
+	identities, err := osxkeychain.ExportFromKeychain(identityKechainRefs, isAskForPassword)
+	if err != nil {
+		return models.Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
-
-	return nil
+	return models.Certificates{
+		Info:    certificates,
+		Content: identities,
+	}, nil
 }
 
-// CollectAndExportProvisioningProfiles copies the give profiles into the given directory
-func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel, absExportOutputDirPath string) error {
+// writeIdentities writes identities to a file path
+func writeIdentities(identites []byte, absExportOutputDirPath string) error {
+	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identites, 0600)
+}
+
+// collectAndExportProvisioningProfiles returns provisioning profies
+func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
 	if len(profiles) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	log.Infof("Required Provisioning Profiles (%d)", len(profiles))
@@ -86,21 +229,44 @@ func CollectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 	fmt.Println()
 	log.Infof("Exporting Provisioning Profiles...")
 
+	var exportedProfiles []models.ProvisioningProfile
 	for _, profile := range profiles {
 		log.Printf("searching for required Provisioning Profile: %s (UUID: %s)", profile.Name, profile.UUID)
-		_, pth, err := profileutil.FindProvisioningProfileInfo(profile.UUID)
+		provisioningProfile, pth, err := profileutil.FindProvisioningProfile(profile.UUID)
 		if err != nil {
-			return fmt.Errorf("failed to find Provisioning Profile: %s", err)
+			return nil, fmt.Errorf("failed to find Provisioning Profile: %s", err)
 		}
-
 		log.Printf("file found at: %s", pth)
 
-		exportFileName := profileExportFileName(profile, pth)
+		exportedProfile, err := profileutil.NewProvisioningProfileInfo(*provisioningProfile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
+		}
+		if bytes.Compare(profile.Content(), exportedProfile.Content()) != 0 {
+			return nil, fmt.Errorf("Profile found in the archive does not match found profile")
+		}
+
+		contents, err := ioutil.ReadFile(pth)
+		if err != nil {
+			return nil, fmt.Errorf("could not read provisioning profile file, error: %s", err)
+		}
+
+		exportedProfiles = append(exportedProfiles, models.ProvisioningProfile{
+			Info:    exportedProfile,
+			Content: contents,
+		})
+	}
+	return exportedProfiles, nil
+}
+
+// writeProvisioningProfiles writes provisioning profiles to the filesystem
+func writeProvisioningProfiles(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
+	for _, profile := range profiles {
+		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
-		if err := command.RunCommand("cp", pth, exportPth); err != nil {
-			return fmt.Errorf("Failed to copy Provisioning Profile (from: %s) (to: %s), error: %s", pth, exportPth, err)
+		if err := ioutil.WriteFile(exportPth, profile.Content, 0600); err != nil {
+			return fmt.Errorf("failed to write file, error: %s", err)
 		}
 	}
-
 	return nil
 }

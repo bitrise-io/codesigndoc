@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bitrise-tools/go-xcode/certificateutil"
+	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/pkg/errors"
 )
 

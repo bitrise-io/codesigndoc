@@ -3,19 +3,22 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
+	"github.com/bitrise-io/codesigndoc/codesigndoc"
+	"github.com/bitrise-io/codesigndoc/xamarin"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xamarin/analyzers/project"
+	"github.com/bitrise-io/go-xamarin/analyzers/solution"
+	"github.com/bitrise-io/go-xamarin/builder"
+	"github.com/bitrise-io/go-xamarin/constants"
 	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-tools/codesigndoc/codesigndoc"
-	"github.com/bitrise-tools/codesigndoc/xamarin"
-	"github.com/bitrise-tools/go-xamarin/analyzers/project"
-	"github.com/bitrise-tools/go-xamarin/analyzers/solution"
-	"github.com/bitrise-tools/go-xamarin/builder"
-	"github.com/bitrise-tools/go-xamarin/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -76,9 +79,9 @@ func archivableSolutionConfigNames(projectsByID map[string]project.Model) []stri
 }
 
 func scanXamarinProject(cmd *cobra.Command, args []string) error {
-	absExportOutputDirPath, err := initExportOutputDir()
+	absExportOutputDirPath, err := absOutputDir()
 	if err != nil {
-		return fmt.Errorf("failed to prepare Export directory: %s", err)
+		return err
 	}
 
 	xamarinCmd := xamarin.CommandModel{}
@@ -94,8 +97,8 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		//
 		// Scan the directory for Xamarin.Solution file first
 		// If can't find any, ask the user to drag-and-drop the file
-		xamarinCmd.SolutionFilePath, err = findXamarinSolution()
-		if err != nil {
+		var err error
+		if xamarinCmd.SolutionFilePath, err = findXamarinSolution(); err != nil {
 			return err
 		}
 	}
@@ -158,15 +161,27 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Println()
 	log.Printf(`🔦  Running a Build, to get all the required code signing settings...`)
-	archivePath, xamLogOut, err := xamarinCmd.GenerateArchive()
-	logOutput := xamLogOut
-	// save the xamarin output into a debug log file
+	var isLogFileWritten bool
 	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
-	{
+
+	archivePath, logOutput, err := xamarinCmd.GenerateArchive()
+	if writeFiles == codesign.WriteFilesAlways ||
+		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xamarin output into a debug log file
+		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create output directory, error: %s", err)
+		}
 		log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
-		if logWriteErr := fileutil.WriteStringToFile(logOutputFilePath, logOutput); logWriteErr != nil {
-			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, logWriteErr)
-		} else if err != nil {
+		if err := fileutil.WriteStringToFile(logOutputFilePath, logOutput); err != nil {
+			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, err)
+		} else {
+			isLogFileWritten = true
+		}
+	}
+	if err != nil {
+		log.Warnf("Last lines of build log:")
+		fmt.Println(stringutil.LastNLines(logOutput, 15))
+		fmt.Println()
+		if isLogFileWritten {
 			log.Warnf("Please check the logfile (%s) to see what caused the error", logOutputFilePath)
 			log.Warnf(`and make sure that you can "Archive for Publishing" this project from Xamarin!`)
 			fmt.Println()
@@ -174,16 +189,29 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 			log.Infof(`And do "Archive for Publishing", after selecting the Configuration+Platform: %s|%s`, xamarinCmd.Configuration, xamarinCmd.Platform)
 			fmt.Println()
 		}
-	}
-	if err != nil {
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
-	certsUploaded, provProfilesUploaded, err := codesigndoc.ExportCodesignFiles(archivePath, absExportOutputDirPath, certificatesOnly, isAskForPassword)
+	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
+	certificatesToExport, profilesToExport, err := codesigndoc.CollectCodesignFiles(archivePath, certificatesOnly)
+	if err != nil {
+		return err
+	}
+	exoprtResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
+		profilesToExport,
+		isAskForPassword,
+		codesign.WriteFilesConfig{
+			WriteFiles:       writeFiles,
+			AbsOutputDirPath: absExportOutputDirPath,
+		},
+		codesign.UploadConfig{
+			PersonalAccessToken: personalAccessToken,
+			AppSlug:             appSlug,
+		})
 	if err != nil {
 		return err
 	}
 
-	printFinished(provProfilesUploaded, certsUploaded)
+	printFinished(exoprtResult, absExportOutputDirPath)
 	return nil
 }
