@@ -1,10 +1,5 @@
-format_version: 5
+format_version: 7
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
-
-app:
-  envs:
-  - BITRISE_BIN_NAME: codesigndoc
-  - GITHUB_RELEASES_URL: https://github.com/bitrise-io/${BITRISE_BIN_NAME}/releases
 
 workflows:
   test:  
@@ -13,6 +8,16 @@ workflows:
     - golint:
     - errcheck:
     - go-test:
+
+  update-wrapper-versions:
+    steps:
+    - script:
+        title: Creating release install_wrap
+        inputs:
+        - content: |-
+            cd ./_scripts
+            go run update_wrapper_versions.go
+            cd -
 
   dep-update:
     title: Dep update
@@ -28,73 +33,3 @@ workflows:
             go get -u -v github.com/golang/dep/cmd/dep
             dep ensure -v
             dep ensure -v -update
-
-
-  create-release:
-    before_run:
-    - test
-    steps:
-    - script:
-        title: Creating deploy
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            if [ -f _bin/tmpbin ] ; then
-              rm _bin/tmpbin
-            fi
-            go build -o _bin/tmpbin
-            binversion="$(_bin/tmpbin version)"
-            echo "binversion: ${binversion}"
-            mkdir -p _bin/${binversion}
-            finalpth=_bin/${binversion}/${BITRISE_BIN_NAME}-$(uname -s)-$(uname -m)
-            echo "finalpth: ${finalpth}"
-            mv _bin/tmpbin "${finalpth}"
-            # register the version for next steps
-            envman add --key RELEASE_VERSION --value "${binversion}"
-            # generate changelog
-            releaseman create-changelog --version "${binversion}"
-    - script:
-        title: Creating release install_wrap
-        inputs:
-        - content: |-
-            template_path = "./_scripts/install_wrap.sh.template"
-            puts " * template_path: #{template_path}"
-            template_content = File.read(template_path)
-            # -- xcode --
-            target_path = "./_scripts/install_wrap-xcode.sh"
-            puts " * target_path: #{target_path}"
-            final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
-            final_content = final_content.gsub("{{scan_cmd}}", 'xcode')
-            File.open(target_path, "w") do |f|
-              f.write(final_content)
-            end
-            # for compatibility
-            File.open("./_scripts/install_wrap.sh", "w") do |f|
-              f.write(final_content)
-            end
-            # -- xamarin --
-            target_path = "./_scripts/install_wrap-xamarin.sh"
-            puts " * target_path: #{target_path}"
-            final_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
-            final_content = final_content.gsub("{{scan_cmd}}", 'xamarin')
-            File.open(target_path, "w") do |f|
-              f.write(final_content)
-            end
-        - runner_bin: ruby
-    # - script:
-    #     title: Creating release changelog template
-    #     inputs:
-    #     - content: |-
-    #         changelog_path = "./_changelogs/#{ENV['RELEASE_VERSION']}.md"
-    #         puts " * changelog_path: #{changelog_path}"
-    #         template_content = File.read("./_changelogs/template.md")
-    #         changelog_content = template_content.gsub("{{version}}", ENV['RELEASE_VERSION'])
-    #         File.open(changelog_path, "w") do |f|
-    #           f.write(changelog_content)
-    #         end
-    #     - runner_bin: ruby
-    # - script:
-    #     title: Open _bin folder
-    #     inputs:
-    #     - content: open _bin

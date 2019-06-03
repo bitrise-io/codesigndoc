@@ -1,5 +1,0 @@
-release:
-  development_branch: master
-  release_branch: master
-changelog:
-  path: ./CHANGELOG.md
