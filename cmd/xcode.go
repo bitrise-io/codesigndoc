@@ -120,20 +120,19 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	}
 
 	archivePath, xcodebuildOutput, err := codesigndoc.GenerateXCodeArchive(xcodeCmd)
-	if err != nil {
-		if writeFiles == codesign.WriteFilesAlways || writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
-			xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-			if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
-				return fmt.Errorf("failed to create output directory, error: %s", err)
-			}
-			log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-			if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
-				log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
-			}
-			log.Warnf("Please check the logfile to see what caused the error and make sure that you can Archive this project from Xcode!")
-			fmt.Println()
+	if writeFiles == codesign.WriteFilesAlways || writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
-
+		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+		}
+		log.Warnf("Please check the logfile to see what caused the error and make sure that you can Archive this project from Xcode!")
+		fmt.Println()
+	}
+	if err != nil {
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
