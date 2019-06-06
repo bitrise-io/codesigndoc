@@ -13,7 +13,6 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
@@ -120,46 +119,32 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 		xcodeCmd.SDK = paramXcodebuildSDK
 	}
 
-	fmt.Println()
-	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
-	var isLogFileWritten bool
-	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
-	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
-
-	if writeFiles == codesign.WriteFilesAlways ||
-		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
-		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
-			return fmt.Errorf("failed to create output directory, error: %s", err)
-		}
-		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
-		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
-			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
-		} else {
-			isLogFileWritten = true
-		}
-	}
+	archivePath, xcodebuildOutput, err := codesigndoc.GenerateXCodeArchive(xcodeCmd)
 	if err != nil {
-		log.Warnf("Last lines of build log:")
-		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
-		fmt.Println()
+		var isLogFileWritten bool
+		xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
+
+		if writeFiles == codesign.WriteFilesAlways || writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
+			if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
+				return fmt.Errorf("failed to create output directory, error: %s", err)
+			}
+			log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
+			if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
+				log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+			} else {
+				isLogFileWritten = true
+			}
+		}
+
 		if isLogFileWritten {
 			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
 			log.Warnf("and make sure that you can Archive this project from Xcode!")
-			fmt.Println()
-			log.Printf("Open the project: %s", xcodeCmd.ProjectFilePath)
-			log.Printf("and Archive, using the Scheme: %s", xcodeCmd.Scheme)
 			fmt.Println()
 		}
 		return ArchiveError{toolXcode, err.Error()}
 	}
 
-	// If certificatesOnly is set, CollectCodesignFiles returns an empty slice for profiles
-	certificatesToExport, profilesToExport, err := codesigndoc.CollectCodesignFiles(archivePath, certificatesOnly)
-	if err != nil {
-		return err
-	}
-
-	certificates, profiles, err := codesign.ExportCodesigningFiles(certificatesToExport, profilesToExport, isAskForPassword)
+	certificates, profiles, err := codesigndoc.CodesigningFilesForXCodeProject(archivePath, certificatesOnly, isAskForPassword)
 	if err != nil {
 		return err
 	}
