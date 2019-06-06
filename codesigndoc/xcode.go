@@ -18,11 +18,13 @@ func GenerateXCodeArchive(xcodeCmd xcode.CommandModel) (string, string, error) {
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
 
 	if err != nil {
+		log.Errorf("Xcode Archive failed.")
+		log.Errorf("Open the project: %s", xcodeCmd.ProjectFilePath)
+		log.Errorf("and run the Archive command, after selecting the scheme: %s", xcodeCmd.Scheme)
+		fmt.Println()
+
 		log.Warnf("Last lines of build log:")
 		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
-		fmt.Println()
-		log.Printf("Open the project: %s", xcodeCmd.ProjectFilePath)
-		log.Printf("and Archive, using the Scheme: %s", xcodeCmd.Scheme)
 		fmt.Println()
 		return "", "", err
 	}
