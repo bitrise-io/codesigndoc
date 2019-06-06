@@ -151,9 +151,14 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
-		profilesToExport,
-		isAskForPassword,
+
+	certificates, profiles, err := codesign.ExportCodesigningFiles(certificatesToExport, profilesToExport, isAskForPassword)
+	if err != nil {
+		return err
+	}
+
+	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificates,
+		profiles,
 		codesign.WriteFilesConfig{
 			WriteFiles:       writeFiles,
 			AbsOutputDirPath: absExportOutputDirPath,

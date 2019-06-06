@@ -54,7 +54,7 @@ func absOutputDir() (string, error) {
 	return absExportOutputDirPath, nil
 }
 
-func scanXcodeProject(cmd *cobra.Command, args []string) error {
+func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	absExportOutputDirPath, err := absOutputDir()
 	if err != nil {
 		return err
@@ -158,9 +158,14 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	exoprtResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
-		profilesToExport,
-		isAskForPassword,
+
+	certificates, profiles, err := codesign.ExportCodesigningFiles(certificatesToExport, profilesToExport, isAskForPassword)
+	if err != nil {
+		return err
+	}
+
+	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificates,
+		profiles,
 		codesign.WriteFilesConfig{
 			WriteFiles:       writeFiles,
 			AbsOutputDirPath: absExportOutputDirPath,
@@ -173,6 +178,6 @@ func scanXcodeProject(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	printFinished(exoprtResult, absExportOutputDirPath)
+	printFinished(exportResult, absExportOutputDirPath)
 	return nil
 }
