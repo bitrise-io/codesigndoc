@@ -115,6 +115,7 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println()
+	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 
@@ -128,15 +129,12 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
 		}
-
-		if err != nil {
-			log.Warnf("Please check the logfile to see what caused the error.")
-		}
 	}
-
 	if err != nil {
 		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+
+		log.Infof(colorstring.Yellow("Please check the build log to see what caused the error."))
 		fmt.Println()
 
 		log.Errorf("Xcode Build For Testing failed.")

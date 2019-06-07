@@ -168,18 +168,17 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
+
 		log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
 		if err := fileutil.WriteStringToFile(logOutputFilePath, logOutput); err != nil {
 			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, err)
-		}
-
-		if err != nil {
-			log.Warnf("Please check the logfile to see what caused the error.")
 		}
 	}
 	if err != nil {
 		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(logOutput, 15))
+
+		log.Infof(colorstring.Yellow("Please check the build log to see what caused the error."))
 		fmt.Println()
 
 		log.Errorf("Build failed.")

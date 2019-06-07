@@ -14,22 +14,34 @@ import (
 )
 
 // GenerateXCodeArchive ...
-func GenerateXCodeArchive(xcodeCmd xcode.CommandModel) (string, string, error) {
+func GenerateXCodeArchive(xcodeCmd xcode.CommandModel, handleBuildLog func(string) error) (archivePath string, err error) {
 	// Output tools versions
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get Xcode (xcodebuild) version, error: %s", err)
+		return "", fmt.Errorf("failed to get Xcode (xcodebuild) version, error: %s", err)
 	}
 	fmt.Println()
 	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
 
 	fmt.Println()
+	fmt.Println()
 	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
+
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
+
+	defer func() {
+		if derr := handleBuildLog(xcodebuildOutput); derr != nil {
+			if err != nil {
+				err = derr
+			}
+		}
+	}()
 
 	if err != nil {
 		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+
+		log.Infof(colorstring.Yellow("Please check the build log to see what caused the error."))
 		fmt.Println()
 
 		log.Errorf("Xcode Archive failed.")
@@ -37,10 +49,10 @@ func GenerateXCodeArchive(xcodeCmd xcode.CommandModel) (string, string, error) {
 		log.Infof(colorstring.Yellow("and make sure that you can build an Archive, with the scheme: ")+"%s", xcodeCmd.Scheme)
 		fmt.Println()
 
-		return "", "", err
+		return "", err
 	}
 
-	return archivePath, xcodebuildOutput, nil
+	return archivePath, nil
 }
 
 // CodesigningFilesForXCodeProject ...
