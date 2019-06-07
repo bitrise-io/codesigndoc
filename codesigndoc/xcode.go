@@ -30,9 +30,11 @@ func BuildXcodeArchive(xcodeCmd xcode.CommandModel, handleBuildLog func(string) 
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
 
 	defer func() {
-		if derr := handleBuildLog(xcodebuildOutput); derr != nil {
-			if err != nil {
-				err = derr
+		if handleBuildLog != nil {
+			if derr := handleBuildLog(xcodebuildOutput); derr != nil {
+				if err != nil {
+					err = derr
+				}
 			}
 		}
 	}()
