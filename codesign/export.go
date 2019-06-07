@@ -1,7 +1,6 @@
 package codesign
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -252,9 +251,6 @@ func exportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoMo
 		exportedProfile, err := profileutil.NewProvisioningProfileInfo(*provisioningProfile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
-		}
-		if bytes.Compare(profile.Content(), exportedProfile.Content()) != 0 {
-			return nil, fmt.Errorf("Profile found in the archive does not match found profile")
 		}
 
 		contents, err := ioutil.ReadFile(pth)
