@@ -123,7 +123,7 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
-	archivePath, err := codesigndoc.GenerateXCodeArchive(xcodeCmd, writeBuildLogs)
+	archivePath, err := codesigndoc.BuildXcodeArchive(xcodeCmd, writeBuildLogs)
 	if err != nil {
 		return ArchiveError{toolXcode, err.Error()}
 	}

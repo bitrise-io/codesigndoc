@@ -13,8 +13,8 @@ import (
 	"github.com/bitrise-io/go-utils/stringutil"
 )
 
-// GenerateXCodeArchive ...
-func GenerateXCodeArchive(xcodeCmd xcode.CommandModel, handleBuildLog func(string) error) (archivePath string, err error) {
+// BuildXcodeArchive builds an Xcode archive
+func BuildXcodeArchive(xcodeCmd xcode.CommandModel, handleBuildLog func(string) error) (archivePath string, err error) {
 	// Output tools versions
 	xcodebuildVersion, err := utility.GetXcodeVersion()
 	if err != nil {
