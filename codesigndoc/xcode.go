@@ -4,28 +4,39 @@ import (
 	"fmt"
 
 	"github.com/bitrise-io/codesigndoc/xcode"
+	"github.com/bitrise-io/go-xcode/utility"
 
 	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/models"
+	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/stringutil"
 )
 
 // GenerateXCodeArchive ...
 func GenerateXCodeArchive(xcodeCmd xcode.CommandModel) (string, string, error) {
+	// Output tools versions
+	xcodebuildVersion, err := utility.GetXcodeVersion()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get Xcode (xcodebuild) version, error: %s", err)
+	}
+	fmt.Println()
+	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
+
 	fmt.Println()
 	log.Printf("🔦  Running an Xcode Archive, to get all the required code signing settings...")
 	archivePath, xcodebuildOutput, err := xcodeCmd.GenerateArchive()
 
 	if err != nil {
-		log.Errorf("Xcode Archive failed.")
-		log.Errorf("Open the project: %s", xcodeCmd.ProjectFilePath)
-		log.Errorf("and run the Archive command, after selecting the scheme: %s", xcodeCmd.Scheme)
-		fmt.Println()
-
-		log.Warnf("Last lines of build log:")
+		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
 		fmt.Println()
+
+		log.Errorf("Xcode Archive failed.")
+		log.Infof(colorstring.Yellow("Open the project: ")+"%s", xcodeCmd.ProjectFilePath)
+		log.Infof(colorstring.Yellow("and make sure that you can build an Archive, with the scheme: ")+"%s", xcodeCmd.Scheme)
+		fmt.Println()
+
 		return "", "", err
 	}
 

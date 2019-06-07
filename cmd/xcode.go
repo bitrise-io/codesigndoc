@@ -13,7 +13,6 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
@@ -59,15 +58,6 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	// Output tools versions
-	xcodebuildVersion, err := utility.GetXcodeVersion()
-	if err != nil {
-		return fmt.Errorf("failed to get Xcode (xcodebuild) version, error: %s", err)
-	}
-	fmt.Println()
-	log.Infof("%s: %s (%s)", colorstring.Green("Xcode (xcodebuild) version"), xcodebuildVersion.Version, xcodebuildVersion.BuildVersion)
-	fmt.Println()
-
 	xcodeCmd := xcode.CommandModel{}
 
 	projectPath := paramXcodeProjectFilePath
@@ -75,7 +65,6 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 		log.Infof("Scan the directory for project files")
 		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
 
-		//
 		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
 		// If can't find any, ask the user to drag-and-drop the file
 		projpth, err := findXcodeProject()
@@ -125,12 +114,15 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
+
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
 		}
-		log.Warnf("Please check the logfile to see what caused the error and make sure that you can Archive this project from Xcode!")
-		fmt.Println()
+		
+		if err != nil {
+			log.Warnf("Please check the logfile to see what caused the error.")
+		}
 	}
 	if err != nil {
 		return ArchiveError{toolXcode, err.Error()}

@@ -161,34 +161,32 @@ func scanXamarinProject(cmd *cobra.Command, args []string) error {
 	fmt.Println()
 	fmt.Println()
 	log.Printf(`🔦  Running a Build, to get all the required code signing settings...`)
-	var isLogFileWritten bool
 	logOutputFilePath := filepath.Join(absExportOutputDirPath, "xamarin-build-output.log")
 
 	archivePath, logOutput, err := xamarinCmd.GenerateArchive()
-	if writeFiles == codesign.WriteFilesAlways ||
-		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xamarin output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways || writeFiles == codesign.WriteFilesFallback && err != nil { // save the xamarin output into a debug log file
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
 		log.Infof("💡  "+colorstring.Yellow("Saving xamarin output into file")+": %s", logOutputFilePath)
 		if err := fileutil.WriteStringToFile(logOutputFilePath, logOutput); err != nil {
 			log.Errorf("Failed to save xamarin build output into file (%s), error: %s", logOutputFilePath, err)
-		} else {
-			isLogFileWritten = true
+		}
+
+		if err != nil {
+			log.Warnf("Please check the logfile to see what caused the error.")
 		}
 	}
 	if err != nil {
-		log.Warnf("Last lines of build log:")
+		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(logOutput, 15))
 		fmt.Println()
-		if isLogFileWritten {
-			log.Warnf("Please check the logfile (%s) to see what caused the error", logOutputFilePath)
-			log.Warnf(`and make sure that you can "Archive for Publishing" this project from Xamarin!`)
-			fmt.Println()
-			log.Infof("Open the project: %s", xamarinCmd.SolutionFilePath)
-			log.Infof(`And do "Archive for Publishing", after selecting the Configuration+Platform: %s|%s`, xamarinCmd.Configuration, xamarinCmd.Platform)
-			fmt.Println()
-		}
+
+		log.Errorf("Build failed.")
+		log.Infof(colorstring.Yellow("Open the project: ")+"%s", xamarinCmd.SolutionFilePath)
+		log.Infof(colorstring.Yellow(`And do "Archive for Publishing", after selecting the Configuration+Platform: `)+"%s|%s", xamarinCmd.Configuration, xamarinCmd.Platform)
+		fmt.Println()
+
 		return ArchiveError{toolXamarin, "failed to run xamarin build command: " + err.Error()}
 	}
 
