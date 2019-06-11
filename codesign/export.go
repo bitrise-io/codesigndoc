@@ -1,7 +1,6 @@
 package codesign
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -53,38 +52,49 @@ type ExportReport struct {
 	CodesignFilesWritten         bool
 }
 
-// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
-func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoModel, profiles []profileutil.ProvisioningProfileInfoModel, askForPassword bool, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (ExportReport, error) {
-	identities, err := collectAndExportIdentities(certificates, askForPassword)
+// ExportCodesigningFiles exports certificates from the Keychain and provisoining profiles from their directory
+func ExportCodesigningFiles(certificatesRequired []certificateutil.CertificateInfoModel, profilesRequired []profileutil.ProvisioningProfileInfoModel, askForPassword bool) (models.Certificates, []models.ProvisioningProfile, error) {
+	certificates, err := exportIdentities(certificatesRequired, askForPassword)
 	if err != nil {
-		return ExportReport{}, err
-	}
-	provisioningProfiles, err := collectAndExportProvisioningProfiles(profiles)
-	if err != nil {
-		return ExportReport{}, err
+		return models.Certificates{}, nil, err
 	}
 
+	profiles, err := exportProvisioningProfiles(profilesRequired)
+	if err != nil {
+		return models.Certificates{}, nil, err
+	}
+
+	return certificates, profiles, nil
+}
+
+// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
+func UploadAndWriteCodesignFiles(certificates models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (ExportReport, error) {
 	var client *bitrise.Client
 	// both or none CLI flags are required
 	if uploadConfig.PersonalAccessToken != "" && uploadConfig.AppSlug != "" {
 		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
 		// Used to upload artifacts as part of an other CLI tool
+		var err error
 		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)
 		if err != nil {
 			return ExportReport{}, err
 		}
+
 		client.SetSelectedAppSlug(uploadConfig.AppSlug)
 	}
+
 	if client == nil {
 		uploadConfirmMsg := "Do you want to upload the provisioning profiles and certificates to Bitrise?"
 		if len(provisioningProfiles) == 0 {
 			uploadConfirmMsg = "Do you want to upload the certificates to Bitrise?"
 		}
 		fmt.Println()
+
 		shouldUpload, err := goinp.AskForBoolFromReader(uploadConfirmMsg, os.Stdin)
 		if err != nil {
 			return ExportReport{}, err
 		}
+
 		if shouldUpload {
 			if client, err = bitriseio.GetInteractiveConfigClient(); err != nil {
 				return ExportReport{}, err
@@ -95,7 +105,7 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 	var filesWritten bool
 	if writeFilesConfig.WriteFiles == WriteFilesAlways ||
 		writeFilesConfig.WriteFiles == WriteFilesFallback && client == nil {
-		if err := writeFiles(identities, provisioningProfiles, writeFilesConfig); err != nil {
+		if err := writeFiles(certificates, provisioningProfiles, writeFilesConfig); err != nil {
 			return ExportReport{}, err
 		}
 		filesWritten = true
@@ -103,13 +113,13 @@ func UploadAndWriteCodesignFiles(certificates []certificateutil.CertificateInfoM
 
 	if client == nil {
 		return ExportReport{
-			CertificatesUploaded:         len(certificates) == 0,
-			ProvisioningProfilesUploaded: len(profiles) == 0,
+			CertificatesUploaded:         len(certificates.Info) == 0,
+			ProvisioningProfilesUploaded: len(provisioningProfiles) == 0,
 			CodesignFilesWritten:         filesWritten,
 		}, nil
 	}
 
-	certificatesUploaded, profilesUploaded, err := bitriseio.UploadCodesigningFiles(client, identities, provisioningProfiles)
+	certificatesUploaded, profilesUploaded, err := bitriseio.UploadCodesigningFiles(client, certificates, provisioningProfiles)
 	return ExportReport{
 		CertificatesUploaded:         certificatesUploaded,
 		ProvisioningProfilesUploaded: profilesUploaded,
@@ -147,8 +157,8 @@ func writeFiles(identities models.Certificates, provisioningProfiles []models.Pr
 	return nil
 }
 
-// collectAndExportIdentities exports the given certificates merged in a single .p12 file
-func collectAndExportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
+// exportIdentities exports the given certificates merged in a single .p12 file
+func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
 	if len(certificates) == 0 {
 		return models.Certificates{}, nil
 	}
@@ -215,8 +225,8 @@ func writeIdentities(identites []byte, absExportOutputDirPath string) error {
 	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identites, 0600)
 }
 
-// collectAndExportProvisioningProfiles returns provisioning profies
-func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
+// exportProvisioningProfiles returns provisioning profies
+func exportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
 	if len(profiles) == 0 {
 		return nil, nil
 	}
@@ -241,9 +251,6 @@ func collectAndExportProvisioningProfiles(profiles []profileutil.ProvisioningPro
 		exportedProfile, err := profileutil.NewProvisioningProfileInfo(*provisioningProfile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
-		}
-		if bytes.Compare(profile.Content(), exportedProfile.Content()) != 0 {
-			return nil, fmt.Errorf("Profile found in the archive does not match found profile")
 		}
 
 		contents, err := ioutil.ReadFile(pth)

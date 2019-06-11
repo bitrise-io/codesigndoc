@@ -115,34 +115,33 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println()
+	fmt.Println()
 	log.Printf("🔦  Running an Xcode build-for-testing, to get all the required code signing settings...")
-	var isLogFileWritten bool
 	xcodebuildOutputFilePath := filepath.Join(absExportOutputDirPath, "xcodebuild-output.log")
 
 	buildForTestingPath, xcodebuildOutput, err := xcodeUITestsCmd.RunBuildForTesting()
-	if writeFiles == codesign.WriteFilesAlways ||
-		writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
+	if writeFiles == codesign.WriteFilesAlways || writeFiles == codesign.WriteFilesFallback && err != nil { // save the xcodebuild output into a debug log file
 		if err := os.MkdirAll(absExportOutputDirPath, 0700); err != nil {
 			return fmt.Errorf("failed to create output directory, error: %s", err)
 		}
+
 		log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 		if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
 			log.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
-		} else {
-			isLogFileWritten = true
 		}
 	}
 	if err != nil {
-		log.Warnf("Last lines of build log:")
+		log.Warnf("Last lines of the build log:")
 		fmt.Println(stringutil.LastNLines(xcodebuildOutput, 15))
+
+		log.Infof(colorstring.Yellow("Please check the build log to see what caused the error."))
 		fmt.Println()
-		if isLogFileWritten {
-			log.Warnf("Please check the logfile (%s) to see what caused the error", xcodebuildOutputFilePath)
-			log.Warnf("and make sure that you can run Build for testing against the project from Xcode!")
-			fmt.Println()
-			log.Printf("Open the project: %s", xcodeUITestsCmd.ProjectFilePath)
-			fmt.Println()
-		}
+
+		log.Errorf("Xcode Build For Testing failed.")
+		log.Infof(colorstring.Yellow("Open the project: ")+"%s", xcodeUITestsCmd.ProjectFilePath)
+		log.Infof(colorstring.Yellow("and make sure that you can run Build For Testing, with the scheme: ")+"%s", xcodeUITestsCmd.Scheme)
+		fmt.Println()
+
 		return BuildForTestingError{toolXcode, err.Error()}
 	}
 
@@ -151,9 +150,14 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificatesToExport,
-		profilesToExport,
-		isAskForPassword,
+
+	certificates, profiles, err := codesign.ExportCodesigningFiles(certificatesToExport, profilesToExport, isAskForPassword)
+	if err != nil {
+		return err
+	}
+
+	exportResult, err := codesign.UploadAndWriteCodesignFiles(certificates,
+		profiles,
 		codesign.WriteFilesConfig{
 			WriteFiles:       writeFiles,
 			AbsOutputDirPath: absExportOutputDirPath,
