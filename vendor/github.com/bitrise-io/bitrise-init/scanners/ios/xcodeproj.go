@@ -41,6 +41,8 @@ var AllowXCWorkspaceExtFilter = utility.ExtensionFilter(xcodeproj.XCWorkspaceExt
 // AllowIsDirectoryFilter ...
 var AllowIsDirectoryFilter = utility.IsDirectoryFilter(true)
 
+var containsContentsXcworkspacedata = utility.DirectoryContainsFile("contents.xcworkspacedata")
+
 // ForbidEmbeddedWorkspaceRegexpFilter ...
 var ForbidEmbeddedWorkspaceRegexpFilter = utility.RegexpFilter(embeddedWorkspacePathPattern, false)
 
@@ -226,6 +228,7 @@ func FilterRelevantWorkspaceFiles(fileList []string, projectTypes ...XcodeProjec
 	filters := []utility.FilterFunc{
 		AllowXCWorkspaceExtFilter,
 		AllowIsDirectoryFilter,
+		containsContentsXcworkspacedata,
 		ForbidEmbeddedWorkspaceRegexpFilter,
 		ForbidGitDirComponentFilter,
 		ForbidPodsDirComponentFilter,

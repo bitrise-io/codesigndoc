@@ -191,6 +191,28 @@ func InDirectoryFilter(dir string, allowed bool) FilterFunc {
 	}
 }
 
+// DirectoryContainsFile returns a FilterFunc that checks if a directory contains a file
+func DirectoryContainsFile(fileName string) FilterFunc {
+	return func(pth string) (bool, error) {
+		isDir, err := IsDirectoryFilter(true)(pth)
+		if err != nil {
+			return false, err
+		}
+		if !isDir {
+			return false, nil
+		}
+
+		absPath := filepath.Join(pth, fileName)
+		if _, err := os.Lstat(absPath); err != nil {
+			if !os.IsNotExist(err) {
+				return false, err
+			}
+			return false, nil
+		}
+		return true, nil
+	}
+}
+
 // FileContains ...
 func FileContains(pth, str string) (bool, error) {
 	content, err := fileutil.ReadStringFromFile(pth)

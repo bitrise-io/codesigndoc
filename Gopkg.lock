@@ -11,7 +11,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5601a0fd753306423d79a8f518d47919f8463d03edfb16dbcb48434404cb0b51"
+  digest = "1:9e349e4b4eefee423b81f576044ed9ce1c97a3de73f9e6f49f26f87ac2c1035c"
   name = "github.com/bitrise-io/bitrise-init"
   packages = [
     "models",
@@ -21,7 +21,7 @@
     "utility",
   ]
   pruneopts = "UT"
-  revision = "1e39bdac80b8db8e4fcf0bac16f27369df08fc15"
+  revision = "72587f8138dfef5d82a9d213db782869acb48d1d"
 
 [[projects]]
   branch = "master"
@@ -29,7 +29,7 @@
   name = "github.com/bitrise-io/envman"
   packages = ["models"]
   pruneopts = "UT"
-  revision = "1716460e0651c3f40b9542f9e237b9a3d35773bb"
+  revision = "eb2e53257e527de59351cec1ecdffb50dadd5a07"
 
 [[projects]]
   branch = "master"
@@ -77,7 +77,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:425cd43a5a7515b399a6e55771f7da70828506ad2e6366e01df6d351e67c168b"
+  digest = "1:6f75ac41dad21e33fb174f22562faf1824e228ccadd26b3a216cad0e408adb5a"
   name = "github.com/bitrise-io/go-xcode"
   packages = [
     "certificateutil",
@@ -91,15 +91,15 @@
     "xcodeproj",
   ]
   pruneopts = "UT"
-  revision = "51984334e0fb83bf66588acf87f09c5ac624874b"
+  revision = "c1544b4453f2869335f71fb53c0360bdb91d01b4"
 
 [[projects]]
   branch = "master"
-  digest = "1:094419e25266ad87ac9eec38043f314f474c81f6b1bb7f4ca11cc7fe5a5d9c2d"
+  digest = "1:980e760f25b82cb4ffe32b146956029f1f5c8bea3c39f9f973cc023d4ae965b1"
   name = "github.com/bitrise-io/goinp"
   packages = ["goinp"]
   pruneopts = "UT"
-  revision = "c9a4dac0f9b3539bbbeb10eece5c3f03d0ec3ea0"
+  revision = "bd18a8681e272db4696c50152b288f722d08b914"
 
 [[projects]]
   branch = "master"
@@ -107,7 +107,7 @@
   name = "github.com/bitrise-io/stepman"
   packages = ["models"]
   pruneopts = "UT"
-  revision = "050220145c5a1c555ae67c6f62677d95eb46ed26"
+  revision = "af0e468635253eaf3a66dca748af4a5966d161b1"
 
 [[projects]]
   branch = "master"
@@ -172,12 +172,12 @@
   revision = "51a8f68e6c24dc43f1e371749c89a267de4ebc53"
 
 [[projects]]
-  digest = "1:22799aea8fe96dd5693abdd1eaa14b1b29e3eafbdc7733fa155b3cb556c8a7ae"
+  digest = "1:e096613fb7cf34743d49af87d197663cfccd61876e2219853005a57baedfa562"
   name = "github.com/spf13/cobra"
   packages = ["."]
   pruneopts = "UT"
-  revision = "67fc4837d267bc9bfd6e47f77783fcc3dffc68de"
-  version = "v0.0.4"
+  revision = "f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5"
+  version = "v0.0.5"
 
 [[projects]]
   digest = "1:c1b1102241e7f645bc8e0c22ae352e8f0dc6484b6cb4d132fa9f24174e0119e2"
@@ -204,18 +204,18 @@
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "UT"
-  revision = "20be4c3c3ed52bfccdb2d59a412ee1a936d175a7"
+  revision = "5c40567a22f818bd14a1ea7245dad9f8ef0691aa"
 
 [[projects]]
   branch = "master"
-  digest = "1:6cbace514cbe27ab19afd55e9fd63e1195cda506c3cc4ae21dfeb3dcd6b8c59f"
+  digest = "1:2a96b14fed8617c9e499777c03ec21f35dfd5b396f0b05fcdd7eff9e6c67f196"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "69e3a3a65b5bed52b8194d33c59d955757d87523"
+  revision = "93c9922d18aeb82498a065f07aec7ad7fa60dfb7"
 
 [[projects]]
   digest = "1:1093f2eb4b344996604f7d8b29a16c5b22ab9e1b25652140d3fede39f640d5cd"

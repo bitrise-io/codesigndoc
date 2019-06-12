@@ -10,6 +10,7 @@ import (
 	errorspkg "errors"
 	"sync"
 	"syscall"
+	"time"
 	"unicode/utf16"
 	"unsafe"
 )
@@ -194,6 +195,7 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	SetEnvironmentVariable(name *uint16, value *uint16) (err error) = kernel32.SetEnvironmentVariableW
 //sys	CreateEnvironmentBlock(block **uint16, token Token, inheritExisting bool) (err error) = userenv.CreateEnvironmentBlock
 //sys	DestroyEnvironmentBlock(block *uint16) (err error) = userenv.DestroyEnvironmentBlock
+//sys	getTickCount64() (ms uint64) = kernel32.GetTickCount64
 //sys	SetFileTime(handle Handle, ctime *Filetime, atime *Filetime, wtime *Filetime) (err error)
 //sys	GetFileAttributes(name *uint16) (attrs uint32, err error) [failretval==INVALID_FILE_ATTRIBUTES] = kernel32.GetFileAttributesW
 //sys	SetFileAttributes(name *uint16, attrs uint32) (err error) = kernel32.SetFileAttributesW
@@ -232,7 +234,7 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	RegQueryInfoKey(key Handle, class *uint16, classLen *uint32, reserved *uint32, subkeysLen *uint32, maxSubkeyLen *uint32, maxClassLen *uint32, valuesLen *uint32, maxValueNameLen *uint32, maxValueLen *uint32, saLen *uint32, lastWriteTime *Filetime) (regerrno error) = advapi32.RegQueryInfoKeyW
 //sys	RegEnumKeyEx(key Handle, index uint32, name *uint16, nameLen *uint32, reserved *uint32, class *uint16, classLen *uint32, lastWriteTime *Filetime) (regerrno error) = advapi32.RegEnumKeyExW
 //sys	RegQueryValueEx(key Handle, name *uint16, reserved *uint32, valtype *uint32, buf *byte, buflen *uint32) (regerrno error) = advapi32.RegQueryValueExW
-//sys	getCurrentProcessId() (pid uint32) = kernel32.GetCurrentProcessId
+//sys	GetCurrentProcessId() (pid uint32) = kernel32.GetCurrentProcessId
 //sys	GetConsoleMode(console Handle, mode *uint32) (err error) = kernel32.GetConsoleMode
 //sys	SetConsoleMode(console Handle, mode uint32) (err error) = kernel32.SetConsoleMode
 //sys	GetConsoleScreenBufferInfo(console Handle, info *ConsoleScreenBufferInfo) (err error) = kernel32.GetConsoleScreenBufferInfo
@@ -241,6 +243,8 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	CreateToolhelp32Snapshot(flags uint32, processId uint32) (handle Handle, err error) [failretval==InvalidHandle] = kernel32.CreateToolhelp32Snapshot
 //sys	Process32First(snapshot Handle, procEntry *ProcessEntry32) (err error) = kernel32.Process32FirstW
 //sys	Process32Next(snapshot Handle, procEntry *ProcessEntry32) (err error) = kernel32.Process32NextW
+//sys	Thread32First(snapshot Handle, threadEntry *ThreadEntry32) (err error)
+//sys	Thread32Next(snapshot Handle, threadEntry *ThreadEntry32) (err error)
 //sys	DeviceIoControl(handle Handle, ioControlCode uint32, inBuffer *byte, inBufferSize uint32, outBuffer *byte, outBufferSize uint32, bytesReturned *uint32, overlapped *Overlapped) (err error)
 // This function returns 1 byte BOOLEAN rather than the 4 byte BOOL.
 //sys	CreateSymbolicLink(symlinkfilename *uint16, targetfilename *uint16, flags uint32) (err error) [failretval&0xff==0] = CreateSymbolicLinkW
@@ -284,6 +288,9 @@ func NewCallbackCDecl(fn interface{}) uintptr {
 //sys	SetVolumeLabel(rootPathName *uint16, volumeName *uint16) (err error) = SetVolumeLabelW
 //sys	SetVolumeMountPoint(volumeMountPoint *uint16, volumeName *uint16) (err error) = SetVolumeMountPointW
 //sys	MessageBox(hwnd Handle, text *uint16, caption *uint16, boxtype uint32) (ret int32, err error) [failretval==0] = user32.MessageBoxW
+//sys	clsidFromString(lpsz *uint16, pclsid *GUID) (ret error) = ole32.CLSIDFromString
+//sys	stringFromGUID2(rguid *GUID, lpsz *uint16, cchMax int32) (chars int32) = ole32.StringFromGUID2
+//sys	coCreateGuid(pguid *GUID) (ret error) = ole32.CoCreateGuid
 
 // syscall interface implementation for other packages
 
@@ -496,6 +503,10 @@ func ComputerName() (name string, err error) {
 		return "", e
 	}
 	return string(utf16.Decode(b[0:n])), nil
+}
+
+func DurationSinceBoot() time.Duration {
+	return time.Duration(getTickCount64()) * time.Millisecond
 }
 
 func Ftruncate(fd Handle, length int64) (err error) {
@@ -1107,7 +1118,7 @@ func SetsockoptIPv6Mreq(fd Handle, level, opt int, mreq *IPv6Mreq) (err error) {
 	return syscall.EWINDOWS
 }
 
-func Getpid() (pid int) { return int(getCurrentProcessId()) }
+func Getpid() (pid int) { return int(GetCurrentProcessId()) }
 
 func FindFirstFile(name *uint16, data *Win32finddata) (handle Handle, err error) {
 	// NOTE(rsc): The Win32finddata struct is wrong for the system call:
@@ -1234,4 +1245,40 @@ func Readlink(path string, buf []byte) (n int, err error) {
 	n = copy(buf, []byte(s))
 
 	return n, nil
+}
+
+// GUIDFromString parses a string in the form of
+// "{XXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}" into a GUID.
+func GUIDFromString(str string) (GUID, error) {
+	guid := GUID{}
+	str16, err := syscall.UTF16PtrFromString(str)
+	if err != nil {
+		return guid, err
+	}
+	err = clsidFromString(str16, &guid)
+	if err != nil {
+		return guid, err
+	}
+	return guid, nil
+}
+
+// GenerateGUID creates a new random GUID.
+func GenerateGUID() (GUID, error) {
+	guid := GUID{}
+	err := coCreateGuid(&guid)
+	if err != nil {
+		return guid, err
+	}
+	return guid, nil
+}
+
+// String returns the canonical string form of the GUID,
+// in the form of "{XXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}".
+func (guid GUID) String() string {
+	var str [100]uint16
+	chars := stringFromGUID2(&guid, &str[0], int32(len(str)))
+	if chars <= 1 {
+		return ""
+	}
+	return string(utf16.Decode(str[:chars-1]))
 }
