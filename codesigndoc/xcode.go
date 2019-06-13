@@ -3,14 +3,13 @@ package codesigndoc
 import (
 	"fmt"
 
-	"github.com/bitrise-io/codesigndoc/xcode"
-	"github.com/bitrise-io/go-xcode/utility"
-
 	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/models"
+	"github.com/bitrise-io/codesigndoc/xcode"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/stringutil"
+	"github.com/bitrise-io/go-xcode/utility"
 )
 
 // BuildXcodeArchive builds an Xcode archive
