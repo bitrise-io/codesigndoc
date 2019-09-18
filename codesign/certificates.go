@@ -19,8 +19,10 @@ const (
 
 var (
 	iOSCertificateNames = []string{
-		"iPhone Developer",    //type: "iOS Development"
+		"iPhone Developer",    // type: "iOS Development"
 		"iPhone Distribution", // type: "iOS Distribution"
+		"Apple Development",   // type: "iOS Development for Xcode 11", id: "83Q87W3TGH"
+		"Apple Distribution",  // type: "iOS Distribution for Xcode 11", id: "WXV89964HE"
 	}
 
 	macOSCertificateNames = []string{
@@ -32,6 +34,8 @@ var (
 	macOSInstallerCertificateNames = []string{
 		"3rd Party Mac Developer Installer", // type: "Mac Installer Distribution"
 		"Developer ID Installer",            // type: "Developer ID Installer"
+		"Apple Development",   // type: "iOS Development for Xcode 11", id: "83Q87W3TGH"
+		"Apple Distribution",  // type: "iOS Distribution for Xcode 11", id: "WXV89964HE"
 	}
 )
 
