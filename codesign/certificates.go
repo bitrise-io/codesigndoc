@@ -29,13 +29,13 @@ var (
 		"Mac Developer",                       // type: "Mac Development"
 		"3rd Party Mac Developer Application", // type: "Mac App Distribution"
 		"Developer ID Application",            // type: "Developer ID Application"
+		"Apple Development",                   // type: "iOS Development for Xcode 11", id: "83Q87W3TGH"
+		"Apple Distribution",                  // type: "iOS Distribution for Xcode 11", id: "WXV89964HE"
 	}
 
 	macOSInstallerCertificateNames = []string{
 		"3rd Party Mac Developer Installer", // type: "Mac Installer Distribution"
 		"Developer ID Installer",            // type: "Developer ID Installer"
-		"Apple Development",   // type: "iOS Development for Xcode 11", id: "83Q87W3TGH"
-		"Apple Distribution",  // type: "iOS Distribution for Xcode 11", id: "WXV89964HE"
 	}
 )
 
