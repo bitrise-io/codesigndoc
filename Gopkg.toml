@@ -29,15 +29,16 @@
 
 [[constraint]]
   name = "github.com/spf13/cobra"
-  version = "0.0.4"
+  version = "0.0.5"
 
 [[constraint]]
   name = "github.com/stretchr/testify"
-  version = "1.3.0"
+  version = "1.4.0"
 
-# Could not introduce github.com/bitrise-io/go-xcode@master, as it has a
-# dependency on github.com/ryanuber/go-glob with constraint ^1.0.0, which
-# has no overlap with existing constraint master from github.com/bitrise-io/bitrise@1.31.0
+# Could not introduce github.com/bitrise-io/go-xcode@master,
+# as it has a dependency on github.com/ryanuber/go-glob with
+# constraint ^1.0.0, which has no overlap with existing
+# constraint master from github.com/bitrise-io/bitrise@1.31.0
 [[override]]
   name = "github.com/ryanuber/go-glob"
   version = "1.0.0"

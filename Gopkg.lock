@@ -55,7 +55,7 @@
     "ziputil",
   ]
   pruneopts = "UT"
-  revision = "ca81ecd939b454c859292796631ebba923cd0e6f"
+  revision = "2c67c48e7086cfd8f9a29bfac2cd420d4dd1d2f9"
 
 [[projects]]
   branch = "master"
@@ -112,9 +112,10 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fdda64c0d9b713316970ace745f655595ef63f848d7404d049aea78fcb269b9b"
+  digest = "1:96dce0e947311f3985d20c3f368e71a4d281c916d3e3b85566f867f4a22980a3"
   name = "github.com/bitrise-io/xcode-project"
   packages = [
+    ".",
     "pretty",
     "serialized",
     "xcodebuild",
@@ -280,6 +281,7 @@
     "github.com/bitrise-io/go-xcode/utility",
     "github.com/bitrise-io/go-xcode/xcarchive",
     "github.com/bitrise-io/goinp/goinp",
+    "github.com/bitrise-io/xcode-project",
     "github.com/bitrise-io/xcode-project/xcodeproj",
     "github.com/bitrise-io/xcode-project/xcscheme",
     "github.com/bitrise-io/xcode-project/xcworkspace",
