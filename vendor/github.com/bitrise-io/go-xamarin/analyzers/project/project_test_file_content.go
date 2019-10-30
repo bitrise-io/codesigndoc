@@ -14,6 +14,7 @@ const iosTestProjectContent = `<?xml version="1.0" encoding="utf-8"?>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|iPhoneSimulator' ">
     <DebugSymbols>true</DebugSymbols>
+	<AndroidManifest>FalsePath</AndroidManifest>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\iPhoneSimulator\Debug</OutputPath>
@@ -142,6 +143,97 @@ const androidTestProjectContent = `<?xml version="1.0" encoding="utf-8"?>
     <AndroidUseLatestPlatformSdk>False</AndroidUseLatestPlatformSdk>
     <AssemblyName>CreditCardValidator.Droid</AssemblyName>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
+    <TargetFrameworkVersion>v4.4</TargetFrameworkVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <AndroidLinkMode>None</AndroidLinkMode>
+    <ConsolePause>false</ConsolePause>
+    <AndroidSigningKeyStore>bitrise-android-keystore.jks</AndroidSigningKeyStore>
+    <AndroidSigningStorePass>bitrise</AndroidSigningStorePass>
+    <AndroidSigningKeyAlias>bitrise-alias</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>bitrise</AndroidSigningKeyPass>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>full</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release</OutputPath>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <ConsolePause>false</ConsolePause>
+    <AndroidSupportedAbis>armeabi-v7a;x86</AndroidSupportedAbis>
+    <AndroidSigningKeyStore>bitrise-android-keystore.jks</AndroidSigningKeyStore>
+    <AndroidSigningStorePass>bitrise</AndroidSigningStorePass>
+    <AndroidSigningKeyAlias>bitrise-alias</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>bitrise</AndroidSigningKeyPass>
+    <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+    <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+    <AndroidKeyStore>True</AndroidKeyStore>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Core" />
+    <Reference Include="Mono.Android" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="MainActivity.cs" />
+    <Compile Include="Resources\Resource.designer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="CreditCardValidationSuccess.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AboutResources.txt" />
+    <None Include="Properties\AndroidManifest.xml" />
+    <None Include="Assets\AboutAssets.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <AndroidResource Include="Resources\layout\Main.axml" />
+    <AndroidResource Include="Resources\values\Strings.xml" />
+    <AndroidResource Include="Resources\drawable-hdpi\Icon.png" />
+    <AndroidResource Include="Resources\drawable-mdpi\Icon.png" />
+    <AndroidResource Include="Resources\drawable-xhdpi\Icon.png" />
+    <AndroidResource Include="Resources\drawable-xxhdpi\Icon.png" />
+    <AndroidResource Include="Resources\drawable-xxxhdpi\Icon.png" />
+    <AndroidResource Include="Resources\layout\CreditCardValidationSuccess.axml" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CreditCardValidator\CreditCardValidator.csproj">
+      <Project>{99A825A6-6F99-4B94-9F65-E908A6347F1E}</Project>
+      <Name>CreditCardValidator</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
+</Project>`
+
+// A valid xml, but unformatted in one line. The previous parse and regex by line won't work here.
+const androidTestProjectUnformattedContent = `<?xml version="1.0" encoding="utf-8"?><Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003"><PropertyGroup><Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration><Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform><ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids><ProjectGuid>{9D1D32A3-D13F-4F23-B7D4-EF9D52B06E60}</ProjectGuid><OutputType>Library</OutputType><RootNamespace>CreditCardValidator.Droid</RootNamespace><MonoAndroidAssetsPrefix>Assets</MonoAndroidAssetsPrefix><MonoAndroidResourcePrefix>Resources</MonoAndroidResourcePrefix><AndroidResgenClass>Resource</AndroidResgenClass><AndroidResgenFile>Resources\Resource.designer.cs</AndroidResgenFile><AndroidApplication>True</AndroidApplication><AndroidUseLatestPlatformSdk>False</AndroidUseLatestPlatformSdk><AssemblyName>CreditCardValidator.Droid</AssemblyName><AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest><TargetFrameworkVersion>v4.4</TargetFrameworkVersion></PropertyGroup><PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' "><DebugSymbols>true</DebugSymbols><DebugType>full</DebugType><Optimize>false</Optimize><OutputPath>bin\Debug</OutputPath><DefineConstants>DEBUG;</DefineConstants><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel><AndroidLinkMode>None</AndroidLinkMode><ConsolePause>false</ConsolePause><AndroidSigningKeyStore>bitrise-android-keystore.jks</AndroidSigningKeyStore><AndroidSigningStorePass>bitrise</AndroidSigningStorePass><AndroidSigningKeyAlias>bitrise-alias</AndroidSigningKeyAlias><AndroidSigningKeyPass>bitrise</AndroidSigningKeyPass></PropertyGroup><PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' "><DebugType>full</DebugType><Optimize>true</Optimize><OutputPath>bin\Release</OutputPath><ErrorReport>prompt</ErrorReport><WarningLevel>4</WarningLevel><ConsolePause>false</ConsolePause><AndroidSupportedAbis>armeabi-v7a;x86</AndroidSupportedAbis><AndroidSigningKeyStore>bitrise-android-keystore.jks</AndroidSigningKeyStore><AndroidSigningStorePass>bitrise</AndroidSigningStorePass><AndroidSigningKeyAlias>bitrise-alias</AndroidSigningKeyAlias><AndroidSigningKeyPass>bitrise</AndroidSigningKeyPass><EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk><AndroidUseSharedRuntime>false</AndroidUseSharedRuntime><AndroidKeyStore>True</AndroidKeyStore></PropertyGroup><ItemGroup><Reference Include="System" /><Reference Include="System.Xml" /><Reference Include="System.Core" /><Reference Include="Mono.Android" /></ItemGroup><ItemGroup><Compile Include="MainActivity.cs" /><Compile Include="Resources\Resource.designer.cs" /><Compile Include="Properties\AssemblyInfo.cs" /><Compile Include="CreditCardValidationSuccess.cs" /></ItemGroup><ItemGroup><None Include="Resources\AboutResources.txt" /><None Include="Properties\AndroidManifest.xml" /><None Include="Assets\AboutAssets.txt" /></ItemGroup><ItemGroup><AndroidResource Include="Resources\layout\Main.axml" /><AndroidResource Include="Resources\values\Strings.xml" /><AndroidResource Include="Resources\drawable-hdpi\Icon.png" /><AndroidResource Include="Resources\drawable-mdpi\Icon.png" /><AndroidResource Include="Resources\drawable-xhdpi\Icon.png" /><AndroidResource Include="Resources\drawable-xxhdpi\Icon.png" /><AndroidResource Include="Resources\drawable-xxxhdpi\Icon.png" /><AndroidResource Include="Resources\layout\CreditCardValidationSuccess.axml" /></ItemGroup><ItemGroup><ProjectReference Include="..\CreditCardValidator\CreditCardValidator.csproj"><Project>{99A825A6-6F99-4B94-9F65-E908A6347F1E}</Project><Name>CreditCardValidator</Name></ProjectReference></ItemGroup><Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" /></Project>`
+
+// A valid xml, but the Android manifest path is redefined. Always the last item should be used.
+const androidTestProjectContentWithRedefine = `<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectTypeGuids>{EFBA0AD7-5A72-4C68-AF49-83D382785DCF};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <ProjectGuid>{9D1D32A3-D13F-4F23-B7D4-EF9D52B06E60}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>CreditCardValidator.Droid</RootNamespace>
+    <MonoAndroidAssetsPrefix>Assets</MonoAndroidAssetsPrefix>
+    <MonoAndroidResourcePrefix>Resources</MonoAndroidResourcePrefix>
+    <AndroidResgenClass>Resource</AndroidResgenClass>
+    <AndroidResgenFile>Resources\Resource.designer.cs</AndroidResgenFile>
+    <AndroidApplication>True</AndroidApplication>
+    <AndroidUseLatestPlatformSdk>False</AndroidUseLatestPlatformSdk>
+    <AssemblyName>CreditCardValidator.Droid</AssemblyName>
+    <AndroidManifest>Bad</AndroidManifest>
+	<AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <TargetFrameworkVersion>v4.4</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

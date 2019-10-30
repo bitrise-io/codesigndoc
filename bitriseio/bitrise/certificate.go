@@ -122,7 +122,16 @@ func (client *Client) GetUploadedCertificatesSerialby(identitySlug string) (cert
 	var serialList []big.Int
 
 	for _, certificate := range certificates {
-		serialList = append(serialList, *certificate.SerialNumber)
+		var (
+			serial big.Int
+			base   = 10
+		)
+
+		if serialRef, ok := serial.SetString(certificate.Serial, base); ok {
+			serialList = append(serialList, *serialRef)
+		} else {
+			log.Warnf("Error converting serial ID (%s) with base (%d): ", certificate.Serial, base)
+		}
 	}
 	return serialList, nil
 }

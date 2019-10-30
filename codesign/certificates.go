@@ -68,7 +68,7 @@ func InstalledCertificates(certType certificateType) ([]certificateutil.Certific
 		}
 	}
 
-	return certificateutil.FilterValidCertificateInfos(certs), nil
+	return certificateutil.FilterValidCertificateInfos(certs).ValidCertificates, nil
 }
 
 // IsDistributionCertificate returns true if the given certificate

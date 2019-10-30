@@ -26,7 +26,9 @@ const (
 	// ProjectPathInputEnvKey ...
 	ProjectPathInputEnvKey = "BITRISE_PROJECT_PATH"
 	// ProjectPathInputTitle ...
-	ProjectPathInputTitle = "Project (or Workspace) path"
+	ProjectPathInputTitle = "Project or Workspace path"
+	// ProjectPathInputSummary ...
+	ProjectPathInputSummary = "The location of your Xcode project or Xcode workspace files, stored as an Environment Variable. In your Workflows, you can specify paths relative to this path."
 )
 
 const (
@@ -36,6 +38,8 @@ const (
 	SchemeInputEnvKey = "BITRISE_SCHEME"
 	// SchemeInputTitle ...
 	SchemeInputTitle = "Scheme name"
+	// SchemeInputSummary ...
+	SchemeInputSummary = "An Xcode scheme defines a collection of targets to build, a configuration to use when building, and a collection of tests to execute. Only shared schemes are detected automatically but you can use any scheme as a target on Bitrise. You can change the scheme at any time in your Env Vars."
 )
 
 const (
@@ -47,6 +51,10 @@ const (
 	IosExportMethodInputTitle = "ipa export method"
 	// MacExportMethodInputTitle ...
 	MacExportMethodInputTitle = "Application export method\nNOTE: `none` means: Export a copy of the application without re-signing."
+	// IosExportMethodInputSummary ...
+	IosExportMethodInputSummary = "The export method used to create an .ipa file in your builds, stored as an Environment Variable. You can change this at any time, or even create several .ipa files with different export methods in the same build."
+	// MacExportMethodInputSummary ...
+	MacExportMethodInputSummary = "The export method used to create an .app file in your builds, stored as an Environment Variable. You can change this at any time, or even create several .app files with different export methods in the same build."
 )
 
 // IosExportMethods ...
@@ -259,12 +267,15 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 	}
 
 	exportMethodInputTitle := ""
+	exportMethodInputSummary := ""
 	exportMethods := []string{}
 	if projectType == XcodeProjectTypeIOS {
 		exportMethodInputTitle = IosExportMethodInputTitle
+		exportMethodInputSummary = IosExportMethodInputSummary
 		exportMethods = IosExportMethods
 	} else {
 		exportMethodInputTitle = MacExportMethodInputTitle
+		exportMethodInputSummary = MacExportMethodInputSummary
 		exportMethods = MacExportMethods
 	}
 
@@ -319,7 +330,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 
 	defaultGitignorePth := filepath.Join(searchDir, ".gitignore")
 
-	projectPathOption := models.NewOption(ProjectPathInputTitle, ProjectPathInputEnvKey)
+	projectPathOption := models.NewOption(ProjectPathInputTitle, ProjectPathInputSummary, ProjectPathInputEnvKey, models.TypeSelector)
 
 	// App icons, merged from every project
 	iconsForAllProjects := models.Icons{}
@@ -328,7 +339,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 	for _, project := range standaloneProjects {
 		log.TInfof("Inspecting standalone project file: %s", project.Pth)
 
-		schemeOption := models.NewOption(SchemeInputTitle, SchemeInputEnvKey)
+		schemeOption := models.NewOption(SchemeInputTitle, SchemeInputSummary, SchemeInputEnvKey, models.TypeSelector)
 		projectPathOption.AddOption(project.Pth, schemeOption)
 
 		projectPath, err := filepath.Abs(filepath.Join(searchDir, project.Pth))
@@ -355,7 +366,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 
 			for _, target := range project.Targets {
 
-				exportMethodOption := models.NewOption(exportMethodInputTitle, ExportMethodInputEnvKey)
+				exportMethodOption := models.NewOption(exportMethodInputTitle, exportMethodInputSummary, ExportMethodInputEnvKey, models.TypeSelector)
 				schemeOption.AddOption(target.Name, exportMethodOption)
 
 				iconIDs := []string{}
@@ -384,7 +395,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 			for _, scheme := range project.SharedSchemes {
 				log.TPrintf("- %s", scheme.Name)
 
-				exportMethodOption := models.NewOption(exportMethodInputTitle, ExportMethodInputEnvKey)
+				exportMethodOption := models.NewOption(exportMethodInputTitle, exportMethodInputSummary, ExportMethodInputEnvKey, models.TypeSelector)
 				schemeOption.AddOption(scheme.Name, exportMethodOption)
 
 				iconIDs := []string{}
@@ -416,7 +427,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 	for _, workspace := range workspaces {
 		log.TInfof("Inspecting workspace file: %s", workspace.Pth)
 
-		schemeOption := models.NewOption(SchemeInputTitle, SchemeInputEnvKey)
+		schemeOption := models.NewOption(SchemeInputTitle, SchemeInputSummary, SchemeInputEnvKey, models.TypeSelector)
 		projectPathOption.AddOption(workspace.Pth, schemeOption)
 
 		carthageCommand, warning := detectCarthageCommand(workspace.Pth)
@@ -438,7 +449,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 			// Workspace path need not exist as it could be generated by cocoapods
 			for _, project := range workspace.Projects { // Not reusing targets as project path is needed
 				for _, target := range project.Targets {
-					exportMethodOption := models.NewOption(exportMethodInputTitle, ExportMethodInputEnvKey)
+					exportMethodOption := models.NewOption(exportMethodInputTitle, exportMethodInputSummary, ExportMethodInputEnvKey, models.TypeSelector)
 					schemeOption.AddOption(target.Name, exportMethodOption)
 
 					iconIDs := []string{}
@@ -468,7 +479,7 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 			for _, scheme := range sharedSchemes {
 				log.TPrintf("- %s", scheme.Name)
 
-				exportMethodOption := models.NewOption(exportMethodInputTitle, ExportMethodInputEnvKey)
+				exportMethodOption := models.NewOption(exportMethodInputTitle, exportMethodInputSummary, ExportMethodInputEnvKey, models.TypeSelector)
 				schemeOption.AddOption(scheme.Name, exportMethodOption)
 
 				iconIDs := []string{}
@@ -525,23 +536,26 @@ func GenerateOptions(projectType XcodeProjectType, searchDir string, excludeAppI
 
 // GenerateDefaultOptions ...
 func GenerateDefaultOptions(projectType XcodeProjectType) models.OptionNode {
-	projectPathOption := models.NewOption(ProjectPathInputTitle, ProjectPathInputEnvKey)
+	projectPathOption := models.NewOption(ProjectPathInputTitle, ProjectPathInputSummary, ProjectPathInputEnvKey, models.TypeUserInput)
 
-	schemeOption := models.NewOption(SchemeInputTitle, SchemeInputEnvKey)
-	projectPathOption.AddOption("_", schemeOption)
+	schemeOption := models.NewOption(SchemeInputTitle, SchemeInputSummary, SchemeInputEnvKey, models.TypeUserInput)
+	projectPathOption.AddOption("", schemeOption)
 
 	exportMethodInputTitle := ""
+	exportMethodInputSummary := ""
 	exportMethods := []string{}
 	if projectType == XcodeProjectTypeIOS {
 		exportMethodInputTitle = IosExportMethodInputTitle
+		exportMethodInputSummary = IosExportMethodInputSummary
 		exportMethods = IosExportMethods
 	} else {
 		exportMethodInputTitle = MacExportMethodInputTitle
+		exportMethodInputSummary = MacExportMethodInputSummary
 		exportMethods = MacExportMethods
 	}
 
-	exportMethodOption := models.NewOption(exportMethodInputTitle, ExportMethodInputEnvKey)
-	schemeOption.AddOption("_", exportMethodOption)
+	exportMethodOption := models.NewOption(exportMethodInputTitle, exportMethodInputSummary, ExportMethodInputEnvKey, models.TypeSelector)
+	schemeOption.AddOption("", exportMethodOption)
 
 	for _, exportMethod := range exportMethods {
 		configOption := models.NewConfigOption(fmt.Sprintf(defaultConfigNameFormat, string(projectType)), nil)

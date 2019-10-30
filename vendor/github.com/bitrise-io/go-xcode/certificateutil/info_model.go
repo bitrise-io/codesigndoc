@@ -1,14 +1,14 @@
 package certificateutil
 
 import (
+	"crypto/rand"
 	"crypto/sha1"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pkcs12"
 )
 
 // CertificateInfoModel ...
@@ -22,32 +22,21 @@ type CertificateInfoModel struct {
 	Serial          string
 	SHA1Fingerprint string
 
-	certificate x509.Certificate
+	Certificate x509.Certificate
+	PrivateKey  interface{}
 }
 
 // String ...
 func (info CertificateInfoModel) String() string {
-	printable := map[string]interface{}{}
-	printable["name"] = info.CommonName
-	printable["serial"] = info.Serial
-	printable["team"] = fmt.Sprintf("%s (%s)", info.TeamName, info.TeamID)
-	printable["expire"] = info.EndDate.String()
+	team := fmt.Sprintf("%s (%s)", info.TeamName, info.TeamID)
+	certInfo := fmt.Sprintf("Serial: %s, Name: %s, Team: %s, Expiry: %s", info.Serial, info.CommonName, team, info.EndDate)
 
-	errors := []string{}
-	if err := info.CheckValidity(); err != nil {
-		errors = append(errors, err.Error())
-	}
-	if len(errors) > 0 {
-		printable["errors"] = errors
-	}
-
-	data, err := json.MarshalIndent(printable, "", "\t")
+	err := info.CheckValidity()
 	if err != nil {
-		log.Errorf("Failed to marshal: %v, error: %s", printable, err)
-		return ""
+		certInfo = certInfo + fmt.Sprintf(", error: %s", err)
 	}
 
-	return string(data)
+	return certInfo
 }
 
 // CheckValidity ...
@@ -64,11 +53,16 @@ func CheckValidity(certificate x509.Certificate) error {
 
 // CheckValidity ...
 func (info CertificateInfoModel) CheckValidity() error {
-	return CheckValidity(info.certificate)
+	return CheckValidity(info.Certificate)
+}
+
+// EncodeToP12 encodes a CertificateInfoModel in pkcs12 (.p12) format.
+func (info CertificateInfoModel) EncodeToP12(passphrase string) ([]byte, error) {
+	return pkcs12.Encode(rand.Reader, info.PrivateKey, &info.Certificate, nil, passphrase)
 }
 
 // NewCertificateInfo ...
-func NewCertificateInfo(certificate x509.Certificate) CertificateInfoModel {
+func NewCertificateInfo(certificate x509.Certificate, privateKey interface{}) CertificateInfoModel {
 	fingerprint := sha1.Sum(certificate.Raw)
 	fingerprintStr := fmt.Sprintf("%x", fingerprint)
 
@@ -80,30 +74,10 @@ func NewCertificateInfo(certificate x509.Certificate) CertificateInfoModel {
 		StartDate:       certificate.NotBefore,
 		Serial:          certificate.SerialNumber.String(),
 		SHA1Fingerprint: fingerprintStr,
-		certificate:     certificate,
-	}
-}
 
-// CertificateInfos ...
-func CertificateInfos(certificates []*x509.Certificate) []CertificateInfoModel {
-	infos := []CertificateInfoModel{}
-	for _, certificate := range certificates {
-		if certificate != nil {
-			info := NewCertificateInfo(*certificate)
-			infos = append(infos, info)
-		}
+		Certificate: certificate,
+		PrivateKey:  privateKey,
 	}
-
-	return infos
-}
-
-// NewCertificateInfosFromPKCS12 ...
-func NewCertificateInfosFromPKCS12(pkcs12Pth, password string) ([]CertificateInfoModel, error) {
-	certificates, err := CertificatesFromPKCS12File(pkcs12Pth, password)
-	if err != nil {
-		return nil, err
-	}
-	return CertificateInfos(certificates), nil
 }
 
 // InstalledCodesigningCertificateInfos ...
@@ -112,7 +86,15 @@ func InstalledCodesigningCertificateInfos() ([]CertificateInfoModel, error) {
 	if err != nil {
 		return nil, err
 	}
-	return CertificateInfos(certificates), nil
+
+	infos := []CertificateInfoModel{}
+	for _, certificate := range certificates {
+		if certificate != nil {
+			infos = append(infos, NewCertificateInfo(*certificate, nil))
+		}
+	}
+
+	return infos, nil
 }
 
 // InstalledInstallerCertificateInfos ...
@@ -122,7 +104,14 @@ func InstalledInstallerCertificateInfos() ([]CertificateInfoModel, error) {
 		return nil, err
 	}
 
-	installerCertificates := FilterCertificateInfoModelsByFilterFunc(CertificateInfos(certificates), func(cert CertificateInfoModel) bool {
+	infos := []CertificateInfoModel{}
+	for _, certificate := range certificates {
+		if certificate != nil {
+			infos = append(infos, NewCertificateInfo(*certificate, nil))
+		}
+	}
+
+	installerCertificates := FilterCertificateInfoModelsByFilterFunc(infos, func(cert CertificateInfoModel) bool {
 		return strings.Contains(cert.CommonName, "Installer")
 	})
 

@@ -6,15 +6,15 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/goinp/goinp"
-	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/export"
 	"github.com/bitrise-io/go-xcode/exportoptions"
 	"github.com/bitrise-io/go-xcode/profileutil"
 	"github.com/bitrise-io/go-xcode/xcarchive"
+	"github.com/bitrise-io/goinp/goinp"
 )
 
 // extractCertificatesAndProfiles returns the certificates and provisioning profiles of the given codesign group
@@ -410,7 +410,7 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 					log.Errorf("Failed to read installed Installer certificates, error: %s", err)
 				}
 
-				installedInstallerCertificates = certificateutil.FilterValidCertificateInfos(installedInstallerCertificates)
+				installedInstallerCertificates = certificateutil.FilterValidCertificateInfos(installedInstallerCertificates).ValidCertificates
 
 				log.Debugf("\n")
 				log.Debugf("Installed installer certificates:")

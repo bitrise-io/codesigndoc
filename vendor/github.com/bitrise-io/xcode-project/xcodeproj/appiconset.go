@@ -7,9 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/bitrise-io/go-utils/sliceutil"
-
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/xcode-project/serialized"
 )
 
@@ -23,7 +22,7 @@ func AppIconSetPaths(projectPath string) (TargetsToAppIconSets, error) {
 		return TargetsToAppIconSets{}, err
 	}
 
-	objects, projectID, err := open(absPth)
+	_, _, objects, projectID, err := open(absPth)
 	proj, err := parseProj(projectID, objects)
 	if err != nil {
 		return TargetsToAppIconSets{}, err

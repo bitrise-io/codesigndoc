@@ -11,6 +11,7 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
+	"github.com/bitrise-io/xcode-project"
 	"github.com/bitrise-io/xcode-project/xcodeproj"
 	"github.com/bitrise-io/xcode-project/xcscheme"
 	"github.com/bitrise-io/xcode-project/xcworkspace"
@@ -190,35 +191,9 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 }
 
 func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.XcodeProj, string, error) {
-	var scheme xcscheme.Scheme
-	var schemeContainerDir string
-
-	if xcodeproj.IsXcodeProj(pth) {
-		project, err := xcodeproj.Open(pth)
-		if err != nil {
-			return xcodeproj.XcodeProj{}, "", err
-		}
-
-		var ok bool
-		scheme, ok = project.Scheme(schemeName)
-		if !ok {
-			return xcodeproj.XcodeProj{}, "", fmt.Errorf("no scheme found with name: %s in project: %s", schemeName, pth)
-		}
-		schemeContainerDir = filepath.Dir(pth)
-	} else if xcworkspace.IsWorkspace(pth) {
-		workspace, err := xcworkspace.Open(pth)
-		if err != nil {
-			return xcodeproj.XcodeProj{}, "", err
-		}
-
-		var containerProject string
-		scheme, containerProject, err = workspace.Scheme(schemeName)
-		if err != nil {
-			return xcodeproj.XcodeProj{}, "", err
-		}
-		schemeContainerDir = filepath.Dir(containerProject)
-	} else {
-		return xcodeproj.XcodeProj{}, "", fmt.Errorf("unknown project extension: %s", filepath.Ext(pth))
+	scheme, schemeContainerDir, err := project.Scheme(pth, schemeName)
+	if err != nil {
+		return xcodeproj.XcodeProj{}, "", fmt.Errorf("could not get scheme with name %s from path %s", schemeName, pth)
 	}
 
 	if configurationName == "" {
