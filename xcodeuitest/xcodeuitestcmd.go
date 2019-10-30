@@ -190,7 +190,7 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 }
 
 func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.XcodeProj, string, error) {
-	var scheme xcscheme.Scheme
+	var scheme *xcscheme.Scheme
 	var schemeContainerDir string
 
 	if xcodeproj.IsXcodeProj(pth) {
@@ -199,9 +199,8 @@ func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.Xcod
 			return xcodeproj.XcodeProj{}, "", err
 		}
 
-		var ok bool
-		scheme, ok = project.Scheme(schemeName)
-		if !ok {
+		scheme, _, err = project.Scheme(schemeName)
+		if err != nil {
 			return xcodeproj.XcodeProj{}, "", fmt.Errorf("no scheme found with name: %s in project: %s", schemeName, pth)
 		}
 		schemeContainerDir = filepath.Dir(pth)
