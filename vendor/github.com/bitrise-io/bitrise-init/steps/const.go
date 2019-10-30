@@ -18,7 +18,7 @@ const (
 	// AndroidUnitTestID ...
 	AndroidUnitTestID = "android-unit-test"
 	// AndroidUnitTestVersion ...
-	AndroidUnitTestVersion = "0.11.0"
+	AndroidUnitTestVersion = "1.0.0"
 )
 
 const (
@@ -32,14 +32,14 @@ const (
 	// GitCloneID ...
 	GitCloneID = "git-clone"
 	// GitCloneVersion ...
-	GitCloneVersion = "4.0.14"
+	GitCloneVersion = "4.0.17"
 )
 
 const (
 	// CachePullID ...
 	CachePullID = "cache-pull"
 	// CachePullVersion ...
-	CachePullVersion = "2.0.1"
+	CachePullVersion = "2.1.0"
 )
 
 const (
@@ -67,7 +67,7 @@ const (
 	// DeployToBitriseIoID ...
 	DeployToBitriseIoID = "deploy-to-bitrise-io"
 	// DeployToBitriseIoVersion ...
-	DeployToBitriseIoVersion = "1.4.2"
+	DeployToBitriseIoVersion = "1.7.1"
 )
 
 const (
@@ -83,35 +83,35 @@ const (
 	// SignAPKID ...
 	SignAPKID = "sign-apk"
 	// SignAPKVersion ...
-	SignAPKVersion = "1.3.0"
+	SignAPKVersion = "1.4.1"
 )
 
 const (
 	// InstallMissingAndroidToolsID ...
 	InstallMissingAndroidToolsID = "install-missing-android-tools"
 	// InstallMissingAndroidToolsVersion ...
-	InstallMissingAndroidToolsVersion = "2.3.5"
+	InstallMissingAndroidToolsVersion = "2.3.7"
 )
 
 const (
 	// FastlaneID ...
 	FastlaneID = "fastlane"
 	// FastlaneVersion ...
-	FastlaneVersion = "2.4.0"
+	FastlaneVersion = "2.6.0"
 )
 
 const (
 	// CocoapodsInstallID ...
 	CocoapodsInstallID = "cocoapods-install"
 	// CocoapodsInstallVersion ...
-	CocoapodsInstallVersion = "1.7.2"
+	CocoapodsInstallVersion = "1.8.0"
 )
 
 const (
 	// CarthageID ...
 	CarthageID = "carthage"
 	// CarthageVersion ...
-	CarthageVersion = "3.2.0"
+	CarthageVersion = "3.2.1"
 )
 
 const (
@@ -125,14 +125,14 @@ const (
 	// XcodeArchiveID ...
 	XcodeArchiveID = "xcode-archive"
 	// XcodeArchiveVersion ...
-	XcodeArchiveVersion = "2.5.0"
+	XcodeArchiveVersion = "2.6.0"
 )
 
 const (
 	// XcodeTestID ...
 	XcodeTestID = "xcode-test"
 	// XcodeTestVersion ...
-	XcodeTestVersion = "2.3.1"
+	XcodeTestVersion = "2.3.2"
 )
 
 const (
@@ -216,7 +216,7 @@ const (
 	// NpmID ...
 	NpmID = "npm"
 	// NpmVersion ...
-	NpmVersion = "1.0.2"
+	NpmVersion = "1.1.0"
 )
 
 const (
@@ -251,12 +251,12 @@ const (
 	// FlutterAnalyzeID ...
 	FlutterAnalyzeID = "flutter-analyze"
 	// FlutterAnalyzeVersion ...
-	FlutterAnalyzeVersion = "0.1.0"
+	FlutterAnalyzeVersion = "0.1.1"
 )
 
 const (
 	// FlutterBuildID ...
 	FlutterBuildID = "flutter-build"
 	// FlutterBuildVersion ...
-	FlutterBuildVersion = "0.9.2"
+	FlutterBuildVersion = "0.12.0"
 )

@@ -5,7 +5,9 @@ import (
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/ziputil"
 	"github.com/bitrise-io/go-xcode/plistutil"
+	"github.com/bitrise-io/go-xcode/utility"
 )
 
 // IsMacOS try to find the Contents dir under the .app/.
@@ -38,4 +40,28 @@ func IsMacOS(archPath string) (bool, error) {
 	}
 
 	return exist, nil
+}
+
+// UnzipXcarchive ...
+func UnzipXcarchive(xcarchivePth string) (string, error) {
+	tmpDir, err := pathutil.NormalizedOSTempDirPath("__xcarhive__")
+	if err != nil {
+		return "", err
+	}
+
+	return tmpDir, ziputil.UnZip(xcarchivePth, tmpDir)
+}
+
+// GetEmbeddedMobileProvisionPath ...
+func GetEmbeddedMobileProvisionPath(xcarchivePth string) (string, error) {
+	return utility.FindFileInAppDir(getAppSubfolder(xcarchivePth), "embedded.mobileprovision")
+}
+
+// GetEmbeddedInfoPlistPath ...
+func GetEmbeddedInfoPlistPath(xcarchivePth string) (string, error) {
+	return utility.FindFileInAppDir(getAppSubfolder(xcarchivePth), "Info.plist")
+}
+
+func getAppSubfolder(basepth string) string {
+	return filepath.Join(basepth, "Products", "Applications")
 }

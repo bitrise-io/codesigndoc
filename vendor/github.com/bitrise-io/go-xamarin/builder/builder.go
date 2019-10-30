@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xamarin/analyzers/project"
 	"github.com/bitrise-io/go-xamarin/analyzers/solution"
@@ -429,6 +430,8 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 						Pth:        xcarchivePth,
 						OutputType: constants.OutputTypeXCArchive,
 					})
+				} else {
+					log.Debugf("No valid xcarchive path found.")
 				}
 
 				if ipaPth, err := exportIpa(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
@@ -438,6 +441,8 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 						Pth:        ipaPth,
 						OutputType: constants.OutputTypeIPA,
 					})
+				} else {
+					log.Debugf("No valid IPA path found.")
 				}
 
 				if dsymPth, err := exportAppDSYM(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
@@ -447,6 +452,8 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 						Pth:        dsymPth,
 						OutputType: constants.OutputTypeDSYM,
 					})
+				} else {
+					log.Debugf("No valid dsym path found.")
 				}
 			}
 
@@ -457,6 +464,8 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 					Pth:        appPth,
 					OutputType: constants.OutputTypeAPP,
 				})
+			} else {
+				log.Debugf("No valid app path found.")
 			}
 		case constants.SDKMacOS:
 			if appPth, err := exportApp(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
@@ -466,7 +475,10 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 					Pth:        appPth,
 					OutputType: constants.OutputTypeAPP,
 				})
+			} else {
+				log.Debugf("No valid app path found.")
 			}
+
 			if pkgPth, err := exportPKG(projectConfig.OutputDir, proj.AssemblyName, startTime, endTime); err != nil {
 				return ProjectOutputMap{}, err
 			} else if pkgPth != "" {
@@ -474,20 +486,24 @@ func (builder Model) CollectProjectOutputs(configuration, platform string, start
 					Pth:        pkgPth,
 					OutputType: constants.OutputTypePKG,
 				})
+			} else {
+				log.Debugf("No valid pkg path found.")
 			}
 		case constants.SDKAndroid:
 			packageName, err := androidPackageName(proj.ManifestPth)
 			if err != nil {
-				return ProjectOutputMap{}, err
+				return ProjectOutputMap{}, fmt.Errorf("could get package name from manifest file at %v. Error: %v", proj.ManifestPth, err)
 			}
 
 			if apkPth, err := exportApk(projectConfig.OutputDir, packageName, startTime, endTime); err != nil {
-				return ProjectOutputMap{}, err
+				return ProjectOutputMap{}, fmt.Errorf("could not export apk. Error: %v", err)
 			} else if apkPth != "" {
 				projectOutputs.Outputs = append(projectOutputs.Outputs, OutputModel{
 					Pth:        apkPth,
 					OutputType: constants.OutputTypeAPK,
 				})
+			} else {
+				log.Debugf("No valid apk path found.")
 			}
 		}
 

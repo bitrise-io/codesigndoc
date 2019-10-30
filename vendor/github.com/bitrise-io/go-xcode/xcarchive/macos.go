@@ -43,7 +43,7 @@ func newMacosBaseApplication(path string) (macosBaseApplication, error) {
 
 	var provisioningProfile *profileutil.ProvisioningProfileInfoModel
 	{
-		provisioningProfilePath := filepath.Join(path, "Contents/Resources/embedded.mobileprovision")
+		provisioningProfilePath := filepath.Join(path, "Contents/embedded.provisionprofile")
 		if exist, err := pathutil.IsPathExists(provisioningProfilePath); err != nil {
 			return macosBaseApplication{}, fmt.Errorf("failed to check if profile exists at: %s, error: %s", provisioningProfilePath, err)
 		} else if exist {
