@@ -18,7 +18,7 @@ func FixWindowsPath(pth string) string {
 // SplitAndStripList ...
 func SplitAndStripList(list, separator string) []string {
 	split := strings.Split(list, separator)
-	elements := []string{}
+	var elements []string
 	for _, s := range split {
 		elements = append(elements, strings.TrimSpace(s))
 	}

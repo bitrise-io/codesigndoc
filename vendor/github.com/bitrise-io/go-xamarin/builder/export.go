@@ -7,21 +7,25 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 )
 
 // ModTimesByPath ...
 type ModTimesByPath map[string]time.Time
 
-func findModTimesByPath(dir string) (ModTimesByPath, error) {
+// findModTimesByPath walks through on the given directory and returns a ModTimesByPath for each file. Boolean
+// excludeDir indicates if it should check directories or not.
+func findModTimesByPath(dir string, excludeDir bool) (ModTimesByPath, error) {
 	modTimesByPath := ModTimesByPath{}
 
 	if walkErr := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		log.Debugf("Walking for path: %s, modtime %v", path, info.ModTime())
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
+		if excludeDir && info.IsDir() {
 			return nil
 		}
 
@@ -43,6 +47,7 @@ func isInTimeInterval(t, startTime, endTime time.Time) bool {
 }
 
 func filterModTimesByPathByTimeWindow(modTimesByPath ModTimesByPath, startTime, endTime time.Time) ModTimesByPath {
+	log.Debugf("Start time: %v, End time: %v", startTime, endTime)
 	if startTime.IsZero() || endTime.IsZero() || startTime.Equal(endTime) || startTime.After(endTime) {
 		return ModTimesByPath{}
 	}
@@ -52,6 +57,9 @@ func filterModTimesByPathByTimeWindow(modTimesByPath ModTimesByPath, startTime, 
 	for pth, modTime := range modTimesByPath {
 		if isInTimeInterval(modTime, startTime, endTime) {
 			filteredModTimesByPath[pth] = modTime
+			log.Debugf("%s is in interval", pth)
+		} else {
+			log.Debugf("%s is not in interval, filtering out", pth)
 		}
 	}
 
@@ -62,6 +70,7 @@ func filterModTimesByPathByTimeWindow(modTimesByPath ModTimesByPath, startTime, 
 // order of regexps should be: most strict -> less strict
 func findLastModifiedPathWithFileNameRegexps(modTimesByPath ModTimesByPath, regexps ...*regexp.Regexp) string {
 	if len(modTimesByPath) == 0 {
+		log.Debugf("Mod times by path is empty")
 		return ""
 	}
 
@@ -70,7 +79,9 @@ func findLastModifiedPathWithFileNameRegexps(modTimesByPath ModTimesByPath, rege
 
 	if len(regexps) > 0 {
 		for _, re := range regexps {
+			log.Debugf("Checking match for regexp: %s", re)
 			for pth, modTime := range modTimesByPath {
+				log.Debugf("Checking file at: %s mod time %s", pth, modTime)
 				fileName := filepath.Base(pth)
 				if re.MatchString(fileName) {
 					if modTime.After(lastModTime) {
@@ -86,7 +97,9 @@ func findLastModifiedPathWithFileNameRegexps(modTimesByPath ModTimesByPath, rege
 			}
 		}
 	} else {
+		log.Debugf("Regexps is empty")
 		for pth, modTime := range modTimesByPath {
+			log.Debugf("Checking mod time: %s. Last mod time: %s", modTime, lastModTime)
 			if modTime.After(lastModTime) {
 				lastModifiedPth = pth
 				lastModTime = modTime
@@ -98,14 +111,17 @@ func findLastModifiedPathWithFileNameRegexps(modTimesByPath ModTimesByPath, rege
 }
 
 // exports the last modified file matching to most strict regexps within a time window
-// order of regexps should be: most strict -> less strict
-func findArtifact(dir string, startTime, endTime time.Time, patterns ...string) (string, error) {
+// order of regexps should be: most strict -> less strict. Boolean excludeDirs indicates that the function should search
+// for directories as well or not. Please note, that for example a .xcarchive file qualifies as a directory, so if you
+// want to find it, the boolean should be false.
+func findArtifact(dir string, startTime, endTime time.Time, excludeDirs bool, patterns ...string) (string, error) {
+	log.Debugf("Searching at %s", dir)
 	regexps := make([]*regexp.Regexp, len(patterns))
 	for i, pattern := range patterns {
 		regexps[i] = regexp.MustCompile(pattern)
 	}
 
-	modTimesByPath, err := findModTimesByPath(dir)
+	modTimesByPath, err := findModTimesByPath(dir, excludeDirs)
 	if err != nil {
 		return "", err
 	}
@@ -115,7 +131,7 @@ func findArtifact(dir string, startTime, endTime time.Time, patterns ...string) 
 }
 
 func exportApk(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, false,
 		fmt.Sprintf(`(?i).*%s.*signed.*\.apk$`, assemblyName),
 		fmt.Sprintf(`(?i).*%s.*\.apk$`, assemblyName),
 		`(?i).*signed.*\.apk$`,
@@ -124,14 +140,14 @@ func exportApk(outputDir, assemblyName string, startTime, endTime time.Time) (st
 }
 
 func exportIpa(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, true,
 		fmt.Sprintf(`(?i).*%s.*\.ipa$`, assemblyName),
 		`(?i).*\.ipa$`,
 	)
 }
 
 func exportXCArchive(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, false,
 		fmt.Sprintf(`(?i).*%s.*\.xcarchive$`, assemblyName),
 		fmt.Sprintf(`(?i).*\.xcarchive$`),
 	)
@@ -153,7 +169,7 @@ func exportLatestXCArchiveFromXcodeArchives(assemblyName string, startTime, endT
 }
 
 func exportAppDSYM(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, false,
 		fmt.Sprintf(`(?i).*%s.*\.app\.dSYM$`, assemblyName),
 		`(?i).*\.app\.dSYM$`,
 	)
@@ -166,21 +182,21 @@ func exportFrameworkDSYMs(outputDir string) ([]string, error) {
 }
 
 func exportPKG(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, false,
 		fmt.Sprintf(`(?i).*%s.*\.pkg$`, assemblyName),
 		`(?i).*\.pkg$`,
 	)
 }
 
 func exportApp(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, false,
 		fmt.Sprintf(`(?i).*%s.*\.app$`, assemblyName),
 		`(?i).*\.app$`,
 	)
 }
 
 func exportDLL(outputDir, assemblyName string, startTime, endTime time.Time) (string, error) {
-	return findArtifact(outputDir, startTime, endTime,
+	return findArtifact(outputDir, startTime, endTime, true,
 		fmt.Sprintf(`(?i).*%s.*\.dll$`, assemblyName),
 		`(?i).*\.dll$`,
 	)

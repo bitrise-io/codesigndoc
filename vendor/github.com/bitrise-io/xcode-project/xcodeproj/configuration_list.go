@@ -1,6 +1,10 @@
 package xcodeproj
 
-import "github.com/bitrise-io/xcode-project/serialized"
+import (
+	"fmt"
+
+	"github.com/bitrise-io/xcode-project/serialized"
+)
 
 // ConfigurationList ...
 type ConfigurationList struct {
@@ -36,8 +40,50 @@ func parseConfigurationList(id string, objects serialized.Object) (Configuration
 	}
 
 	return ConfigurationList{
-		ID: id,
+		ID:                       id,
 		DefaultConfigurationName: defaultConfigurationName,
 		BuildConfigurations:      buildConfigurations,
 	}, nil
+}
+
+// BuildConfigurationList ...
+func (p XcodeProj) BuildConfigurationList(targetID string) (serialized.Object, error) {
+	objects, err := p.RawProj.Object("objects")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target buildConfigurationList, the objects of the project are not found, error: %s", err)
+	}
+
+	object, err := objects.Object(targetID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target buildConfigurationList, the project objects with ID (%s) is not found, error: %s", p.Proj.ID, err)
+	}
+	buildConfigurationListID, err := object.String("buildConfigurationList")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch target's (%s) buildConfigurationList, error: %s", targetID, err)
+	}
+
+	return objects.Object(buildConfigurationListID)
+}
+
+// BuildConfigurations ...
+func (p XcodeProj) BuildConfigurations(buildConfigurationList serialized.Object) ([]serialized.Object, error) {
+	buildConfigurationIDList, err := buildConfigurationList.StringSlice("buildConfigurations")
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch the buildConfigurations attributes of the the buildConfigurationList (%v), error: %s", buildConfigurationList, err)
+	}
+
+	var buildConfigurations []serialized.Object
+	for _, id := range buildConfigurationIDList {
+		objects, err := p.RawProj.Object("objects")
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch target buildConfigurations, the objects of the project are not found, error: %s", err)
+		}
+
+		buildConfiguration, err := objects.Object(id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch target buildConfiguration objects with ID (%s), error: %s", id, err)
+		}
+		buildConfigurations = append(buildConfigurations, buildConfiguration)
+	}
+	return buildConfigurations, nil
 }

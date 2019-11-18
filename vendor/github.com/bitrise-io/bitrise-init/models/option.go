@@ -5,10 +5,43 @@ import (
 	"fmt"
 )
 
+// Type is to select the user interaction type that is required to fill an option
+type Type string
+
+// OptionTypes we currently support, list, user-input, optional-user-input
+const (
+	// Originally:
+	// - if there was only one key then this question was not asked
+	// - if there was more than one keys then it was asked in a list to select from
+	// Now, if this type is selected:
+	// - if there is only one key then this question shall not not be asked
+	// - if there are more than one keys then the selection must be asked in a list to select from
+	TypeSelector Type = "selector"
+	// Originally:
+	// - if there was only one key then this question was not asked
+	// - if there was more than one keys then it was asked in a list to select from
+	// Now, if this type is selected:
+	// - if there is only one key then the view should let the user select of the only item the list has or manual input
+	// - if there are more than one keys then the selection must be asked in a list to select from or have a manual button to let the user to input anything else
+	TypeOptionalSelector Type = "selector_optional"
+	// Originally:
+	// - if there was only one key and it's name was `_` then we shown an input field to the user to type his value in and it was a requirement to have an input value
+	// Now, if this type is selected:
+	// - we must show an input field to the user and it is required to fill, any name for the key will be the placeholder value for the input field
+	TypeUserInput Type = "user_input"
+	// Originally:
+	// - if there was only one key and it's name was `_` then we shown an input field to the user to type his value in and it was a requirement to have an input value
+	// Now, if this type is selected:
+	// - we must show an input field to the user and it is NOT required to be filled, can be empty, and any name for the key will be the placeholder value for the input field
+	TypeOptionalUserInput Type = "user_input_optional"
+)
+
 // OptionNode ...
 type OptionNode struct {
 	Title          string                 `json:"title,omitempty" yaml:"title,omitempty"`
+	Summary        string                 `json:"summary,omitempty" yaml:"summary,omitempty"`
 	EnvKey         string                 `json:"env_key,omitempty" yaml:"env_key,omitempty"`
+	Type           Type                   `json:"type,omitempty" yaml:"type,omitempty"`
 	ChildOptionMap map[string]*OptionNode `json:"value_map,omitempty" yaml:"value_map,omitempty"`
 	// Leafs only
 	Config string   `json:"config,omitempty" yaml:"config,omitempty"`
@@ -19,12 +52,14 @@ type OptionNode struct {
 }
 
 // NewOption ...
-func NewOption(title, envKey string) *OptionNode {
+func NewOption(title, summary, envKey string, optionType Type) *OptionNode {
 	return &OptionNode{
 		Title:          title,
+		Summary:        summary,
 		EnvKey:         envKey,
 		ChildOptionMap: map[string]*OptionNode{},
 		Components:     []string{},
+		Type:           optionType,
 	}
 }
 

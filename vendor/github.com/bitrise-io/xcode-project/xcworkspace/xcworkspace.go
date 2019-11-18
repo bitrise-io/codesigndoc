@@ -24,23 +24,23 @@ type Workspace struct {
 	Path string
 }
 
-// Scheme returns the scheme with the given name and it's container's file path
-func (w Workspace) Scheme(name string) (xcscheme.Scheme, string, error) {
+// Scheme returns the scheme by name and it's container's absolute path.
+func (w Workspace) Scheme(name string) (*xcscheme.Scheme, string, error) {
 	schemesByContainer, err := w.Schemes()
 	if err != nil {
-		return xcscheme.Scheme{}, "", err
+		return nil, "", err
 	}
 
 	normName := norm.NFC.String(name)
 	for container, schemes := range schemesByContainer {
 		for _, scheme := range schemes {
 			if norm.NFC.String(scheme.Name) == normName {
-				return scheme, container, nil
+				return &scheme, container, nil
 			}
 		}
 	}
 
-	return xcscheme.Scheme{}, "", SchemeNotFoundError{scheme: name, container: w.Name}
+	return nil, "", xcscheme.NotFoundError{Scheme: name, Container: w.Name}
 }
 
 // SchemeBuildSettings ...

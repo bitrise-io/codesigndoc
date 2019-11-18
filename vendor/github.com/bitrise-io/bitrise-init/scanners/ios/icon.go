@@ -19,12 +19,12 @@ func lookupIconBySchemeName(projectPath string, schemeName string, basepath stri
 		return nil, fmt.Errorf("failed to open project file: %s, error: %s", projectPath, err)
 	}
 
-	scheme, found := project.Scheme(schemeName)
-	if !found {
-		return nil, fmt.Errorf("failed to find scheme (%s) in project (%s)", schemeName, project.Path)
+	scheme, _, err := project.Scheme(schemeName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", schemeName, project.Path, err)
 	}
 
-	blueprintID := getBlueprintID(scheme)
+	blueprintID := getBlueprintID(*scheme)
 	if blueprintID == "" {
 		log.TDebugf("scheme (%s) does not contain app buildable reference in project (%s)", scheme.Name, project.Path)
 		return nil, nil

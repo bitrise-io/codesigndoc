@@ -164,7 +164,12 @@ func NewProvisioningProfileInfo(provisioningProfile pkcs7.PKCS7) (ProvisioningPr
 				certificates = append(certificates, certificate)
 			}
 		}
-		info.DeveloperCertificates = certificateutil.CertificateInfos(certificates)
+
+		for _, certificate := range certificates {
+			if certificate != nil {
+				info.DeveloperCertificates = append(info.DeveloperCertificates, certificateutil.NewCertificateInfo(*certificate, nil))
+			}
+		}
 	}
 
 	info.Entitlements = profile.GetEntitlements()

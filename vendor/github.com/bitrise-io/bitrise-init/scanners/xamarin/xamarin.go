@@ -22,21 +22,24 @@ const (
 )
 
 const (
-	xamarinSolutionInputKey    = "xamarin_solution"
-	xamarinSolutionInputEnvKey = "BITRISE_PROJECT_PATH"
-	xamarinSolutionInputTitle  = "Path to the Xamarin Solution file"
+	xamarinSolutionInputKey     = "xamarin_solution"
+	xamarinSolutionInputEnvKey  = "BITRISE_PROJECT_PATH"
+	xamarinSolutionInputTitle   = "Path to the Xamarin Solution file"
+	xamarinSolutionInputSummary = "Your solution file has to contain all the solution configurations you wish to use on Bitrise. A solution configuration specifies how projects in the solution are to be built and deployed."
 )
 
 const (
-	xamarinConfigurationInputKey    = "xamarin_configuration"
-	xamarinConfigurationInputEnvKey = "BITRISE_XAMARIN_CONFIGURATION"
-	xamarinConfigurationInputTitle  = "Xamarin solution configuration"
+	xamarinConfigurationInputKey     = "xamarin_configuration"
+	xamarinConfigurationInputEnvKey  = "BITRISE_XAMARIN_CONFIGURATION"
+	xamarinConfigurationInputTitle   = "Xamarin solution configuration"
+	xamarinConfigurationInputSummary = "The Xamarin solution configuration that you wish to run in your first build. You can change this at any time in your Workflows."
 )
 
 const (
-	xamarinPlatformInputKey    = "xamarin_platform"
-	xamarinPlatformInputEnvKey = "BITRISE_XAMARIN_PLATFORM"
-	xamarinPlatformInputTitle  = "Xamarin solution platform"
+	xamarinPlatformInputKey     = "xamarin_platform"
+	xamarinPlatformInputEnvKey  = "BITRISE_XAMARIN_PLATFORM"
+	xamarinPlatformInputTitle   = "Xamarin solution platform"
+	xamarinPlatformInputSummary = ""
 )
 
 const (
@@ -195,14 +198,14 @@ func (scanner *Scanner) Options() (models.OptionNode, models.Warnings, models.Ic
 	}
 
 	// Check for solution projects
-	xamarinSolutionOption := models.NewOption(xamarinSolutionInputTitle, xamarinSolutionInputEnvKey)
+	xamarinSolutionOption := models.NewOption(xamarinSolutionInputTitle, xamarinSolutionInputSummary, xamarinSolutionInputEnvKey, models.TypeSelector)
 
 	for solutionFile, configMap := range validSolutionMap {
-		xamarinConfigurationOption := models.NewOption(xamarinConfigurationInputTitle, xamarinConfigurationInputEnvKey)
+		xamarinConfigurationOption := models.NewOption(xamarinConfigurationInputTitle, xamarinConfigurationInputSummary, xamarinConfigurationInputEnvKey, models.TypeSelector)
 		xamarinSolutionOption.AddOption(solutionFile, xamarinConfigurationOption)
 
 		for config, platforms := range configMap {
-			xamarinPlatformOption := models.NewOption(xamarinPlatformInputTitle, xamarinPlatformInputEnvKey)
+			xamarinPlatformOption := models.NewOption(xamarinPlatformInputTitle, xamarinPlatformInputSummary, xamarinPlatformInputEnvKey, models.TypeSelector)
 			xamarinConfigurationOption.AddOption(config, xamarinPlatformOption)
 
 			for _, platform := range platforms {
@@ -217,16 +220,16 @@ func (scanner *Scanner) Options() (models.OptionNode, models.Warnings, models.Ic
 
 // DefaultOptions ...
 func (Scanner) DefaultOptions() models.OptionNode {
-	xamarinSolutionOption := models.NewOption(xamarinSolutionInputTitle, xamarinSolutionInputEnvKey)
+	xamarinSolutionOption := models.NewOption(xamarinSolutionInputTitle, xamarinSolutionInputSummary, xamarinSolutionInputEnvKey, models.TypeUserInput)
 
-	xamarinConfigurationOption := models.NewOption(xamarinConfigurationInputTitle, xamarinConfigurationInputEnvKey)
-	xamarinSolutionOption.AddOption("_", xamarinConfigurationOption)
+	xamarinConfigurationOption := models.NewOption(xamarinConfigurationInputTitle, xamarinConfigurationInputSummary, xamarinConfigurationInputEnvKey, models.TypeUserInput)
+	xamarinSolutionOption.AddOption("", xamarinConfigurationOption)
 
-	xamarinPlatformOption := models.NewOption(xamarinPlatformInputTitle, xamarinPlatformInputEnvKey)
-	xamarinConfigurationOption.AddOption("_", xamarinPlatformOption)
+	xamarinPlatformOption := models.NewOption(xamarinPlatformInputTitle, xamarinPlatformInputSummary, xamarinPlatformInputEnvKey, models.TypeUserInput)
+	xamarinConfigurationOption.AddOption("", xamarinPlatformOption)
 
 	configOption := models.NewConfigOption(defaultConfigName, nil)
-	xamarinPlatformOption.AddConfig("_", configOption)
+	xamarinPlatformOption.AddConfig("", configOption)
 
 	return *xamarinSolutionOption
 }

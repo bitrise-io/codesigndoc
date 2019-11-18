@@ -1,0 +1,31 @@
+format_version: "5"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+project_type: other
+
+workflows:
+  test:
+    steps:
+    - script:
+        title: Install testing packages
+        run_if: .IsCI
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            go get -u -v howett.net/plist
+            go get -u -v github.com/stretchr/testify/require
+            go get -u -v github.com/bitrise-io/go-utils/command
+            go get -u -v github.com/bitrise-io/go-utils/fileutil
+            go get -u -v github.com/bitrise-io/go-utils/pathutil
+            go get -u -v golang.org/x/text/unicode/norm
+            go get -u github.com/google/go-cmp/cmp
+    - go-list:
+    - golint:
+    - errcheck:
+    - go-test:
+    - codecov:
+        run_if: .IsCI
+        inputs:
+        - other_options: -f ${GO_CODE_COVERAGE_REPORT_PATH}
+        - CODECOV_TOKEN: "$CODECOV_UPLOAD_TOKEN"
