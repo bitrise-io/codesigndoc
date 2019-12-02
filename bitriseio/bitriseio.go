@@ -84,7 +84,7 @@ func selectApp(appList []bitrise.Application) (seledtedAppSlug string, err error
 	for _, app := range appList {
 		selectionList = append(selectionList, app.Title+" ("+app.RepoURL+")")
 	}
-	userSelection, err := goinp.SelectFromStringsWithDefault("Select the app which you want to upload the privisioning profiles", 1, selectionList)
+	userSelection, err := goinp.SelectFromStringsWithDefault("Select the app which you want to upload the provisioning profiles", 1, selectionList)
 
 	if err != nil {
 		return "", fmt.Errorf("failed to read input: %s", err)
