@@ -163,10 +163,14 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 
 ### Create a new release
 
+You must do the release in two steps. You cannot merge `version/version.go`
+changes and `bitrise run update-wrapper-versions` changes in one step, because
+the install scripts have to refer to valid, existing releases.
+
 1. Merge all changes to master.
 1. Increase the version in `version/version.go`.
 1. Merge the version change to master.
-1. Push version tag to master.
+1. Push version tag to master. This will trigger an automated release process.
 1. Download from GitHub and test the new release.
-1. Run `bitrise run update-wrapper-versions`.
+1. Run `bitrise run update-wrapper-versions`. This will update the version numbers in the install scripts.
 1. Merge the updated wrapper versions.
