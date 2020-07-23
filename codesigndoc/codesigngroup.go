@@ -327,11 +327,11 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 		if len(certificateOptions) == 1 {
 			selectedCertificateOption = certificateOptions[0]
 
-			fmt.Printf("Codesign Indentity for %s ipa export: %s\n", selectedExportMethod, selectedCertificateOption)
+			fmt.Printf("Codesign Identity for %s ipa export: %s\n", selectedExportMethod, selectedCertificateOption)
 		} else {
 			sort.Strings(certificateOptions)
 
-			question := fmt.Sprintf("Select the Codesign Indentity for %s ipa export", selectedExportMethod)
+			question := fmt.Sprintf("Select the Codesign Identity for %s ipa export", selectedExportMethod)
 			selectedCertificateOption, err = goinp.SelectFromStringsWithDefault(question, 1, certificateOptions)
 			if err != nil {
 				return nil, fmt.Errorf("failed to read input: %s", err)
@@ -347,7 +347,7 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 			}
 		}
 		if selectedCertificate == nil {
-			return nil, errors.New("failed to find selected Codesign Indentity")
+			return nil, errors.New("failed to find selected Codesign Identity")
 		}
 
 		// Select Profiles
