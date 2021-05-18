@@ -139,7 +139,7 @@ func Open(pth string) (Workspace, error) {
 
 	var workspace Workspace
 	if err := xml.Unmarshal(b, &workspace); err != nil {
-		return Workspace{}, err
+		return Workspace{}, fmt.Errorf("failed to unmarshal workspace file: %s, error: %s", pth, err)
 	}
 
 	workspace.Name = strings.TrimSuffix(filepath.Base(pth), filepath.Ext(pth))

@@ -12,12 +12,14 @@ import (
 
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/xcode-project/xcscheme"
 )
 
 // SchemeModel ...
 type SchemeModel struct {
-	Name      string
-	HasXCTest bool
+	Name                  string
+	HasXCTest             bool
+	BuildableReferenceIDs []string
 }
 
 func filterSharedSchemeFilePaths(paths []string) []string {
@@ -159,9 +161,15 @@ func sharedSchemes(projectOrWorkspacePth string) ([]SchemeModel, error) {
 			return []SchemeModel{}, err
 		}
 
+		buildableReferenceIDs, err := buildableReferenceIDs(schemePth)
+		if err != nil {
+			return []SchemeModel{}, err
+		}
+
 		schemes = append(schemes, SchemeModel{
-			Name:      schemeName,
-			HasXCTest: hasXCTest,
+			Name:                  schemeName,
+			HasXCTest:             hasXCTest,
+			BuildableReferenceIDs: buildableReferenceIDs,
 		})
 	}
 
@@ -247,4 +255,18 @@ func WorkspaceSharedSchemes(workspacePth string) ([]SchemeModel, error) {
 	}
 
 	return workspaceSharedSchemes, nil
+}
+
+func buildableReferenceIDs(schemePth string) ([]string, error) {
+	scheme, err := xcscheme.Open(schemePth)
+	if err != nil {
+		return []string{}, err
+	}
+
+	var ids []string
+	for _, entry := range scheme.BuildAction.BuildActionEntries {
+		ids = append(ids, entry.BuildableReference.BlueprintIdentifier)
+	}
+
+	return ids, nil
 }

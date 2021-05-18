@@ -5,10 +5,11 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/command"
+	"github.com/bitrise-io/go-utils/errorutil"
 	"github.com/bitrise-io/xcode-project/serialized"
 )
 
-func parseShowBuildSettingsOutput(out string) (serialized.Object, error) {
+func parseShowBuildSettingsOutput(out string) serialized.Object {
 	settings := serialized.Object{}
 
 	lines := strings.Split(out, "\n")
@@ -20,12 +21,16 @@ func parseShowBuildSettingsOutput(out string) (serialized.Object, error) {
 		}
 
 		key := strings.TrimSpace(split[0])
+		if key == "" {
+			continue
+		}
+
 		value := strings.TrimSpace(strings.Join(split[1:], " = "))
 
 		settings[key] = value
 	}
 
-	return settings, nil
+	return settings
 }
 
 // ShowProjectBuildSettings ...
@@ -35,12 +40,17 @@ func ShowProjectBuildSettings(project, target, configuration string, customOptio
 	args = append(args, customOptions...)
 
 	cmd := command.New("xcodebuild", args...)
+
 	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s failed: %s", cmd.PrintableCommandArgs(), err)
+		if errorutil.IsExitStatusError(err) {
+			return nil, fmt.Errorf("%s command failed: output: %s", cmd.PrintableCommandArgs(), out)
+		}
+
+		return nil, fmt.Errorf("failed to run command %s: %s", cmd.PrintableCommandArgs(), err)
 	}
 
-	return parseShowBuildSettingsOutput(out)
+	return parseShowBuildSettingsOutput(out), nil
 }
 
 // ShowWorkspaceBuildSettings ...
@@ -50,10 +60,15 @@ func ShowWorkspaceBuildSettings(workspace, scheme, configuration string, customO
 	args = append(args, customOptions...)
 
 	cmd := command.New("xcodebuild", args...)
+
 	out, err := cmd.RunAndReturnTrimmedCombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s failed: %s", cmd.PrintableCommandArgs(), err)
+		if errorutil.IsExitStatusError(err) {
+			return nil, fmt.Errorf("%s command failed: output: %s", cmd.PrintableCommandArgs(), out)
+		}
+
+		return nil, fmt.Errorf("failed to run command %s: %s", cmd.PrintableCommandArgs(), err)
 	}
 
-	return parseShowBuildSettingsOutput(out)
+	return parseShowBuildSettingsOutput(out), nil
 }

@@ -6,18 +6,20 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
-	"github.com/bitrise-io/xcode-project/pretty"
-
+	"github.com/bitrise-io/go-plist"
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/xcode-project/pretty"
 	"github.com/bitrise-io/xcode-project/serialized"
 	"github.com/bitrise-io/xcode-project/xcodebuild"
 	"github.com/bitrise-io/xcode-project/xcscheme"
 	"golang.org/x/text/unicode/norm"
-	"howett.net/plist"
 )
 
 // XcodeProj ...
@@ -25,6 +27,10 @@ type XcodeProj struct {
 	Proj    Proj
 	RawProj serialized.Object
 	Format  int
+	// Used to replace project in-place. This leaves the order of objects and comments for unchanged objects unchanged.
+	// It allows better compatibility with Cordova and the Xcode agvtool
+	originalContents                  []byte
+	originalPbxProj, annotatedPbxProj serialized.Object
 
 	Name string
 	Path string
@@ -304,58 +310,52 @@ func Open(pth string) (XcodeProj, error) {
 		return XcodeProj{}, err
 	}
 
-	format, raw, objects, projectID, err := open(pth)
-	if err != nil {
-		return XcodeProj{}, err
-	}
-
-	p, err := parseProj(projectID, objects)
-	if err != nil {
-		return XcodeProj{}, err
-	}
-
-	return XcodeProj{
-		Proj:    p,
-		RawProj: raw,
-		Format:  format,
-		Path:    absPth,
-		Name:    strings.TrimSuffix(filepath.Base(absPth), filepath.Ext(absPth)),
-	}, nil
-}
-
-// open parse the provided .pbxprog file.
-// Returns the `raw` contents as a serialized.Object, the `objects` as serialized.Object and the PBXProject's `projectID` as string
-// If there was an error during the parsing it returns an error
-func open(absPth string) (format int, rawPbxProj serialized.Object, objects serialized.Object, projectID string, err error) {
 	pbxProjPth := filepath.Join(absPth, "project.pbxproj")
 
-	var b []byte
-	b, err = fileutil.ReadBytesFromFile(pbxProjPth)
+	content, err := fileutil.ReadBytesFromFile(pbxProjPth)
 	if err != nil {
-		return
+		return XcodeProj{}, err
 	}
 
-	if format, err = plist.Unmarshal(b, &rawPbxProj); err != nil {
-		err = fmt.Errorf("failed to generate json from Pbxproj - error: %s", err)
-		return
-	}
-
-	objects, err = rawPbxProj.Object("objects")
+	p, err := parsePBXProjContent(content)
 	if err != nil {
-		return
+		return XcodeProj{}, err
 	}
 
+	p.Path = absPth
+	p.Name = strings.TrimSuffix(filepath.Base(absPth), filepath.Ext(absPth))
+
+	return *p, nil
+}
+
+func parsePBXProjContent(content []byte) (*XcodeProj, error) {
+	var rawPbxProj serialized.Object
+	format, err := plist.UnmarshalWithCustomAnnotation(content, &rawPbxProj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal project.pbxproj: %s", err)
+	}
+
+	annotatedPbxProj := deepCopyObject(rawPbxProj) // Preserve annotations
+	rawPbxProj = removeCustomInfoObject(rawPbxProj)
+	originalPbxProj := deepCopyObject(rawPbxProj)
+
+	objects, err := rawPbxProj.Object("objects")
+	if err != nil {
+		return nil, err
+	}
+
+	var projectID string
 	for id := range objects {
 		var object serialized.Object
 		object, err = objects.Object(id)
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		var objectISA string
 		objectISA, err = object.String("isa")
 		if err != nil {
-			return
+			return nil, err
 		}
 
 		if objectISA == "PBXProject" {
@@ -363,7 +363,24 @@ func open(absPth string) (format int, rawPbxProj serialized.Object, objects seri
 			break
 		}
 	}
-	return
+
+	if projectID == "" {
+		return nil, fmt.Errorf("failed to find PBXProject's id in project.pbxproj")
+	}
+
+	proj, err := parseProj(projectID, objects)
+	if err != nil {
+		return nil, err
+	}
+
+	return &XcodeProj{
+		Proj:             proj,
+		RawProj:          rawPbxProj,
+		Format:           format,
+		originalPbxProj:  originalPbxProj,
+		annotatedPbxProj: annotatedPbxProj,
+		originalContents: content,
+	}, nil
 }
 
 // IsXcodeProj ...
@@ -380,11 +397,6 @@ func (p *XcodeProj) ForceCodeSign(configuration, targetName, developmentTeam, co
 	target, ok := p.Proj.TargetByName(targetName)
 	if !ok {
 		return fmt.Errorf("failed to find target with name: %s", targetName)
-	}
-
-	targetAttributes, err := p.TargetAttributes()
-	if err != nil {
-		return fmt.Errorf("failed to get project's target attributes, error: %s", err)
 	}
 
 	buildConfigurationList, err := p.BuildConfigurationList(target.ID)
@@ -408,24 +420,33 @@ func (p *XcodeProj) ForceCodeSign(configuration, targetName, developmentTeam, co
 		return fmt.Errorf("failed to find buildConfiguration for configuration %s in the buildConfiguration list: %s", configuration, pretty.Object(buildConfigurations))
 	}
 
-	// Override TargetAttributes
-	if err = foreceCodeSignOnTargetAttributes(targetAttributes, target.ID, developmentTeam); err != nil {
-		return fmt.Errorf("failed to change code signing in target attributes, error: %s", err)
-	}
-
 	// Override BuildSettings
-	if err = foreceCodeSignOnBuildConfiguration(buildConfiguration, target.ID, developmentTeam, provisioningProfileUUID, codesignIdentity); err != nil {
+	if err = forceCodeSignOnBuildConfiguration(buildConfiguration, developmentTeam, provisioningProfileUUID, codesignIdentity); err != nil {
 		return fmt.Errorf("failed to change code signing in build settings, error: %s", err)
 	}
+
+	if targetAttributes, err := p.TargetAttributes(); err == nil {
+		// Override TargetAttributes
+		if err = forceCodeSignOnTargetAttributes(targetAttributes, target.ID, developmentTeam); err != nil {
+			return fmt.Errorf("failed to change code signing in target attributes, error: %s", err)
+		}
+	} else if !serialized.IsKeyNotFoundError(err) {
+		return fmt.Errorf("failed to get project's target attributes, error: %s", err)
+	}
+
 	return nil
 }
 
-// foreceCodeSignOnTargetAttributes sets the TargetAttributes for the provided targetID.
+// forceCodeSignOnTargetAttributes sets the TargetAttributes for the provided targetID.
 // **Overrides the ProvisioningStyle, developmentTeam and clears the DevelopmentTeamName in the provided `targetAttributes`!**
-func foreceCodeSignOnTargetAttributes(targetAttributes serialized.Object, targetID, developmentTeam string) error {
+func forceCodeSignOnTargetAttributes(targetAttributes serialized.Object, targetID, developmentTeam string) error {
 	targetAttribute, err := targetAttributes.Object(targetID)
 	if err != nil {
-		return fmt.Errorf("failed to get traget's (%s) attributes, error: %s", targetID, err)
+		// Skip projects not using target attributes
+		if serialized.IsKeyNotFoundError(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get target's (%s) attributes, error: %s", targetID, err)
 	}
 
 	targetAttribute["ProvisioningStyle"] = "Manual"
@@ -434,23 +455,41 @@ func foreceCodeSignOnTargetAttributes(targetAttributes serialized.Object, target
 	return nil
 }
 
-// foreceCodeSignOnBuildConfiguration sets the BuildSettings for the provided targetID.
-// **Overrides the CODE_SIGN_STYLE, DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY, CODE_SIGN_IDENTITY[sdk=iphoneos\*], PROVISIONING_PROFILE, PROVISIONING_PROFILE[sdk=iphoneos\*] and clears the PROVISIONING_PROFILE_SPECIFIER in the provided `buildConfiguration`!**
-func foreceCodeSignOnBuildConfiguration(buildConfiguration serialized.Object, targetID, developmentTeam, provisioningProfileUUID, codesignIdentity string) error {
+// forceCodeSignOnBuildConfiguration sets the BuildSettings for the provided build configuration.
+// **Overrides the CODE_SIGN_STYLE, DEVELOPMENT_TEAM, CODE_SIGN_IDENTITY, PROVISIONING_PROFILE
+// and clears the PROVISIONING_PROFILE_SPECIFIER in the provided `buildConfiguration`,
+// each modification also applies for the sdk specific settings too (CODE_SIGN_IDENTITY[sdk=iphoneos*])!**
+func forceCodeSignOnBuildConfiguration(buildConfiguration serialized.Object, developmentTeam, provisioningProfileUUID, codesignIdentity string) error {
 	buildSettings, err := buildConfiguration.Object("buildSettings")
 	if err != nil {
 		return fmt.Errorf("failed to get buildSettings of buildConfiguration (%s), error: %s", pretty.Object(buildConfiguration), err)
 	}
 
-	buildSettings["CODE_SIGN_STYLE"] = "Manual"
-	buildSettings["DEVELOPMENT_TEAM"] = developmentTeam
-	buildSettings["CODE_SIGN_IDENTITY"] = codesignIdentity
-	buildSettings["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = codesignIdentity
-	buildSettings["PROVISIONING_PROFILE_SPECIFIER"] = ""
-	buildSettings["PROVISIONING_PROFILE"] = provisioningProfileUUID
-	buildSettings["PROVISIONING_PROFILE[sdk=iphoneos*]"] = provisioningProfileUUID
+	forceAttributes := map[string]string{
+		"CODE_SIGN_STYLE":                "Manual",
+		"DEVELOPMENT_TEAM":               developmentTeam,
+		"CODE_SIGN_IDENTITY":             codesignIdentity,
+		"PROVISIONING_PROFILE_SPECIFIER": "",
+		"PROVISIONING_PROFILE":           provisioningProfileUUID,
+	}
+	for key, value := range forceAttributes {
+		writeAttributeForAllSDKs(buildSettings, key, value)
+	}
 
 	return nil
+}
+
+func writeAttributeForAllSDKs(buildSettings serialized.Object, newKey string, newValue string) {
+	buildSettings[newKey] = newValue
+
+	// override specific build setting if any: https://stackoverflow.com/a/5382708/5842489
+	// Example: CODE_SIGN_IDENTITY[sdk=iphoneos*]
+	matcher := regexp.MustCompile(fmt.Sprintf(`^%s\[sdk=.*\]$`, regexp.QuoteMeta(newKey)))
+	for oldKey := range buildSettings {
+		if matcher.Match([]byte(oldKey)) {
+			buildSettings[oldKey] = newValue
+		}
+	}
 }
 
 // Save the XcodeProj
@@ -460,13 +499,188 @@ func (p XcodeProj) Save() error {
 	return p.savePBXProj()
 }
 
-// savePBXProj overrides the project.pbxproj file of the XcodeProj with the contents of `rawProj`
+// savePBXProj overrides the project.pbxproj file of  the XcodeProj with the contents of `rawProj`
 func (p XcodeProj) savePBXProj() error {
-	b, err := plist.Marshal(p.RawProj, p.Format)
+	pth := path.Join(p.Path, "project.pbxproj")
+	newContent, merr := p.perObjectModify()
+	if merr == nil {
+		return ioutil.WriteFile(pth, newContent, 0644)
+	}
+	// merr != nil
+	log.Warnf("failed to modify project in-place: %v", merr)
+
+	newContent, err := plist.MarshalIndent(p.RawProj, p.Format, "\t")
 	if err != nil {
-		return fmt.Errorf("failed to marshal .pbxproj")
+		return fmt.Errorf("failed to marshal .pbxproj: %v", err)
 	}
 
-	pth := path.Join(p.Path, "project.pbxproj")
-	return ioutil.WriteFile(pth, b, 0644)
+	return ioutil.WriteFile(pth, newContent, 0644)
+}
+
+const (
+	customAnnotationKey = plist.CustomAnnotationKey
+	startKey            = plist.CustomAnnotationStartKey
+	endKey              = plist.CustomAnnotationEndKey
+)
+
+func removeCustomInfoObject(o serialized.Object) serialized.Object {
+	for _, v := range o {
+		removeCustomInfo(v)
+	}
+
+	return o
+}
+
+func removeCustomInfo(o interface{}) interface{} {
+	switch container := o.(type) {
+	case map[string]interface{}:
+		{
+			delete(container, customAnnotationKey)
+			for _, val := range container {
+				removeCustomInfo(val)
+			}
+
+			return container
+		}
+	case []interface{}:
+		{
+			for _, element := range container {
+				removeCustomInfo(element)
+			}
+
+			return container
+		}
+	default:
+		return o
+	}
+}
+
+func deepCopyObject(object serialized.Object) serialized.Object {
+	newObj := make(map[string]interface{})
+	for k, v := range object {
+		newObj[k] = deepCopy(v)
+	}
+
+	return newObj
+}
+
+func deepCopy(o interface{}) interface{} {
+	switch container := o.(type) {
+	case map[string]interface{}:
+		{
+			newObj := make(map[string]interface{})
+			for k, v := range container {
+				newObj[k] = deepCopy(v)
+			}
+
+			return newObj
+		}
+	case []interface{}:
+		{
+			destArray := make([]interface{}, len(container))
+			for i, element := range container {
+				destArray[i] = deepCopy(element)
+			}
+
+			return destArray
+		}
+	default:
+		return o
+	}
+}
+
+type change struct {
+	start, end int
+	rawObject  []byte
+}
+
+func (p XcodeProj) perObjectModify() ([]byte, error) {
+	objectsMod, err := p.RawProj.Object("objects")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse project: %v", err)
+	}
+	objectsOrig, err := p.originalPbxProj.Object("objects")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse project: %v", err)
+	}
+	objectsAnnotated, err := p.annotatedPbxProj.Object("objects")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse project: %v", err)
+	}
+
+	var mods []change
+	for keyMod := range objectsMod {
+		objectMod, err := objectsMod.Object(keyMod)
+		if err != nil {
+			return nil, fmt.Errorf("%s", err)
+		}
+
+		objectOrig, err := objectsOrig.Object(keyMod)
+		if err != nil {
+			return nil, fmt.Errorf("new object added, not in original project: %v", err)
+		}
+
+		objectsAnnotated, err := objectsAnnotated.Object(keyMod)
+		if err != nil {
+			return nil, fmt.Errorf("new object added, not in original annotated project: %v", err)
+		}
+
+		// If object did not change do nothing
+		if reflect.DeepEqual(objectOrig, objectMod) {
+			continue
+		}
+
+		customPosDict, err := objectsAnnotated.Object(customAnnotationKey)
+		if err != nil {
+			return nil, fmt.Errorf("no raw object position available: %v", err)
+		}
+		startPos, err := customPosDict.Int64(startKey)
+		if err != nil {
+			return nil, fmt.Errorf("no raw object start position available: %v", err)
+		}
+		endPos, err := customPosDict.Int64(endKey)
+		if err != nil {
+			return nil, fmt.Errorf("no raw end position availbale: %v", err)
+		}
+
+		contentMod, err := plist.MarshalIndent(objectMod, p.Format, "\t")
+		if err != nil {
+			return nil, fmt.Errorf("could not marshal object (%s): %v", objectsMod, err)
+		}
+
+		mods = append(mods, change{
+			start:     int(startPos),
+			end:       int(endPos),
+			rawObject: contentMod,
+		})
+	}
+
+	if len(mods) == 0 {
+		return p.originalContents, nil
+	}
+
+	sort.Slice(mods, func(i, j int) bool {
+		if mods[i].start == mods[j].start {
+			return mods[i].end < mods[j].end
+		}
+		return mods[i].start < mods[j].start
+	})
+
+	var contentsMod []byte
+	previousEndPos := 0
+	for i, mod := range mods {
+		if i < len(mods)-1 && mod.end >= mods[i+1].start {
+			return nil, fmt.Errorf("overlapping changes: %d, %d", mods[i].end, mods[i+1].start)
+		}
+
+		contentsMod = append(contentsMod, p.originalContents[previousEndPos:mod.start]...)
+		contentsMod = append(contentsMod, mod.rawObject...)
+		previousEndPos = mod.end
+	}
+
+	if previousEndPos <= len(p.originalContents)-1 {
+		contentsMod = append(contentsMod, p.originalContents[previousEndPos:]...)
+	}
+
+	return contentsMod, nil
 }

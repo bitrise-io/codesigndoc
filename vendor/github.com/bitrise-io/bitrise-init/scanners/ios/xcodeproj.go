@@ -1,25 +1,9 @@
 package ios
 
 import (
-	"path/filepath"
-
-	"fmt"
-
-	"github.com/bitrise-io/bitrise-init/scanners/xamarin"
-	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-xcode/pathfilters"
 	"github.com/bitrise-io/go-xcode/xcodeproj"
-)
-
-const (
-	embeddedWorkspacePathPattern = `.+\.xcodeproj/.+\.xcworkspace`
-
-	gitDirName        = ".git"
-	podsDirName       = "Pods"
-	carthageDirName   = "Carthage"
-	cordovaLibDirName = "CordovaLib"
-
-	frameworkExt = ".framework"
 )
 
 // XcodeProjectType ...
@@ -31,93 +15,6 @@ const (
 	// XcodeProjectTypeMacOS ...
 	XcodeProjectTypeMacOS XcodeProjectType = "macos"
 )
-
-// AllowXcodeProjExtFilter ...
-var AllowXcodeProjExtFilter = utility.ExtensionFilter(xcodeproj.XCodeProjExt, true)
-
-// AllowXCWorkspaceExtFilter ...
-var AllowXCWorkspaceExtFilter = utility.ExtensionFilter(xcodeproj.XCWorkspaceExt, true)
-
-// AllowIsDirectoryFilter ...
-var AllowIsDirectoryFilter = utility.IsDirectoryFilter(true)
-
-var containsContentsXcworkspacedata = utility.DirectoryContainsFile("contents.xcworkspacedata")
-
-// ForbidEmbeddedWorkspaceRegexpFilter ...
-var ForbidEmbeddedWorkspaceRegexpFilter = utility.RegexpFilter(embeddedWorkspacePathPattern, false)
-
-// ForbidGitDirComponentFilter ...
-var ForbidGitDirComponentFilter = utility.ComponentFilter(gitDirName, false)
-
-// ForbidPodsDirComponentFilter ...
-var ForbidPodsDirComponentFilter = utility.ComponentFilter(podsDirName, false)
-
-// ForbidCarthageDirComponentFilter ...
-var ForbidCarthageDirComponentFilter = utility.ComponentFilter(carthageDirName, false)
-
-// ForbidCordovaLibDirComponentFilter ...
-var ForbidCordovaLibDirComponentFilter = utility.ComponentFilter(cordovaLibDirName, false)
-
-// ForbidFramworkComponentWithExtensionFilter ...
-var ForbidFramworkComponentWithExtensionFilter = utility.ComponentWithExtensionFilter(frameworkExt, false)
-
-// ForbidNodeModulesComponentFilter ...
-var ForbidNodeModulesComponentFilter = utility.ComponentFilter(xamarin.NodeModulesDirName, false)
-
-// AllowIphoneosSDKFilter ...
-var AllowIphoneosSDKFilter = SDKFilter("iphoneos", true)
-
-// AllowMacosxSDKFilter ...
-var AllowMacosxSDKFilter = SDKFilter("macosx", true)
-
-// SDKFilter ...
-func SDKFilter(sdk string, allowed bool) utility.FilterFunc {
-	return func(pth string) (bool, error) {
-		found := false
-
-		projectFiles := []string{}
-
-		if xcodeproj.IsXCodeProj(pth) {
-			projectFiles = append(projectFiles, pth)
-		} else if xcodeproj.IsXCWorkspace(pth) {
-			projects, err := xcodeproj.WorkspaceProjectReferences(pth)
-			if err != nil {
-				return false, err
-			}
-
-			for _, project := range projects {
-				exist, err := pathutil.IsPathExists(project)
-				if err != nil {
-					return false, err
-				}
-				if !exist {
-					continue
-				}
-				projectFiles = append(projectFiles, project)
-
-			}
-		} else {
-			return false, fmt.Errorf("Not Xcode project nor workspace file: %s", pth)
-		}
-
-		for _, projectFile := range projectFiles {
-			pbxprojPth := filepath.Join(projectFile, "project.pbxproj")
-			projectSDKs, err := xcodeproj.GetBuildConfigSDKs(pbxprojPth)
-			if err != nil {
-				return false, err
-			}
-
-			for _, projectSDK := range projectSDKs {
-				if projectSDK == sdk {
-					found = true
-					break
-				}
-			}
-		}
-
-		return (allowed == found), nil
-	}
-}
 
 // FindWorkspaceInList ...
 func FindWorkspaceInList(workspacePth string, workspaces []xcodeproj.WorkspaceModel) (xcodeproj.WorkspaceModel, bool) {
@@ -199,77 +96,77 @@ func CreateStandaloneProjectsAndWorkspaces(projectFiles, workspaceFiles []string
 
 // FilterRelevantProjectFiles ...
 func FilterRelevantProjectFiles(fileList []string, projectTypes ...XcodeProjectType) ([]string, error) {
-	filters := []utility.FilterFunc{
-		AllowXcodeProjExtFilter,
-		AllowIsDirectoryFilter,
-		ForbidEmbeddedWorkspaceRegexpFilter,
-		ForbidGitDirComponentFilter,
-		ForbidPodsDirComponentFilter,
-		ForbidCarthageDirComponentFilter,
-		ForbidFramworkComponentWithExtensionFilter,
-		ForbidCordovaLibDirComponentFilter,
-		ForbidNodeModulesComponentFilter,
+	filters := []pathutil.FilterFunc{
+		pathfilters.AllowXcodeProjExtFilter,
+		pathfilters.AllowIsDirectoryFilter,
+		pathfilters.ForbidEmbeddedWorkspaceRegexpFilter,
+		pathfilters.ForbidGitDirComponentFilter,
+		pathfilters.ForbidPodsDirComponentFilter,
+		pathfilters.ForbidCarthageDirComponentFilter,
+		pathfilters.ForbidFramworkComponentWithExtensionFilter,
+		pathfilters.ForbidCordovaLibDirComponentFilter,
+		pathfilters.ForbidNodeModulesComponentFilter,
 	}
 
 	for _, projectType := range projectTypes {
 		switch projectType {
 		case XcodeProjectTypeIOS:
-			filters = append(filters, AllowIphoneosSDKFilter)
+			filters = append(filters, pathfilters.AllowIphoneosSDKFilter)
 		case XcodeProjectTypeMacOS:
-			filters = append(filters, AllowMacosxSDKFilter)
+			filters = append(filters, pathfilters.AllowMacosxSDKFilter)
 		}
 	}
 
-	return utility.FilterPaths(fileList, filters...)
+	return pathutil.FilterPaths(fileList, filters...)
 }
 
 // FilterRelevantWorkspaceFiles ...
 func FilterRelevantWorkspaceFiles(fileList []string, projectTypes ...XcodeProjectType) ([]string, error) {
-	filters := []utility.FilterFunc{
-		AllowXCWorkspaceExtFilter,
-		AllowIsDirectoryFilter,
-		containsContentsXcworkspacedata,
-		ForbidEmbeddedWorkspaceRegexpFilter,
-		ForbidGitDirComponentFilter,
-		ForbidPodsDirComponentFilter,
-		ForbidCarthageDirComponentFilter,
-		ForbidFramworkComponentWithExtensionFilter,
-		ForbidCordovaLibDirComponentFilter,
-		ForbidNodeModulesComponentFilter,
+	filters := []pathutil.FilterFunc{
+		pathfilters.AllowXCWorkspaceExtFilter,
+		pathfilters.AllowIsDirectoryFilter,
+		pathfilters.AllowWorkspaceWithContentsFile,
+		pathfilters.ForbidEmbeddedWorkspaceRegexpFilter,
+		pathfilters.ForbidGitDirComponentFilter,
+		pathfilters.ForbidPodsDirComponentFilter,
+		pathfilters.ForbidCarthageDirComponentFilter,
+		pathfilters.ForbidFramworkComponentWithExtensionFilter,
+		pathfilters.ForbidCordovaLibDirComponentFilter,
+		pathfilters.ForbidNodeModulesComponentFilter,
 	}
 
 	for _, projectType := range projectTypes {
 		switch projectType {
 		case XcodeProjectTypeIOS:
-			filters = append(filters, AllowIphoneosSDKFilter)
+			filters = append(filters, pathfilters.AllowIphoneosSDKFilter)
 		case XcodeProjectTypeMacOS:
-			filters = append(filters, AllowMacosxSDKFilter)
+			filters = append(filters, pathfilters.AllowMacosxSDKFilter)
 		}
 	}
 
-	return utility.FilterPaths(fileList, filters...)
+	return pathutil.FilterPaths(fileList, filters...)
 }
 
 // FilterRelevantPodfiles ...
 func FilterRelevantPodfiles(fileList []string) ([]string, error) {
-	return utility.FilterPaths(fileList,
+	return pathutil.FilterPaths(fileList,
 		AllowPodfileBaseFilter,
-		ForbidGitDirComponentFilter,
-		ForbidPodsDirComponentFilter,
-		ForbidCarthageDirComponentFilter,
-		ForbidFramworkComponentWithExtensionFilter,
-		ForbidCordovaLibDirComponentFilter,
-		ForbidNodeModulesComponentFilter)
+		pathfilters.ForbidGitDirComponentFilter,
+		pathfilters.ForbidPodsDirComponentFilter,
+		pathfilters.ForbidCarthageDirComponentFilter,
+		pathfilters.ForbidFramworkComponentWithExtensionFilter,
+		pathfilters.ForbidCordovaLibDirComponentFilter,
+		pathfilters.ForbidNodeModulesComponentFilter)
 }
 
 // FilterRelevantCartFile ...
 func FilterRelevantCartFile(fileList []string) ([]string, error) {
-	return utility.FilterPaths(fileList,
+	return pathutil.FilterPaths(fileList,
 		AllowCartfileBaseFilter,
-		ForbidGitDirComponentFilter,
-		ForbidPodsDirComponentFilter,
-		ForbidCarthageDirComponentFilter,
-		ForbidFramworkComponentWithExtensionFilter,
-		ForbidCordovaLibDirComponentFilter,
-		ForbidNodeModulesComponentFilter)
+		pathfilters.ForbidGitDirComponentFilter,
+		pathfilters.ForbidPodsDirComponentFilter,
+		pathfilters.ForbidCarthageDirComponentFilter,
+		pathfilters.ForbidFramworkComponentWithExtensionFilter,
+		pathfilters.ForbidCordovaLibDirComponentFilter,
+		pathfilters.ForbidNodeModulesComponentFilter)
 }

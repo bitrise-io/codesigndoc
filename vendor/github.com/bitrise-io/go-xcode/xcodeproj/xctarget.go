@@ -12,10 +12,16 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 )
 
+const (
+	appClipProductType = "com.apple.product-type.application.on-demand-install-capable"
+)
+
 // TargetModel ...
 type TargetModel struct {
-	Name      string
-	HasXCTest bool
+	Name       string
+	ID         string
+	HasXCTest  bool
+	HasAppClip bool
 }
 
 // PBXNativeTarget ...
@@ -276,8 +282,26 @@ func targetWithID(targets []PBXNativeTarget, id string) (PBXNativeTarget, bool) 
 	return PBXNativeTarget{}, false
 }
 
+func targetHasAppClipDependency(target PBXNativeTarget, nativeTargets []PBXNativeTarget, targetDependencies []PBXTargetDependency) bool {
+	for _, dependencieID := range target.dependencies {
+		dependency, found := targetDependencieWithID(targetDependencies, dependencieID)
+		if found {
+			dependentTarget, found := targetWithID(nativeTargets, dependency.target)
+			if found {
+				return dependentTarget.productType == appClipProductType
+			}
+		}
+	}
+
+	return false
+}
+
+func isTargetXCTest(target PBXNativeTarget) bool {
+	return path.Ext(target.productPath) == ".xctest"
+}
+
 func pbxprojContentTartgets(pbxprojContent string) ([]TargetModel, error) {
-	targetMap := map[string]TargetModel{}
+	targetMap := map[string]*TargetModel{}
 
 	nativeTargets, err := parsePBXNativeTargets(pbxprojContent)
 	if err != nil {
@@ -289,34 +313,28 @@ func pbxprojContentTartgets(pbxprojContent string) ([]TargetModel, error) {
 		return []TargetModel{}, err
 	}
 
-	// Add targets which has test targets
+	// Add all non xctest targets with NO HasXCTests and proper HasAppClip
 	for _, target := range nativeTargets {
-		if path.Ext(target.productPath) == ".xctest" {
-			if len(target.dependencies) > 0 {
-				for _, dependencieID := range target.dependencies {
-					dependency, found := targetDependencieWithID(targetDependencies, dependencieID)
-					if found {
-						dependentTarget, found := targetWithID(nativeTargets, dependency.target)
-						if found {
-							targetMap[dependentTarget.name] = TargetModel{
-								Name:      dependentTarget.name,
-								HasXCTest: true,
-							}
-						}
-					}
-				}
+		if !isTargetXCTest(target) {
+			targetMap[target.name] = &TargetModel{
+				Name:       target.name,
+				ID:         target.id,
+				HasXCTest:  false,
+				HasAppClip: targetHasAppClipDependency(target, nativeTargets, targetDependencies),
 			}
 		}
 	}
 
-	// Add targets which has NO test targets
+	// Update targets which has an xctest dependency
 	for _, target := range nativeTargets {
-		if path.Ext(target.productPath) != ".xctest" {
-			_, found := targetMap[target.name]
-			if !found {
-				targetMap[target.name] = TargetModel{
-					Name:      target.name,
-					HasXCTest: false,
+		if isTargetXCTest(target) {
+			for _, dependencyID := range target.dependencies {
+				dependency, found := targetDependencieWithID(targetDependencies, dependencyID)
+				if found {
+					dependentTarget, found := targetWithID(nativeTargets, dependency.target)
+					if found {
+						targetMap[dependentTarget.name].HasXCTest = true
+					}
 				}
 			}
 		}
@@ -324,7 +342,7 @@ func pbxprojContentTartgets(pbxprojContent string) ([]TargetModel, error) {
 
 	targets := []TargetModel{}
 	for _, target := range targetMap {
-		targets = append(targets, target)
+		targets = append(targets, *target)
 	}
 
 	return targets, nil

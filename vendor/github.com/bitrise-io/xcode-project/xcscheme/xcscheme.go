@@ -83,7 +83,7 @@ func Open(pth string) (Scheme, error) {
 
 	var scheme Scheme
 	if err := xml.Unmarshal(b, &scheme); err != nil {
-		return Scheme{}, err
+		return Scheme{}, fmt.Errorf("failed to unmarshal scheme file: %s, error: %s", pth, err)
 	}
 
 	scheme.Name = strings.TrimSuffix(filepath.Base(pth), filepath.Ext(pth))

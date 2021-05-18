@@ -14,6 +14,7 @@ type NonAppStoreOptionsModel struct {
 	SigningCertificate                 string
 	SigningStyle                       string
 	ICloudContainerEnvironment         ICloudContainerEnvironment
+	DistributionBundleIdentifier       string
 
 	// for non app-store exports
 	CompileBitcode                           bool
@@ -29,7 +30,7 @@ func NewNonAppStoreOptions(method Method) NonAppStoreOptionsModel {
 		Method:                                   method,
 		CompileBitcode:                           CompileBitcodeDefault,
 		EmbedOnDemandResourcesAssetPacksInBundle: EmbedOnDemandResourcesAssetPacksInBundleDefault,
-		Thinning: ThinningDefault,
+		Thinning:                                 ThinningDefault,
 	}
 }
 
@@ -50,6 +51,9 @@ func (options NonAppStoreOptionsModel) Hash() map[string]interface{} {
 	}
 	if options.ICloudContainerEnvironment != "" {
 		hash[ICloudContainerEnvironmentKey] = options.ICloudContainerEnvironment
+	}
+	if options.DistributionBundleIdentifier != "" {
+		hash[DistributionBundleIdentifier] = options.DistributionBundleIdentifier
 	}
 	if !options.Manifest.IsEmpty() {
 		hash[ManifestKey] = options.Manifest.ToHash()

@@ -20,11 +20,27 @@ const (
 	StepRunStatusCodeSkippedWithRunIf = 4
 
 	// Version ...
-	Version = "8"
+	Version = "11"
 )
 
 // StepListItemModel ...
 type StepListItemModel map[string]stepmanModels.StepModel
+
+// PipelineModel ...
+type PipelineModel struct {
+	Stages []StageListItemModel `json:"stages,omitempty" yaml:"stages,omitempty"`
+}
+
+// StageListItemModel ...
+type StageListItemModel map[string]StageModel
+
+// StageModel ...
+type StageModel struct {
+	Workflows []WorkflowListItemModel `json:"workflows,omitempty" yaml:"workflows,omitempty"`
+}
+
+// WorkflowListItemModel ...
+type WorkflowListItemModel map[string]WorkflowModel
 
 // WorkflowModel ...
 type WorkflowModel struct {
@@ -66,6 +82,7 @@ type TriggerMapItemModel struct {
 	PullRequestSourceBranch string `json:"pull_request_source_branch,omitempty" yaml:"pull_request_source_branch,omitempty"`
 	PullRequestTargetBranch string `json:"pull_request_target_branch,omitempty" yaml:"pull_request_target_branch,omitempty"`
 	Tag                     string `json:"tag,omitempty" yaml:"tag,omitempty"`
+	PipelineID              string `json:"pipeline,omitempty" yaml:"pipeline,omitempty"`
 	WorkflowID              string `json:"workflow,omitempty" yaml:"workflow,omitempty"`
 
 	// deprecated
@@ -87,7 +104,10 @@ type BitriseDataModel struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	//
 	App        AppModel                 `json:"app,omitempty" yaml:"app,omitempty"`
+	Meta       map[string]interface{}   `json:"meta,omitempty" yaml:"meta,omitempty"`
 	TriggerMap TriggerMapModel          `json:"trigger_map,omitempty" yaml:"trigger_map,omitempty"`
+	Pipelines  map[string]PipelineModel `json:"pipelines,omitempty" yaml:"pipelines,omitempty"`
+	Stages     map[string]StageModel    `json:"stages,omitempty" yaml:"stages,omitempty"`
 	Workflows  map[string]WorkflowModel `json:"workflows,omitempty" yaml:"workflows,omitempty"`
 }
 
@@ -103,8 +123,16 @@ type StepIDData struct {
 	Version string
 }
 
+// BuildRunStartModel ...
+type BuildRunStartModel struct {
+	EventName   string    `json:"event_name" yaml:"event_name"`
+	ProjectType string    `json:"project_type" yaml:"project_type"`
+	StartTime   time.Time `json:"start_time" yaml:"start_time"`
+}
+
 // BuildRunResultsModel ...
 type BuildRunResultsModel struct {
+	EventName            string                `json:"event_name" yaml:"event_name"`
 	ProjectType          string                `json:"project_type" yaml:"project_type"`
 	StartTime            time.Time             `json:"start_time" yaml:"start_time"`
 	StepmanUpdates       map[string]int        `json:"stepman_updates" yaml:"stepman_updates"`
@@ -116,13 +144,14 @@ type BuildRunResultsModel struct {
 
 // StepRunResultsModel ...
 type StepRunResultsModel struct {
-	StepInfo  stepmanModels.StepInfoModel `json:"step_info" yaml:"step_info"`
-	Status    int                         `json:"status" yaml:"status"`
-	Idx       int                         `json:"idx" yaml:"idx"`
-	RunTime   time.Duration               `json:"run_time" yaml:"run_time"`
-	StartTime time.Time                   `json:"start_time" yaml:"start_time"`
-	ErrorStr  string                      `json:"error_str" yaml:"error_str"`
-	ExitCode  int                         `json:"exit_code" yaml:"exit_code"`
+	StepInfo   stepmanModels.StepInfoModel `json:"step_info" yaml:"step_info"`
+	StepInputs map[string]string           `json:"step_inputs" yaml:"step_inputs"`
+	Status     int                         `json:"status" yaml:"status"`
+	Idx        int                         `json:"idx" yaml:"idx"`
+	RunTime    time.Duration               `json:"run_time" yaml:"run_time"`
+	StartTime  time.Time                   `json:"start_time" yaml:"start_time"`
+	ErrorStr   string                      `json:"error_str" yaml:"error_str"`
+	ExitCode   int                         `json:"exit_code" yaml:"exit_code"`
 }
 
 // TestResultStepInfo ...

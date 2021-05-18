@@ -6,20 +6,6 @@ project_type: other
 workflows:
   test:
     steps:
-    - script:
-        title: Install testing packages
-        run_if: .IsCI
-        inputs:
-        - content: |-
-            #!/bin/bash
-            set -ex
-            go get -u -v howett.net/plist
-            go get -u -v github.com/stretchr/testify/require
-            go get -u -v github.com/bitrise-io/go-utils/command
-            go get -u -v github.com/bitrise-io/go-utils/fileutil
-            go get -u -v github.com/bitrise-io/go-utils/pathutil
-            go get -u -v golang.org/x/text/unicode/norm
-            go get -u github.com/google/go-cmp/cmp
     - go-list:
     - golint:
     - errcheck:

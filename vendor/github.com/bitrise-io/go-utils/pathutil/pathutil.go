@@ -184,3 +184,34 @@ func NormalizedOSTempDirPath(tmpDirNamePrefix string) (retPth string, err error)
 func GetFileName(path string) string {
 	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 }
+
+// ListPathInDirSortedByComponents ...
+func ListPathInDirSortedByComponents(searchDir string, relPath bool) ([]string, error) {
+	searchDir, err := filepath.Abs(searchDir)
+	if err != nil {
+		return []string{}, err
+	}
+
+	var fileList []string
+
+	if err := filepath.Walk(searchDir, func(path string, _ os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+
+		if relPath {
+			rel, err := filepath.Rel(searchDir, path)
+			if err != nil {
+				return err
+			}
+			path = rel
+		}
+
+		fileList = append(fileList, path)
+
+		return nil
+	}); err != nil {
+		return []string{}, err
+	}
+	return SortPathsByComponents(fileList)
+}

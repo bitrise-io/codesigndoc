@@ -10,7 +10,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/fileutil"
-	"github.com/bitrise-io/go-utils/pkcs12"
+	"github.com/bitrise-io/pkcs12"
 	"github.com/pkg/errors"
 )
 

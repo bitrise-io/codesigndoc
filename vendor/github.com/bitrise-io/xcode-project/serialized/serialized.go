@@ -36,6 +36,21 @@ func (o Object) String(key string) (string, error) {
 	return casted, nil
 }
 
+// Int64 returns a value with int64 type from the map
+func (o Object) Int64(key string) (int64, error) {
+	value, err := o.Value(key)
+	if err != nil {
+		return -1, err
+	}
+
+	casted, ok := value.(int64)
+	if !ok {
+		return -1, NewTypeCastError(key, value, 0)
+	}
+
+	return casted, nil
+}
+
 // StringSlice ...
 func (o Object) StringSlice(key string) ([]string, error) {
 	value, err := o.Value(key)

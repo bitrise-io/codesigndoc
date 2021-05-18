@@ -2,6 +2,7 @@ package xcarchive
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
@@ -64,4 +65,24 @@ func GetEmbeddedInfoPlistPath(xcarchivePth string) (string, error) {
 
 func getAppSubfolder(basepth string) string {
 	return filepath.Join(basepth, "Products", "Applications")
+}
+
+func findDSYMs(archivePath string) ([]string, []string, error) {
+	dsymsDirPth := filepath.Join(archivePath, "dSYMs")
+	dsyms, err := utility.ListEntries(dsymsDirPth, utility.ExtensionFilter(".dsym", true))
+	if err != nil {
+		return []string{}, []string{}, err
+	}
+
+	appDSYMs := []string{}
+	frameworkDSYMs := []string{}
+	for _, dsym := range dsyms {
+		if strings.HasSuffix(dsym, ".app.dSYM") {
+			appDSYMs = append(appDSYMs, dsym)
+		} else {
+			frameworkDSYMs = append(frameworkDSYMs, dsym)
+		}
+	}
+
+	return appDSYMs, frameworkDSYMs, nil
 }

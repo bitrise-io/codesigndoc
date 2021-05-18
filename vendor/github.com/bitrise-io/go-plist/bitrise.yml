@@ -1,0 +1,13 @@
+format_version: "10"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  ci:
+    before_run:
+      - test
+
+  test:
+    steps:
+    - go-test:
+        inputs:
+        - packages: github.com/bitrise-io/go-plist

@@ -118,6 +118,7 @@ type StepGroupInfoModel struct {
 	RemovalDate    string            `json:"removal_date,omitempty" yaml:"removal_date,omitempty"`
 	DeprecateNotes string            `json:"deprecate_notes,omitempty" yaml:"deprecate_notes,omitempty"`
 	AssetURLs      map[string]string `json:"asset_urls,omitempty" yaml:"asset_urls,omitempty"`
+	Maintainer     string            `json:"maintainer,omitempty" yaml:"maintainer,omitempty"`
 }
 
 // StepGroupModel ...
@@ -168,13 +169,14 @@ type EnvInfoModel struct {
 
 // StepInfoModel ...
 type StepInfoModel struct {
-	Library       string             `json:"library,omitempty" yaml:"library,omitempty"`
-	ID            string             `json:"id,omitempty" yaml:"id,omitempty"`
-	Version       string             `json:"version,omitempty" yaml:"version,omitempty"`
-	LatestVersion string             `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`
-	GroupInfo     StepGroupInfoModel `json:"info,omitempty" yaml:"info,omitempty"`
-	Step          StepModel          `json:"step,omitempty" yaml:"step,omitempty"`
-	DefinitionPth string             `json:"definition_pth,omitempty" yaml:"definition_pth,omitempty"`
+	Library         string             `json:"library,omitempty" yaml:"library,omitempty"`
+	ID              string             `json:"id,omitempty" yaml:"id,omitempty"`
+	Version         string             `json:"version,omitempty" yaml:"version,omitempty"`
+	OriginalVersion string             `json:"original_version,omitempty" yaml:"original_version,omitempty"`
+	LatestVersion   string             `json:"latest_version,omitempty" yaml:"latest_version,omitempty"`
+	GroupInfo       StepGroupInfoModel `json:"info,omitempty" yaml:"info,omitempty"`
+	Step            StepModel          `json:"step,omitempty" yaml:"step,omitempty"`
+	DefinitionPth   string             `json:"definition_pth,omitempty" yaml:"definition_pth,omitempty"`
 }
 
 // StepListModel ...

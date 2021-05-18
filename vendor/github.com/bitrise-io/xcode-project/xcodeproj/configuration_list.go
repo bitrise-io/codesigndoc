@@ -50,16 +50,16 @@ func parseConfigurationList(id string, objects serialized.Object) (Configuration
 func (p XcodeProj) BuildConfigurationList(targetID string) (serialized.Object, error) {
 	objects, err := p.RawProj.Object("objects")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch target buildConfigurationList, the objects of the project are not found, error: %s", err)
+		return nil, fmt.Errorf("failed to read project: %s", err)
 	}
 
 	object, err := objects.Object(targetID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch target buildConfigurationList, the project objects with ID (%s) is not found, error: %s", p.Proj.ID, err)
+		return nil, fmt.Errorf("failed to read target (%s) object: %s", targetID, err)
 	}
 	buildConfigurationListID, err := object.String("buildConfigurationList")
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch target's (%s) buildConfigurationList, error: %s", targetID, err)
+		return nil, fmt.Errorf("failed to read target (%s) build configuration list: %s", targetID, err)
 	}
 
 	return objects.Object(buildConfigurationListID)
