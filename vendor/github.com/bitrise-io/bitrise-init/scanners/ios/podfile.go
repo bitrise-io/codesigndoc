@@ -8,8 +8,8 @@ import (
 
 	"encoding/json"
 
-	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xcode/xcodeproj"
 )
@@ -17,16 +17,22 @@ import (
 const podfileBase = "Podfile"
 
 // AllowPodfileBaseFilter ...
-var AllowPodfileBaseFilter = utility.BaseFilter(podfileBase, true)
+var AllowPodfileBaseFilter = pathutil.BaseFilter(podfileBase, true)
 
-func getTargetDefinitionProjectMap(podfilePth, cocoapodsVersion string) (map[string]string, error) {
+type podfileParser struct {
+	podfilePth                string
+	suppressPodFileParseError bool
+}
+
+func (podfileParser podfileParser) getTargetDefinitionProjectMap(cocoapodsVersion string) (map[string]string, error) {
 	gemfileCocoapodsVersion := ""
 	if cocoapodsVersion != "" {
 		gemfileCocoapodsVersion = fmt.Sprintf(`, '%s'`, cocoapodsVersion)
 	}
 
 	gemfileContent := fmt.Sprintf(`source 'https://rubygems.org'
-gem 'cocoapods-core'%s
+gem 'cocoapods'%s
+gem 'cocoapods-core'
 gem 'json'
 `, gemfileCocoapodsVersion)
 
@@ -37,6 +43,9 @@ require 'json'
 
 begin
 	podfile_path = ENV['PODFILE_PATH']
+	# In case of relative require in the Podfile, change working directory
+	# For example: require_relative '../node_modules/react-native/scripts/react_native_pods'
+	Dir.chdir(File.dirname(podfile_path))
 	podfile = Pod::Podfile.from_file(podfile_path)
 	targets = podfile.target_definitions
 	
@@ -50,13 +59,13 @@ begin
 
 	puts "#{{ :data => target_project_map }.to_json}"
 rescue => e
-	puts "#{{ :error => e.to_s }.to_json}"
+	puts "#{{ :error => "#{e.to_s} Reason: #{e.message}"}.to_json}"
 end
 `
 
-	absPodfilePth, err := filepath.Abs(podfilePth)
+	absPodfilePth, err := filepath.Abs(podfileParser.podfilePth)
 	if err != nil {
-		return map[string]string{}, fmt.Errorf("failed to expand path (%s), error: %s", podfilePth, err)
+		return map[string]string{}, fmt.Errorf("failed to expand path (%s), error: %s", podfileParser.podfilePth, err)
 	}
 
 	envs := []string{fmt.Sprintf("PODFILE_PATH=%s", absPodfilePth)}
@@ -81,15 +90,30 @@ end
 		return map[string]string{}, fmt.Errorf("failed to parse target definition output, error: %s", err)
 	}
 
-	if targetDefinitionOutput.Error != "" {
+	if podfileParser.shouldRaiseReadDefinitionError(targetDefinitionOutput.Error) {
 		return map[string]string{}, fmt.Errorf("failed to read target defintion map, error: %s", targetDefinitionOutput.Error)
 	}
 
 	return targetDefinitionOutput.Data, nil
 }
 
-func getUserDefinedProjectRelavtivePath(podfilePth, cocoapodsVersion string) (string, error) {
-	targetProjectMap, err := getTargetDefinitionProjectMap(podfilePth, cocoapodsVersion)
+func (podfileParser podfileParser) shouldRaiseReadDefinitionError(err string) bool {
+	if err == "" {
+		return false
+	}
+
+	isInvalidPodfileError := strings.Contains(err, "Pod::DSLError")
+	if isInvalidPodfileError && podfileParser.suppressPodFileParseError {
+		log.TWarnf("Could not parse podfile: %s", err)
+		log.TWarnf("Will continue using default Cocoapods paths.")
+		return false
+	}
+
+	return true
+}
+
+func (podfileParser podfileParser) getUserDefinedProjectRelavtivePath(cocoapodsVersion string) (string, error) {
+	targetProjectMap, err := podfileParser.getTargetDefinitionProjectMap(cocoapodsVersion)
 	if err != nil {
 		return "", fmt.Errorf("failed to get target definition map, error: %s", err)
 	}
@@ -102,14 +126,15 @@ func getUserDefinedProjectRelavtivePath(podfilePth, cocoapodsVersion string) (st
 	return "", nil
 }
 
-func getUserDefinedWorkspaceRelativePath(podfilePth, cocoapodsVersion string) (string, error) {
+func (podfileParser podfileParser) getUserDefinedWorkspaceRelativePath(cocoapodsVersion string) (string, error) {
 	gemfileCocoapodsVersion := ""
 	if cocoapodsVersion != "" {
 		gemfileCocoapodsVersion = fmt.Sprintf(`, '%s'`, cocoapodsVersion)
 	}
 
 	gemfileContent := fmt.Sprintf(`source 'https://rubygems.org'
-gem 'cocoapods-core'%s
+gem 'cocoapods'%s
+gem 'cocoapods-core'
 gem 'json'
 `, gemfileCocoapodsVersion)
 
@@ -120,16 +145,19 @@ require 'json'
 
 begin
 	podfile_path = ENV['PODFILE_PATH']
+	# In case of relative require in the Podfile, change working directory
+	# For example: require_relative '../node_modules/react-native/scripts/react_native_pods'
+	Dir.chdir(File.dirname(podfile_path))
 	podfile = Pod::Podfile.from_file(podfile_path)
 	pth = podfile.workspace_path
 	puts "#{{ :data => pth }.to_json}"
 rescue => e
-	puts "#{{ :error => e.to_s }.to_json}"
+	puts "#{{ :error => "#{e.to_s} Reason: #{e.message}"}.to_json}"
 end
 `
-	absPodfilePth, err := filepath.Abs(podfilePth)
+	absPodfilePth, err := filepath.Abs(podfileParser.podfilePth)
 	if err != nil {
-		return "", fmt.Errorf("failed to expand path (%s), error: %s", podfilePth, err)
+		return "", fmt.Errorf("failed to expand path (%s), error: %s", podfileParser.podfilePth, err)
 	}
 
 	envs := []string{fmt.Sprintf("PODFILE_PATH=%s", absPodfilePth)}
@@ -154,8 +182,8 @@ end
 		return "", fmt.Errorf("failed to parse workspace path output, error: %s", err)
 	}
 
-	if workspacePathOutput.Error != "" {
-		return "", fmt.Errorf("failed to readworkspace path, error: %s", workspacePathOutput.Error)
+	if podfileParser.shouldRaiseReadDefinitionError(workspacePathOutput.Error) {
+		return "", fmt.Errorf("failed to read workspace path, error: %s", workspacePathOutput.Error)
 	}
 
 	return workspacePathOutput.Data, nil
@@ -166,54 +194,30 @@ end
 // If more then one project exists in the Podfile's directory, root 'xcodeproj/project' property have to be defined in the Podfile.
 // Root 'xcodeproj/project' property will be mapped to the default cocoapods target (Pods).
 // If workspace property defined in the Podfile, it will override the workspace name.
-func GetWorkspaceProjectMap(podfilePth string, projects []string) (map[string]string, error) {
-	podfileDir := filepath.Dir(podfilePth)
+func (podfileParser podfileParser) GetWorkspaceProjectMap(projects []string) (map[string]string, error) {
+	podfileDir := filepath.Dir(podfileParser.podfilePth)
 
-	cocoapodsVersion := ""
-
-	podfileLockPth := filepath.Join(podfileDir, "Podfile.lock")
-	if exist, err := pathutil.IsPathExists(podfileLockPth); err != nil {
-		return map[string]string{}, fmt.Errorf("failed to check if Podfile.lock exist, error: %s", err)
-	} else if !exist {
-		podfileLockPth = filepath.Join(podfileDir, "podfile.lock")
-		if exist, err := pathutil.IsPathExists(podfileLockPth); err != nil {
-			return map[string]string{}, fmt.Errorf("failed to check if podfile.lock exist, error: %s", err)
-		} else if !exist {
-			podfileLockPth = ""
-		}
-	}
-
-	if podfileLockPth != "" {
-		version, err := GemVersionFromGemfileLock("cocoapods", podfileLockPth)
-		if err != nil {
-			return map[string]string{}, fmt.Errorf("failed to read cocoapods version from %s, error: %s", podfileLockPth, err)
-		}
-		cocoapodsVersion = version
-	}
-
-	// fix podfile quotation
-	podfileContent, err := fileutil.ReadStringFromFile(podfilePth)
+	podfileLockPth, err := podfileParser.podfilelockPath(podfileDir)
 	if err != nil {
-		return map[string]string{}, fmt.Errorf("failed to read podfile (%s), error: %s", podfilePth, err)
+		return map[string]string{}, err
 	}
 
-	podfileContent = strings.Replace(podfileContent, `‘`, `'`, -1)
-	podfileContent = strings.Replace(podfileContent, `’`, `'`, -1)
-	podfileContent = strings.Replace(podfileContent, `“`, `"`, -1)
-	podfileContent = strings.Replace(podfileContent, `”`, `"`, -1)
-
-	if err := fileutil.WriteStringToFile(podfilePth, podfileContent); err != nil {
-		return map[string]string{}, fmt.Errorf("failed to apply Podfile quotation fix, error: %s", err)
+	cocoapodsVersion, err := podfileParser.cocoapodsVersion(podfileLockPth)
+	if err != nil {
+		return map[string]string{}, err
 	}
-	// ----
 
-	projectRelPth, err := getUserDefinedProjectRelavtivePath(podfilePth, cocoapodsVersion)
+	if err := podfileParser.fixPodfileQuotation(podfileParser.podfilePth); err != nil {
+		return map[string]string{}, err
+	}
+
+	projectRelPth, err := podfileParser.getUserDefinedProjectRelavtivePath(cocoapodsVersion)
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("failed to get user defined project path, error: %s", err)
 	}
 
 	if projectRelPth == "" {
-		projects, err := utility.FilterPaths(projects, utility.InDirectoryFilter(podfileDir, true))
+		projects, err := pathutil.FilterPaths(projects, pathutil.InDirectoryFilter(podfileDir, true))
 		if err != nil {
 			return map[string]string{}, fmt.Errorf("failed to filter projects, error: %s", err)
 		}
@@ -234,7 +238,7 @@ func GetWorkspaceProjectMap(podfilePth string, projects []string) (map[string]st
 		return map[string]string{}, fmt.Errorf("project not found at: %s", projectPth)
 	}
 
-	workspaceRelPth, err := getUserDefinedWorkspaceRelativePath(podfilePth, cocoapodsVersion)
+	workspaceRelPth, err := podfileParser.getUserDefinedWorkspaceRelativePath(cocoapodsVersion)
 	if err != nil {
 		return map[string]string{}, fmt.Errorf("failed to get user defined workspace path, error: %s", err)
 	}
@@ -248,6 +252,53 @@ func GetWorkspaceProjectMap(podfilePth string, projects []string) (map[string]st
 	return map[string]string{
 		workspacePth: projectPth,
 	}, nil
+}
+
+func (podfileParser podfileParser) podfilelockPath(podfileDir string) (string, error) {
+	podfileLockPth := filepath.Join(podfileDir, "Podfile.lock")
+	if exist, err := pathutil.IsPathExists(podfileLockPth); err != nil {
+		return "", fmt.Errorf("failed to check if Podfile.lock exist: %s", err)
+	} else if !exist {
+		podfileLockPth = filepath.Join(podfileDir, "podfile.lock")
+		if exist, err := pathutil.IsPathExists(podfileLockPth); err != nil {
+			return "", fmt.Errorf("failed to check if podfile.lock exist: %s", err)
+		} else if !exist {
+			podfileLockPth = ""
+		}
+	}
+
+	return podfileLockPth, nil
+}
+
+func (podfileParser podfileParser) cocoapodsVersion(podfileLockPth string) (string, error) {
+
+	if podfileLockPth == "" {
+		return "", nil
+	}
+
+	version, err := GemVersionFromGemfileLock("cocoapods", podfileLockPth)
+	if err != nil {
+		return "", fmt.Errorf("failed to read cocoapods version from %s: %s", podfileLockPth, err)
+	}
+	return version, nil
+}
+
+func (podfileParser podfileParser) fixPodfileQuotation(podfilePth string) error {
+	podfileContent, err := fileutil.ReadStringFromFile(podfilePth)
+	if err != nil {
+		return fmt.Errorf("failed to read podfile (%s), error: %s", podfilePth, err)
+	}
+
+	podfileContent = strings.Replace(podfileContent, `‘`, `'`, -1)
+	podfileContent = strings.Replace(podfileContent, `’`, `'`, -1)
+	podfileContent = strings.Replace(podfileContent, `“`, `"`, -1)
+	podfileContent = strings.Replace(podfileContent, `”`, `"`, -1)
+
+	if err := fileutil.WriteStringToFile(podfilePth, podfileContent); err != nil {
+		return fmt.Errorf("failed to apply Podfile quotation fix, error: %s", err)
+	}
+
+	return nil
 }
 
 // MergePodWorkspaceProjectMap ...

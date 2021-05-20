@@ -204,6 +204,12 @@ func XcodeArchiveMacStepListItem(inputs ...envmanModels.EnvironmentItemModel) bi
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
+// ExportXCArchiveStepListItem ...
+func ExportXCArchiveStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
+	stepIDComposite := stepIDComposite(ExportXCArchiveID, ExportXCArchiveVersion)
+	return stepListItem(stepIDComposite, "", "", inputs...)
+}
+
 // XcodeTestMacStepListItem ...
 func XcodeTestMacStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
 	stepIDComposite := stepIDComposite(XcodeTestMacID, XcodeTestMacVersion)

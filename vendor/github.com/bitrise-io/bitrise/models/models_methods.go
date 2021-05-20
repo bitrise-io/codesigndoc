@@ -12,7 +12,7 @@ import (
 	"github.com/ryanuber/go-glob"
 )
 
-func (triggerItem TriggerMapItemModel) String(printWorkflow bool) string {
+func (triggerItem TriggerMapItemModel) String(printTarget bool) string {
 	str := ""
 
 	if triggerItem.PushBranch != "" {
@@ -52,8 +52,12 @@ func (triggerItem TriggerMapItemModel) String(printWorkflow bool) string {
 		str += fmt.Sprintf("pattern: %s && is_pull_request_allowed: %v", triggerItem.Pattern, triggerItem.IsPullRequestAllowed)
 	}
 
-	if printWorkflow {
-		str += fmt.Sprintf(" -> workflow: %s", triggerItem.WorkflowID)
+	if printTarget {
+		if triggerItem.PipelineID != "" {
+			str += fmt.Sprintf(" -> pipeline: %s", triggerItem.PipelineID)
+		} else {
+			str += fmt.Sprintf(" -> workflow: %s", triggerItem.WorkflowID)
+		}
 	}
 
 	return str
@@ -261,6 +265,11 @@ func (config *BitriseDataModel) Normalize() error {
 			return err
 		}
 	}
+	normalizedMeta, err := stepmanModels.JSONMarshallable(config.Meta)
+	if err != nil {
+		return err
+	}
+	config.Meta = normalizedMeta
 
 	return nil
 }
@@ -281,6 +290,12 @@ func (workflow *WorkflowModel) Validate() ([]string, error) {
 		stepID, step, err := GetStepIDStepDataPair(stepListItem)
 		if err != nil {
 			return warnings, err
+		}
+
+		if ver, src := getStepVersion(stepID), getStepSource(stepID); len(ver) > 0 && isStepLibSource(src) {
+			if _, err := stepmanModels.ParseRequiredVersion(ver); err != nil {
+				return warnings, fmt.Errorf("invalid version format (%s) specified for step ID: %s", ver, stepID)
+			}
 		}
 
 		if err := step.ValidateInputAndOutputEnvs(false); err != nil {
@@ -319,8 +334,11 @@ func (app *AppModel) Validate() error {
 
 // Validate ...
 func (triggerItem TriggerMapItemModel) Validate() error {
-	if triggerItem.WorkflowID == "" {
-		return fmt.Errorf("invalid trigger item: (%s) -> (%s), error: empty workflow id", triggerItem.Pattern, triggerItem.WorkflowID)
+	if triggerItem.PipelineID != "" && triggerItem.WorkflowID != "" {
+		return fmt.Errorf("invalid trigger item: (%s), error: pipeline & workflow both defined", triggerItem.Pattern)
+	}
+	if triggerItem.PipelineID == "" && triggerItem.WorkflowID == "" {
+		return fmt.Errorf("invalid trigger item: (%s), error: empty pipeline & workflow", triggerItem.Pattern)
 	}
 
 	if triggerItem.Pattern == "" {
@@ -416,15 +434,28 @@ func (config *BitriseDataModel) Validate() ([]string, error) {
 		}
 
 		found := false
-
-		for workflowID := range config.Workflows {
-			if workflowID == triggerMapItem.WorkflowID {
-				found = true
+		if triggerMapItem.PipelineID != "" {
+			for pipelineID := range config.Pipelines {
+				if pipelineID == triggerMapItem.PipelineID {
+					found = true
+					break
+				}
 			}
-		}
 
-		if !found {
-			return warnings, fmt.Errorf("workflow (%s) defined in trigger item (%s), but does not exist", triggerMapItem.WorkflowID, triggerMapItem.String(true))
+			if !found {
+				return warnings, fmt.Errorf("pipeline (%s) defined in trigger item (%s), but does not exist", triggerMapItem.PipelineID, triggerMapItem.String(true))
+			}
+		} else {
+			for workflowID := range config.Workflows {
+				if workflowID == triggerMapItem.WorkflowID {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return warnings, fmt.Errorf("workflow (%s) defined in trigger item (%s), but does not exist", triggerMapItem.WorkflowID, triggerMapItem.String(true))
+			}
 		}
 	}
 
@@ -439,30 +470,141 @@ func (config *BitriseDataModel) Validate() ([]string, error) {
 	}
 	// ---
 
+	// pipelines
+	pipelineWarnings, err := validatePipelines(config)
+	warnings = append(warnings, pipelineWarnings...)
+	if err != nil {
+		return warnings, err
+	}
+	// ---
+
+	// stages
+	stageWarnings, err := validateStages(config)
+	warnings = append(warnings, stageWarnings...)
+	if err != nil {
+		return warnings, err
+	}
+	// ---
+
 	// workflows
-	for ID, workflow := range config.Workflows {
-		if ID == "" {
-			return warnings, fmt.Errorf("invalid workflow ID (%s): empty", ID)
-		}
-
-		r := regexp.MustCompile(`[A-Za-z0-9-_.]+`)
-		if find := r.FindString(ID); find != ID {
-			warnings = append(warnings, fmt.Sprintf("invalid workflow ID (%s): doesn't conform to: [A-Za-z0-9-_.]", ID))
-		}
-
-		warns, err := workflow.Validate()
-		warnings = append(warnings, warns...)
-		if err != nil {
-			return warnings, err
-		}
-
-		if err := checkWorkflowReferenceCycle(ID, workflow, *config, []string{}); err != nil {
-			return warnings, err
-		}
+	workflowWarnings, err := validateWorkflows(config)
+	warnings = append(warnings, workflowWarnings...)
+	if err != nil {
+		return warnings, err
 	}
 	// ---
 
 	return warnings, nil
+}
+
+func validatePipelines(config *BitriseDataModel) ([]string, error) {
+	pipelineWarnings := make([]string, 0)
+	for ID, pipeline := range config.Pipelines {
+		idWarning, err := validateID(ID, "pipeline")
+		if idWarning != "" {
+			pipelineWarnings = append(pipelineWarnings, idWarning)
+		}
+		if err != nil {
+			return pipelineWarnings, err
+		}
+
+		if len(pipeline.Stages) == 0 {
+			return pipelineWarnings, fmt.Errorf("pipeline (%s) should have at least 1 stage", ID)
+		}
+
+		for _, pipelineStage := range pipeline.Stages {
+			pipelineStageID, err := GetStageIDFromListItemModel(pipelineStage)
+			if err != nil {
+				return pipelineWarnings, err
+			}
+			found := false
+			for stageID := range config.Stages {
+				if stageID == pipelineStageID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return pipelineWarnings, fmt.Errorf("stage (%s) defined in pipeline (%s), but does not exist", pipelineStageID, ID)
+			}
+		}
+	}
+
+	return pipelineWarnings, nil
+}
+
+func validateStages(config *BitriseDataModel) ([]string, error) {
+	stageWarnings := make([]string, 0)
+	for ID, stage := range config.Stages {
+		idWarning, err := validateID(ID, "stage")
+		if idWarning != "" {
+			stageWarnings = append(stageWarnings, idWarning)
+		}
+		if err != nil {
+			return stageWarnings, err
+		}
+
+		if len(stage.Workflows) == 0 {
+			return stageWarnings, fmt.Errorf("stage (%s) should have at least 1 workflow", ID)
+		}
+
+		for _, stageWorkflow := range stage.Workflows {
+			found := false
+			stageWorkflowID, err := GetWorkflowIDFromListItemModel(stageWorkflow)
+			if err != nil {
+				return stageWarnings, err
+			}
+			for workflowID := range config.Workflows {
+				if workflowID == stageWorkflowID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return stageWarnings, fmt.Errorf("workflow (%s) defined in stage (%s), but does not exist", stageWorkflowID, ID)
+			}
+		}
+	}
+
+	return stageWarnings, nil
+}
+
+func validateWorkflows(config *BitriseDataModel) ([]string, error) {
+	workflowWarnings := make([]string, 0)
+	for ID, workflow := range config.Workflows {
+		idWarning, err := validateID(ID, "workflow")
+		if idWarning != "" {
+			workflowWarnings = append(workflowWarnings, idWarning)
+		}
+		if err != nil {
+			return workflowWarnings, err
+		}
+
+		warns, err := workflow.Validate()
+		workflowWarnings = append(workflowWarnings, warns...)
+		if err != nil {
+			return workflowWarnings, fmt.Errorf("validation error in workflow: %s: %s", ID, err)
+		}
+
+		if err := checkWorkflowReferenceCycle(ID, workflow, *config, []string{}); err != nil {
+			return workflowWarnings, err
+		}
+	}
+
+	return workflowWarnings, nil
+}
+
+func validateID(id, modelType string) (string, error) {
+	if id == "" {
+		return "", fmt.Errorf("invalid %s ID (%s): empty", modelType, id)
+	}
+
+	r := regexp.MustCompile(`[A-Za-z0-9-_.]+`)
+	if find := r.FindString(id); find != id {
+		return fmt.Sprintf("invalid %s ID (%s): doesn't conform to: [A-Za-z0-9-_.]", modelType, id), nil
+	}
+
+	return "", nil
 }
 
 // ----------------------------
@@ -854,6 +996,34 @@ func MergeStepWith(step, otherStep stepmanModels.StepModel) (stepmanModels.StepM
 }
 
 // ----------------------------
+// --- WorkflowIDData
+
+// GetWorkflowIDFromListItemModel ...
+func GetWorkflowIDFromListItemModel(workflowListItem WorkflowListItemModel) (string, error) {
+	if len(workflowListItem) > 1 {
+		return "", errors.New("WorkflowListItem contains more than 1 key-value pair")
+	}
+	for key := range workflowListItem {
+		return key, nil
+	}
+	return "", errors.New("WorkflowListItem does not contain a key-value pair")
+}
+
+// ----------------------------
+// --- StageIDData
+
+// GetStageIDFromListItemModel ...
+func GetStageIDFromListItemModel(stageListItem StageListItemModel) (string, error) {
+	if len(stageListItem) > 1 {
+		return "", errors.New("StageListItem contains more than 1 key-value pair")
+	}
+	for key := range stageListItem {
+		return key, nil
+	}
+	return "", errors.New("StageListItem does not contain a key-value pair")
+}
+
+// ----------------------------
 // --- StepIDData
 
 // GetStepIDStepDataPair ...
@@ -865,6 +1035,66 @@ func GetStepIDStepDataPair(stepListItem StepListItemModel) (string, stepmanModel
 		return key, value, nil
 	}
 	return "", stepmanModels.StepModel{}, errors.New("StepListItem does not contain a key-value pair")
+}
+
+// detaches source from the step node
+// e.g.: "git::git@github.com:bitrise-steplib/steps-script.git@master" -> "git"
+func getStepSource(compositeVersionStr string) string {
+	if s := strings.SplitN(string(compositeVersionStr), "::", 2); len(s) == 2 {
+		if src := s[0]; len(src) > 0 {
+			return src
+		}
+	}
+	return ""
+}
+
+// detaches step id and version composite from the step node
+// e.g.: "git::git@github.com:bitrise-steplib/steps-script.git@master" -> "git@github.com:bitrise-steplib/steps-script.git@master"
+func getStepComposite(compositeVersionStr string) string {
+	if s := strings.SplitN(compositeVersionStr, "::", 2); len(s) == 2 {
+		return s[1]
+	}
+	return compositeVersionStr
+}
+
+// splits step node composite into it's parts by taking care of extra "@" when using SSH git URL
+// e.g.: "git::git@github.com:bitrise-steplib/steps-script.git@master" -> ["git@github.com:bitrise-steplib/steps-script.git" "master"]
+func splitCompositeComponents(composite string) []string {
+	s := strings.Split(composite, "@")
+	if item := s[0]; item == "git" {
+		s = s[1:]
+		s[0] = item + "@" + s[0]
+	}
+	return s
+}
+
+// returns step version from compositeString
+// e.g.: "git::https://github.com/bitrise-steplib/steps-script.git@master" -> "master"
+func getStepVersion(compositeVersionStr string) string {
+	composite := getStepComposite(compositeVersionStr)
+
+	if s := splitCompositeComponents(composite); len(s) > 1 {
+		return s[len(s)-1]
+	}
+
+	return ""
+}
+
+// returns step ID from compositeString
+// e.g.: "git::https://github.com/bitrise-steplib/steps-script.git@master" -> "https://github.com/bitrise-steplib/steps-script.git"
+func getStepID(compositeVersionStr string) string {
+	composite := getStepComposite(compositeVersionStr)
+	return splitCompositeComponents(composite)[0]
+}
+
+// returns true if step source is StepLib
+func isStepLibSource(source string) bool {
+	switch source {
+	case "path", "git", "_", "":
+		return false
+	default:
+		return true
+	}
 }
 
 // CreateStepIDDataFromString ...
@@ -882,63 +1112,28 @@ func GetStepIDStepDataPair(stepListItem StepListItemModel) (string, stepmanModel
 //  * only stepid, latest version will be used (requires a default steplib source to be provided):
 //    * script
 func CreateStepIDDataFromString(compositeVersionStr, defaultStepLibSource string) (StepIDData, error) {
-	// first, determine the steplib-source/type
-	stepSrc := ""
-	stepIDAndVersionOrURIStr := ""
-	libsourceStepSplits := strings.Split(compositeVersionStr, "::")
-	if len(libsourceStepSplits) == 2 {
-		// long/verbose ID mode, ex: step-lib-src::step-id@1.0.0
-		stepSrc = libsourceStepSplits[0]
-		stepIDAndVersionOrURIStr = libsourceStepSplits[1]
-	} else if len(libsourceStepSplits) == 1 {
-		// missing steplib-src mode, ex: step-id@1.0.0
-		//  in this case if we have a default StepLibSource we'll use that
-		stepIDAndVersionOrURIStr = libsourceStepSplits[0]
-	} else {
-		return StepIDData{}, errors.New("No StepLib found, neither default provided (" + compositeVersionStr + ")")
-	}
-
-	if stepSrc == "" {
+	src := getStepSource(compositeVersionStr)
+	if src == "" {
 		if defaultStepLibSource == "" {
 			return StepIDData{}, errors.New("No default StepLib source, in this case the composite ID should contain the source, separated with a '::' separator from the step ID (" + compositeVersionStr + ")")
 		}
-		stepSrc = defaultStepLibSource
+		src = defaultStepLibSource
 	}
 
-	// now determine the ID-or-URI and the version (if provided)
-	stepIDOrURI := ""
-	stepVersion := ""
-	stepidVersionOrURISplits := strings.Split(stepIDAndVersionOrURIStr, "@")
-	if len(stepidVersionOrURISplits) >= 2 {
-		splitsCnt := len(stepidVersionOrURISplits)
-		allButLastSplits := stepidVersionOrURISplits[:splitsCnt-1]
-		// the ID or URI is all components except the last @version component
-		//  which will be the version itself
-		// for example in case it's a git direct URI like:
-		//  git@github.com:bitrise-io/steps-timestamp.git@develop
-		// which contains 2 at (@) signs only the last should be the version,
-		//  the first one is part of the URI
-		stepIDOrURI = strings.Join(allButLastSplits, "@")
-		// version is simply the last component
-		stepVersion = stepidVersionOrURISplits[splitsCnt-1]
-	} else if len(stepidVersionOrURISplits) == 1 {
-		stepIDOrURI = stepidVersionOrURISplits[0]
-	} else {
-		return StepIDData{}, errors.New("Step ID and version should be separated with a '@' separator (" + stepIDAndVersionOrURIStr + ")")
-	}
-
-	if stepIDOrURI == "" {
+	id := getStepID(compositeVersionStr)
+	if id == "" {
 		return StepIDData{}, errors.New("No ID found at all (" + compositeVersionStr + ")")
 	}
 
-	if stepSrc == "git" && stepVersion == "" {
-		stepVersion = "master"
+	version := getStepVersion(compositeVersionStr)
+	if src == "git" && version == "" {
+		version = "master"
 	}
 
 	return StepIDData{
-		SteplibSource: stepSrc,
-		IDorURI:       stepIDOrURI,
-		Version:       stepVersion,
+		IDorURI:       id,
+		SteplibSource: string(src),
+		Version:       version,
 	}, nil
 }
 
@@ -951,14 +1146,7 @@ func CreateStepIDDataFromString(compositeVersionStr, defaultStepLibSource string
 // __If the ID is a Unique Resource ID then the step can be cached (locally)__,
 // as it won't change between subsequent step execution.
 func (sIDData StepIDData) IsUniqueResourceID() bool {
-	switch sIDData.SteplibSource {
-	case "path":
-		return false
-	case "git":
-		return false
-	case "_":
-		return false
-	case "":
+	if !isStepLibSource(sIDData.SteplibSource) {
 		return false
 	}
 

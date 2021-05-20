@@ -28,12 +28,18 @@ const (
 func (stepInfo StepInfoModel) String() string {
 	str := ""
 	if stepInfo.GroupInfo.DeprecateNotes != "" {
-		str += colorstring.Red("This step is deprecated")
+		str += colorstring.Red("This step is deprecated!") + "\n"
+
+		str += colorstring.Red("Note: ")
+		str += strings.TrimSpace(stepInfo.GroupInfo.DeprecateNotes) + "\n"
 
 		if stepInfo.GroupInfo.RemovalDate != "" {
-			str += colorstring.Redf(" and will be removed: %s", stepInfo.GroupInfo.RemovalDate)
+			str += colorstring.Red("Removal date: ")
+			str += strings.TrimSpace(stepInfo.GroupInfo.RemovalDate) + "\n"
 		}
-		str += "\n"
+	}
+	if len(stepInfo.GroupInfo.Maintainer) > 0 {
+		str += fmt.Sprintf("%s %s\n", colorstring.Blue("Maintainer:"), stepInfo.GroupInfo.Maintainer)
 	}
 	str += fmt.Sprintf("%s %s\n", colorstring.Blue("Library:"), stepInfo.Library)
 	str += fmt.Sprintf("%s %s\n", colorstring.Blue("ID:"), stepInfo.ID)
@@ -253,29 +259,25 @@ func (collection StepCollectionModel) GetStep(id, version string) (StepModel, bo
 }
 
 // GetStepVersion ...
-func (collection StepCollectionModel) GetStepVersion(id, version string) (StepVersionModel, bool, bool) {
+func (collection StepCollectionModel) GetStepVersion(id, version string) (stepVersion StepVersionModel, stepFound bool, versionFound bool) {
 	stepHash := collection.Steps
 	stepVersions, stepFound := stepHash[id]
 
 	if !stepFound {
-		return StepVersionModel{}, stepFound, false
+		return StepVersionModel{}, false, false
 	}
 
 	if version == "" {
 		version = stepVersions.LatestVersionNumber
 	}
 
-	step, versionFound := stepVersions.Versions[version]
-
-	if !stepFound || !versionFound {
-		return StepVersionModel{}, stepFound, versionFound
+	requiredVersion, err := ParseRequiredVersion(version)
+	if err != nil {
+		return StepVersionModel{}, true, false
 	}
 
-	return StepVersionModel{
-		Step:                   step,
-		Version:                version,
-		LatestAvailableVersion: stepVersions.LatestVersionNumber,
-	}, true, true
+	stepVersionModel, versionFound := latestMatchingStepVersion(requiredVersion, stepVersions)
+	return stepVersionModel, true, versionFound
 }
 
 // GetDownloadLocations ...

@@ -8,8 +8,8 @@ import (
 	"github.com/bitrise-io/bitrise-init/models"
 	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/xcode-project/xcodeproj"
-	"github.com/bitrise-io/xcode-project/xcscheme"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 )
 
 // lookupIconBySchemeName returns possible ios app icons for a scheme.

@@ -7,9 +7,9 @@ import (
 
 	"github.com/bitrise-io/bitrise-init/scanners/ios"
 	"github.com/bitrise-io/bitrise-init/scanners/xamarin"
-	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 )
 
@@ -30,7 +30,7 @@ func scanForProjectFiles(projType projectType) ([]string, error) {
 		return nil, err
 	}
 
-	fileList, err := utility.ListPathInDirSortedByComponents(searchDir, false)
+	fileList, err := pathutil.ListPathInDirSortedByComponents(searchDir, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for files in (%s), error: %s", searchDir, err)
 	}

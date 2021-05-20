@@ -27,6 +27,9 @@ const (
 // ICloudContainerEnvironment ...
 type ICloudContainerEnvironment string
 
+// DistributionBundleIdentifier ...
+const DistributionBundleIdentifier = "distributionBundleIdentifier"
+
 // ManifestKey ...
 const ManifestKey = "manifest"
 

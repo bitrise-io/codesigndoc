@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bitrise-io/bitrise-init/utility"
 	"github.com/bitrise-io/go-utils/fileutil"
+	"github.com/bitrise-io/go-utils/pathutil"
 )
 
 const (
@@ -18,13 +18,13 @@ const (
 	solutionConfigurationEnd   = "EndGlobalSection"
 )
 
-var allowSolutionExtensionFilter = utility.ExtensionFilter(solutionExtension, true)
-var forbidComponentsSolutionFilter = utility.ComponentFilter(componentsDirName, false)
-var forbidNodeModulesDirComponentFilter = utility.ComponentFilter(NodeModulesDirName, false)
+var allowSolutionExtensionFilter = pathutil.ExtensionFilter(solutionExtension, true)
+var forbidComponentsSolutionFilter = pathutil.ComponentFilter(componentsDirName, false)
+var forbidNodeModulesDirComponentFilter = pathutil.ComponentFilter(NodeModulesDirName, false)
 
 // FilterSolutionFiles ...
 func FilterSolutionFiles(fileList []string) ([]string, error) {
-	files, err := utility.FilterPaths(fileList,
+	files, err := pathutil.FilterPaths(fileList,
 		allowSolutionExtensionFilter,
 		forbidComponentsSolutionFilter,
 		forbidNodeModulesDirComponentFilter)
