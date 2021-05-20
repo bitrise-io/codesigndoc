@@ -20,10 +20,10 @@ func findModTimesByPath(dir string, excludeDir bool) (ModTimesByPath, error) {
 	modTimesByPath := ModTimesByPath{}
 
 	if walkErr := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		log.Debugf("Walking for path: %s, modtime %v", path, info.ModTime())
 		if err != nil {
 			return err
 		}
+		log.Debugf("Walking for path: %s, modtime %v", path, info.ModTime())
 
 		if excludeDir && info.IsDir() {
 			return nil

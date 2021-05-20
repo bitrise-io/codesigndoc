@@ -11,10 +11,10 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/progress"
-	"github.com/bitrise-io/xcode-project"
-	"github.com/bitrise-io/xcode-project/xcodeproj"
-	"github.com/bitrise-io/xcode-project/xcscheme"
-	"github.com/bitrise-io/xcode-project/xcworkspace"
+	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 )
 
 // CommandModel ...
@@ -191,7 +191,7 @@ func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 }
 
 func findBuiltProject(pth, schemeName, configurationName string) (xcodeproj.XcodeProj, string, error) {
-	scheme, schemeContainerDir, err := project.Scheme(pth, schemeName)
+	scheme, schemeContainerDir, err := schemeint.Scheme(pth, schemeName)
 	if err != nil {
 		return xcodeproj.XcodeProj{}, "", fmt.Errorf("could not get scheme with name %s from path %s", schemeName, pth)
 	}

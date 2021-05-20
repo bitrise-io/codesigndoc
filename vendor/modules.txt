@@ -1,36 +1,38 @@
-# github.com/bitrise-io/bitrise v0.0.0-20190611131411-f7458dd6a6c5
-## explicit
+# github.com/bitrise-io/bitrise v0.0.0-20210519130014-380842fb41c1
 github.com/bitrise-io/bitrise/models
-# github.com/bitrise-io/bitrise-init v0.0.0-20191021084735-b96068c8b6cd
+# github.com/bitrise-io/bitrise-init v0.0.0-20210520122036-d213de321eb8
 ## explicit
+github.com/bitrise-io/bitrise-init/analytics
 github.com/bitrise-io/bitrise-init/models
 github.com/bitrise-io/bitrise-init/scanners/ios
 github.com/bitrise-io/bitrise-init/scanners/xamarin
 github.com/bitrise-io/bitrise-init/steps
 github.com/bitrise-io/bitrise-init/utility
-# github.com/bitrise-io/envman v0.0.0-20191008123703-a82637cf13cc
-## explicit
+# github.com/bitrise-io/envman v0.0.0-20210517135508-b2b4fe89eac5
 github.com/bitrise-io/envman/models
-# github.com/bitrise-io/go-utils v0.0.0-20191030135146-2c67c48e7086
+# github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10
+github.com/bitrise-io/go-plist
+# github.com/bitrise-io/go-steputils v0.0.0-20210514150206-5b6261447e77
+github.com/bitrise-io/go-steputils/command/rubyscript
+github.com/bitrise-io/go-steputils/step
+# github.com/bitrise-io/go-utils v0.0.0-20210520073355-367fa34178f5
 ## explicit
 github.com/bitrise-io/go-utils/colorstring
 github.com/bitrise-io/go-utils/command
-github.com/bitrise-io/go-utils/command/rubyscript
 github.com/bitrise-io/go-utils/errorutil
 github.com/bitrise-io/go-utils/fileutil
 github.com/bitrise-io/go-utils/log
 github.com/bitrise-io/go-utils/parseutil
 github.com/bitrise-io/go-utils/pathutil
-github.com/bitrise-io/go-utils/pkcs12
-github.com/bitrise-io/go-utils/pkcs12/internal/rc2
 github.com/bitrise-io/go-utils/pointers
+github.com/bitrise-io/go-utils/pretty
 github.com/bitrise-io/go-utils/progress
 github.com/bitrise-io/go-utils/retry
 github.com/bitrise-io/go-utils/sliceutil
 github.com/bitrise-io/go-utils/stringutil
 github.com/bitrise-io/go-utils/urlutil
 github.com/bitrise-io/go-utils/ziputil
-# github.com/bitrise-io/go-xamarin v0.0.0-20190927121140-b4423590eb83
+# github.com/bitrise-io/go-xamarin v0.0.0-20210519123500-acea30f4caad
 ## explicit
 github.com/bitrise-io/go-xamarin/analyzers/project
 github.com/bitrise-io/go-xamarin/analyzers/solution
@@ -42,73 +44,73 @@ github.com/bitrise-io/go-xamarin/tools/buildtools/msbuild
 github.com/bitrise-io/go-xamarin/tools/buildtools/xbuild
 github.com/bitrise-io/go-xamarin/tools/nunit
 github.com/bitrise-io/go-xamarin/utility
-# github.com/bitrise-io/go-xcode v0.0.0-20191009125050-19cbfe6430ac
+# github.com/bitrise-io/go-xcode v0.0.0-20210520114025-bdbec53ee59f
 ## explicit
 github.com/bitrise-io/go-xcode/certificateutil
 github.com/bitrise-io/go-xcode/export
 github.com/bitrise-io/go-xcode/exportoptions
 github.com/bitrise-io/go-xcode/models
+github.com/bitrise-io/go-xcode/pathfilters
 github.com/bitrise-io/go-xcode/plistutil
 github.com/bitrise-io/go-xcode/profileutil
 github.com/bitrise-io/go-xcode/utility
 github.com/bitrise-io/go-xcode/xcarchive
 github.com/bitrise-io/go-xcode/xcodeproj
-# github.com/bitrise-io/goinp v0.0.0-20190611131639-bd18a8681e27
+github.com/bitrise-io/go-xcode/xcodeproject/schemeint
+github.com/bitrise-io/go-xcode/xcodeproject/serialized
+github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild
+github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj
+github.com/bitrise-io/go-xcode/xcodeproject/xcscheme
+github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace
+# github.com/bitrise-io/goinp v0.0.0-20210504152833-8559b0680ab1
 ## explicit
 github.com/bitrise-io/goinp/goinp
-# github.com/bitrise-io/stepman v0.0.0-20191008120510-5243f5feb136
-## explicit
+# github.com/bitrise-io/pkcs12 v0.0.0-20210430063833-0da06eb56630
+github.com/bitrise-io/pkcs12
+github.com/bitrise-io/pkcs12/internal/rc2
+# github.com/bitrise-io/stepman v0.0.0-20210517135458-203f7a48d37a
 github.com/bitrise-io/stepman/models
-# github.com/bitrise-io/xcode-project v0.0.0-20191004122952-a4e01d69cacc
-## explicit
-github.com/bitrise-io/xcode-project
-github.com/bitrise-io/xcode-project/pretty
-github.com/bitrise-io/xcode-project/serialized
-github.com/bitrise-io/xcode-project/xcodebuild
-github.com/bitrise-io/xcode-project/xcodeproj
-github.com/bitrise-io/xcode-project/xcscheme
-github.com/bitrise-io/xcode-project/xcworkspace
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa
-## explicit
 github.com/fullsailor/pkcs7
-# github.com/google/go-cmp v0.5.5
-## explicit
+# github.com/hashicorp/go-cleanhttp v0.5.1
+github.com/hashicorp/go-cleanhttp
+# github.com/hashicorp/go-retryablehttp v0.6.6
+github.com/hashicorp/go-retryablehttp
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/ryanuber/go-glob v1.0.0
-## explicit
 github.com/ryanuber/go-glob
 # github.com/spf13/cobra v0.0.5
 ## explicit
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
-## explicit
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.4.0
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# golang.org/x/crypto v0.0.0-20191029031824-8986dd9e96cf
-## explicit
+# golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
 golang.org/x/crypto/ssh/terminal
-# golang.org/x/sys v0.0.0-20191029155521-f43be2a4598c
-## explicit
+# golang.org/x/sys v0.0.0-20210514084401-e8d321eab015
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/text v0.3.2
-## explicit
+# golang.org/x/term v0.0.0-20210503060354-a79de5458b56
+golang.org/x/term
+# golang.org/x/text v0.3.6
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# gopkg.in/yaml.v2 v2.2.4
-## explicit
+# gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
-# howett.net/plist v0.0.0-20181124034731-591f970eefbb
-## explicit
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+gopkg.in/yaml.v3
+# howett.net/plist v0.0.0-20201203080718-1454fab16a06
 howett.net/plist

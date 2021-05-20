@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/pathutil"
@@ -95,14 +96,17 @@ func (xbuild Model) buildCommands() []string {
 		cmdSlice = append(cmdSlice, fmt.Sprintf("/target:%s", xbuild.target))
 	}
 
-	cmdSlice = append(cmdSlice, fmt.Sprintf("/p:SolutionDir=%s", filepath.Dir(xbuild.SolutionPth)))
+	// According to official docs this value should include the trailing backslash:
+	// https://docs.microsoft.com/en-us/cpp/build/reference/common-macros-for-build-commands-and-properties?view=vs-2019
+	solutionDirPth := ensureTrailingPathSeparator(filepath.Dir(xbuild.SolutionPth))
+	cmdSlice = append(cmdSlice, "/p:SolutionDir="+solutionDirPth)
 
 	if xbuild.configuration != "" {
-		cmdSlice = append(cmdSlice, fmt.Sprintf("/p:Configuration=%s", xbuild.configuration))
+		cmdSlice = append(cmdSlice, "/p:Configuration="+xbuild.configuration)
 	}
 
 	if xbuild.platform != "" {
-		cmdSlice = append(cmdSlice, fmt.Sprintf("/p:Platform=%s", xbuild.platform))
+		cmdSlice = append(cmdSlice, "/p:Platform="+xbuild.platform)
 	}
 
 	if xbuild.archiveOnBuild {
@@ -114,8 +118,6 @@ func (xbuild Model) buildCommands() []string {
 	}
 
 	cmdSlice = append(cmdSlice, xbuild.customOptions...)
-
-	//cmdSlice = append(cmdSlice, "/verbosity:minimal", "/nologo")
 
 	return cmdSlice
 }
@@ -146,4 +148,9 @@ func (xbuild Model) Run(outWriter, errWriter io.Writer) error {
 	command.SetStderr(errWriter)
 
 	return command.Run()
+}
+
+func ensureTrailingPathSeparator(path string) string {
+	slash := string(filepath.Separator)
+	return strings.TrimSuffix(path, slash) + slash
 }

@@ -3,7 +3,6 @@ package xcarchive
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xcode/plistutil"
@@ -101,6 +100,11 @@ type IosWatchApplication struct {
 	Extensions []IosExtension
 }
 
+// IosClipApplication ...
+type IosClipApplication struct {
+	iosBaseApplication
+}
+
 // NewIosWatchApplication ...
 func NewIosWatchApplication(path string) (IosWatchApplication, error) {
 	baseApp, err := newIosBaseApplication(path)
@@ -129,10 +133,23 @@ func NewIosWatchApplication(path string) (IosWatchApplication, error) {
 	}, nil
 }
 
+// NewIosClipApplication ...
+func NewIosClipApplication(path string) (IosClipApplication, error) {
+	baseApp, err := newIosBaseApplication(path)
+	if err != nil {
+		return IosClipApplication{}, err
+	}
+
+	return IosClipApplication{
+		iosBaseApplication: baseApp,
+	}, nil
+}
+
 // IosApplication ...
 type IosApplication struct {
 	iosBaseApplication
 	WatchApplication *IosWatchApplication
+	ClipApplication  *IosClipApplication
 	Extensions       []IosExtension
 }
 
@@ -160,6 +177,23 @@ func NewIosApplication(path string) (IosApplication, error) {
 		}
 	}
 
+	var clipApp *IosClipApplication
+	{
+		pattern := filepath.Join(utility.EscapeGlobPath(path), "AppClips/*.app")
+		pths, err := filepath.Glob(pattern)
+		if err != nil {
+			return IosApplication{}, err
+		}
+		if len(pths) > 0 {
+			clipPath := pths[0]
+			app, err := NewIosClipApplication(clipPath)
+			if err != nil {
+				return IosApplication{}, err
+			}
+			clipApp = &app
+		}
+	}
+
 	extensions := []IosExtension{}
 	{
 		pattern := filepath.Join(utility.EscapeGlobPath(path), "PlugIns/*.appex")
@@ -180,6 +214,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 	return IosApplication{
 		iosBaseApplication: baseApp,
 		WatchApplication:   watchApp,
+		ClipApplication:    clipApp,
 		Extensions:         extensions,
 	}, nil
 }
@@ -296,6 +331,13 @@ func (archive IosArchive) BundleIDEntitlementsMap() map[string]plistutil.PlistDa
 		}
 	}
 
+	if archive.Application.ClipApplication != nil {
+		clipApplication := *archive.Application.ClipApplication
+
+		bundleID := clipApplication.BundleIdentifier()
+		bundleIDEntitlementsMap[bundleID] = clipApplication.Entitlements
+	}
+
 	return bundleIDEntitlementsMap
 }
 
@@ -323,29 +365,17 @@ func (archive IosArchive) BundleIDProfileInfoMap() map[string]profileutil.Provis
 		}
 	}
 
+	if archive.Application.ClipApplication != nil {
+		clipApplication := *archive.Application.ClipApplication
+
+		bundleID := clipApplication.BundleIdentifier()
+		bundleIDProfileMap[bundleID] = clipApplication.ProvisioningProfile
+	}
+
 	return bundleIDProfileMap
 }
 
 // FindDSYMs ...
-func (archive IosArchive) FindDSYMs() (string, []string, error) {
-	dsymsDirPth := filepath.Join(archive.Path, "dSYMs")
-	dsyms, err := utility.ListEntries(dsymsDirPth, utility.ExtensionFilter(".dsym", true))
-	if err != nil {
-		return "", []string{}, err
-	}
-
-	appDSYM := ""
-	frameworkDSYMs := []string{}
-	for _, dsym := range dsyms {
-		if strings.HasSuffix(dsym, ".app.dSYM") {
-			appDSYM = dsym
-		} else {
-			frameworkDSYMs = append(frameworkDSYMs, dsym)
-		}
-	}
-	if appDSYM == "" && len(frameworkDSYMs) == 0 {
-		return "", []string{}, fmt.Errorf("no dsym found")
-	}
-
-	return appDSYM, frameworkDSYMs, nil
+func (archive IosArchive) FindDSYMs() ([]string, []string, error) {
+	return findDSYMs(archive.Path)
 }

@@ -273,8 +273,8 @@ func GetOutputDir(propertyGroup PropertyGroup, projectDir, configuration, platfo
 		return "", err
 	}
 	relativePth = utility.FixWindowsPath(relativePth)
-	strings.Replace(relativePth, "$(Configuration)", configuration, -1)
-	strings.Replace(relativePth, "$(Platform)", platform, -1)
+	relativePth = strings.Replace(relativePth, "$(Configuration)", configuration, -1)
+	relativePth = strings.Replace(relativePth, "$(Platform)", platform, -1)
 	return filepath.Join(projectDir, relativePth), nil
 }
 
