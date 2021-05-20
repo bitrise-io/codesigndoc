@@ -2,10 +2,10 @@ package pathfilters
 
 import (
 	"fmt"
-	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-xcode/xcodeproj"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 )
 
 const (
@@ -31,10 +31,10 @@ const (
 )
 
 // AllowXcodeProjExtFilter ...
-var AllowXcodeProjExtFilter = pathutil.ExtensionFilter(xcodeproj.XCodeProjExt, true)
+var AllowXcodeProjExtFilter = pathutil.ExtensionFilter(xcodeproj.XcodeProjExtension, true)
 
 // AllowXCWorkspaceExtFilter ...
-var AllowXCWorkspaceExtFilter = pathutil.ExtensionFilter(xcodeproj.XCWorkspaceExt, true)
+var AllowXCWorkspaceExtFilter = pathutil.ExtensionFilter(xcworkspace.XCWorkspaceExtension, true)
 
 // AllowIsDirectoryFilter ...
 var AllowIsDirectoryFilter = pathutil.IsDirectoryFilter(true)
@@ -79,10 +79,14 @@ func SDKFilter(sdk string, allowed bool) pathutil.FilterFunc {
 
 		projectFiles := []string{}
 
-		if xcodeproj.IsXCodeProj(pth) {
+		if xcodeproj.IsXcodeProj(pth) {
 			projectFiles = append(projectFiles, pth)
-		} else if xcodeproj.IsXCWorkspace(pth) {
-			projects, err := xcodeproj.WorkspaceProjectReferences(pth)
+		} else if xcworkspace.IsWorkspace(pth) {
+			workspace, err := xcworkspace.Open(pth)
+			if err != nil {
+				return false, err
+			}
+			projects, err := workspace.ProjectFileLocations()
 			if err != nil {
 				return false, err
 			}
@@ -99,17 +103,30 @@ func SDKFilter(sdk string, allowed bool) pathutil.FilterFunc {
 
 			}
 		} else {
-			return false, fmt.Errorf("Not Xcode project nor workspace file: %s", pth)
+			return false, fmt.Errorf("not Xcode project nor workspace file: %s", pth)
 		}
 
+		sdkMap := map[string]bool{}
 		for _, projectFile := range projectFiles {
-			pbxprojPth := filepath.Join(projectFile, "project.pbxproj")
-			projectSDKs, err := xcodeproj.GetBuildConfigSDKs(pbxprojPth)
+			project, err := xcodeproj.Open(projectFile)
 			if err != nil {
 				return false, err
 			}
 
-			for _, projectSDK := range projectSDKs {
+			var buildConfigurations []xcodeproj.BuildConfiguration
+			buildConfigurations = append(buildConfigurations, project.Proj.BuildConfigurationList.BuildConfigurations...)
+			for _, target := range project.Proj.Targets {
+				buildConfigurations = append(buildConfigurations, target.BuildConfigurationList.BuildConfigurations...)
+			}
+
+			for _, buildConfiguratioon := range buildConfigurations {
+				sdk, err := buildConfiguratioon.BuildSettings.String("SDKROOT")
+				if err == nil {
+					sdkMap[sdk] = true
+				}
+			}
+
+			for projectSDK := range sdkMap {
 				if projectSDK == sdk {
 					found = true
 					break

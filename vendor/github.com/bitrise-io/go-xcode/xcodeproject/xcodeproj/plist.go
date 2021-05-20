@@ -3,9 +3,9 @@ package xcodeproj
 import (
 	"io/ioutil"
 
-	"github.com/bitrise-io/go-plist"
+	plist "github.com/bitrise-io/go-plist"
 	"github.com/bitrise-io/go-utils/fileutil"
-	"github.com/bitrise-io/xcode-project/serialized"
+	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 )
 
 // ReadPlistFile returns a parsed object representing a plist file residing at path

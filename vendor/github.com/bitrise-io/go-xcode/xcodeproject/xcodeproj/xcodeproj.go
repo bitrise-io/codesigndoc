@@ -11,15 +11,20 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bitrise-io/go-plist"
+	plist "github.com/bitrise-io/go-plist"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/xcode-project/pretty"
-	"github.com/bitrise-io/xcode-project/serialized"
-	"github.com/bitrise-io/xcode-project/xcodebuild"
-	"github.com/bitrise-io/xcode-project/xcscheme"
+	"github.com/bitrise-io/go-utils/pretty"
+	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"golang.org/x/text/unicode/norm"
+)
+
+const (
+	// XcodeProjExtension ...
+	XcodeProjExtension = ".xcodeproj"
 )
 
 // XcodeProj ...
@@ -385,7 +390,7 @@ func parsePBXProjContent(content []byte) (*XcodeProj, error) {
 
 // IsXcodeProj ...
 func IsXcodeProj(pth string) bool {
-	return filepath.Ext(pth) == ".xcodeproj"
+	return filepath.Ext(pth) == XcodeProjExtension
 }
 
 // ForceCodeSign modifies the project's code signing settings to use manual code signing.

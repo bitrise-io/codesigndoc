@@ -1,9 +1,9 @@
-package project
+package schemeint
 
 import (
-	"github.com/bitrise-io/xcode-project/xcodeproj"
-	"github.com/bitrise-io/xcode-project/xcscheme"
-	"github.com/bitrise-io/xcode-project/xcworkspace"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
+	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 )
 
 // HasScheme represents a struct that implements Scheme.

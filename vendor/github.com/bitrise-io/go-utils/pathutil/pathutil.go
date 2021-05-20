@@ -215,3 +215,24 @@ func ListPathInDirSortedByComponents(searchDir string, relPath bool) ([]string, 
 	}
 	return SortPathsByComponents(fileList)
 }
+
+// ListEntries filters contents of a directory using the provided filters
+func ListEntries(dir string, filters ...FilterFunc) ([]string, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return []string{}, err
+	}
+
+	entries, err := ioutil.ReadDir(absDir)
+	if err != nil {
+		return []string{}, err
+	}
+
+	var paths []string
+	for _, entry := range entries {
+		pth := filepath.Join(absDir, entry.Name())
+		paths = append(paths, pth)
+	}
+
+	return FilterPaths(paths, filters...)
+}

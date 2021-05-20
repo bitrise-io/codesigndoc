@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"os"
 	"path"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/bitrise-io/bitrise-init/scanners/xamarin"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/log"
+	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/goinp/goinp"
 )
 

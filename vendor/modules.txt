@@ -1,6 +1,6 @@
-# github.com/bitrise-io/bitrise v0.0.0-20210513161711-09b1442cf3e0
+# github.com/bitrise-io/bitrise v0.0.0-20210519130014-380842fb41c1
 github.com/bitrise-io/bitrise/models
-# github.com/bitrise-io/bitrise-init v0.0.0-20210518124036-0b2b7f91bdb1
+# github.com/bitrise-io/bitrise-init v0.0.0-20210520122036-d213de321eb8
 ## explicit
 github.com/bitrise-io/bitrise-init/analytics
 github.com/bitrise-io/bitrise-init/models
@@ -15,7 +15,7 @@ github.com/bitrise-io/go-plist
 # github.com/bitrise-io/go-steputils v0.0.0-20210514150206-5b6261447e77
 github.com/bitrise-io/go-steputils/command/rubyscript
 github.com/bitrise-io/go-steputils/step
-# github.com/bitrise-io/go-utils v0.0.0-20210517140706-aa64fd88ca49
+# github.com/bitrise-io/go-utils v0.0.0-20210520073355-367fa34178f5
 ## explicit
 github.com/bitrise-io/go-utils/colorstring
 github.com/bitrise-io/go-utils/command
@@ -25,13 +25,14 @@ github.com/bitrise-io/go-utils/log
 github.com/bitrise-io/go-utils/parseutil
 github.com/bitrise-io/go-utils/pathutil
 github.com/bitrise-io/go-utils/pointers
+github.com/bitrise-io/go-utils/pretty
 github.com/bitrise-io/go-utils/progress
 github.com/bitrise-io/go-utils/retry
 github.com/bitrise-io/go-utils/sliceutil
 github.com/bitrise-io/go-utils/stringutil
 github.com/bitrise-io/go-utils/urlutil
 github.com/bitrise-io/go-utils/ziputil
-# github.com/bitrise-io/go-xamarin v0.0.0-20210419121736-7541e2f0d448
+# github.com/bitrise-io/go-xamarin v0.0.0-20210519123500-acea30f4caad
 ## explicit
 github.com/bitrise-io/go-xamarin/analyzers/project
 github.com/bitrise-io/go-xamarin/analyzers/solution
@@ -43,7 +44,7 @@ github.com/bitrise-io/go-xamarin/tools/buildtools/msbuild
 github.com/bitrise-io/go-xamarin/tools/buildtools/xbuild
 github.com/bitrise-io/go-xamarin/tools/nunit
 github.com/bitrise-io/go-xamarin/utility
-# github.com/bitrise-io/go-xcode v0.0.0-20210517092111-792daa927657
+# github.com/bitrise-io/go-xcode v0.0.0-20210520114025-bdbec53ee59f
 ## explicit
 github.com/bitrise-io/go-xcode/certificateutil
 github.com/bitrise-io/go-xcode/export
@@ -55,6 +56,12 @@ github.com/bitrise-io/go-xcode/profileutil
 github.com/bitrise-io/go-xcode/utility
 github.com/bitrise-io/go-xcode/xcarchive
 github.com/bitrise-io/go-xcode/xcodeproj
+github.com/bitrise-io/go-xcode/xcodeproject/schemeint
+github.com/bitrise-io/go-xcode/xcodeproject/serialized
+github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild
+github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj
+github.com/bitrise-io/go-xcode/xcodeproject/xcscheme
+github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace
 # github.com/bitrise-io/goinp v0.0.0-20210504152833-8559b0680ab1
 ## explicit
 github.com/bitrise-io/goinp/goinp
@@ -63,15 +70,6 @@ github.com/bitrise-io/pkcs12
 github.com/bitrise-io/pkcs12/internal/rc2
 # github.com/bitrise-io/stepman v0.0.0-20210517135458-203f7a48d37a
 github.com/bitrise-io/stepman/models
-# github.com/bitrise-io/xcode-project v0.0.0-20210302080829-f3e0bfbcd5cb
-## explicit
-github.com/bitrise-io/xcode-project
-github.com/bitrise-io/xcode-project/pretty
-github.com/bitrise-io/xcode-project/serialized
-github.com/bitrise-io/xcode-project/xcodebuild
-github.com/bitrise-io/xcode-project/xcodeproj
-github.com/bitrise-io/xcode-project/xcscheme
-github.com/bitrise-io/xcode-project/xcworkspace
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
 # github.com/fullsailor/pkcs7 v0.0.0-20190404230743-d7302db945fa

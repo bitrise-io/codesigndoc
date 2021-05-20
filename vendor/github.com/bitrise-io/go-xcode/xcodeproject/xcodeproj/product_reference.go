@@ -1,6 +1,6 @@
 package xcodeproj
 
-import "github.com/bitrise-io/xcode-project/serialized"
+import "github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 
 // ProductReference ...
 type ProductReference struct {

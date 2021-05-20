@@ -6,7 +6,7 @@ import (
 
 	"github.com/bitrise-io/go-utils/command"
 	"github.com/bitrise-io/go-utils/errorutil"
-	"github.com/bitrise-io/xcode-project/serialized"
+	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 )
 
 func parseShowBuildSettingsOutput(out string) serialized.Object {
