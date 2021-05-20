@@ -8,7 +8,9 @@ require (
 	github.com/bitrise-io/go-xamarin v0.0.0-20210519123500-acea30f4caad
 	github.com/bitrise-io/go-xcode v0.0.0-20210520114025-bdbec53ee59f
 	github.com/bitrise-io/goinp v0.0.0-20210504152833-8559b0680ab1
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-retryablehttp v0.7.0 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cobra v0.0.5
+	github.com/spf13/cobra v1.1.3
 	github.com/stretchr/testify v1.7.0
 )
