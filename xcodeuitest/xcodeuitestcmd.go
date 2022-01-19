@@ -34,6 +34,17 @@ type CommandModel struct {
 	// For more info about the possible values please see xcodebuild's docs about the -sdk flag.
 	// Only passed to xcodebuild if not empty!
 	SDK string
+
+	// DESTINATION: configure which device or Simulator will be used by the tool
+	// The supported platforms are:
+	//	OS X, your Mac
+	//	iOS, a connected iOS device
+	//	iOS Simulator
+	//	watchOS
+	//	watchOS Simulator
+	//	tvOS
+	//	tvOS Simulator
+	DESTINATION string
 }
 
 // RunBuildForTesting runs the build-for-tesing xcode command
@@ -82,12 +93,17 @@ func (xcuitestcmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs
 		baseArgs = append(baseArgs, "-sdk", xcuitestcmd.SDK)
 	}
 
+	if xcuitestcmd.DESTINATION != "" {
+		baseArgs = append(baseArgs, "-destination", xcuitestcmd.DESTINATION)
+	}
+
 	return append(baseArgs, xcodebuildActionArgs...), nil
 }
 
 // RunXcodebuildCommand TODO comment
 func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (string, error) {
 	xcodeCmdParamsToRun, err := xcuitestcmd.transformToXcodebuildParams(xcodebuildActionArgs...)
+
 	if err != nil {
 		return "", err
 	}
