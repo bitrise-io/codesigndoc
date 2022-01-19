@@ -132,9 +132,9 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 				return fmt.Errorf("Failed to open project (%s), error: %s", xcodeUITestsCmd.ProjectFilePath, err)
 			}
 
-			projectScheme, _, err := project.Scheme(xcodeUITestsCmd.Scheme)
+			projectScheme, _, err := proj.Scheme(xcodeUITestsCmd.Scheme)
 			if err != nil {
-				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeUITestsCmd.Scheme, project.Path, err)
+				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeUITestsCmd.Scheme, proj.Path, err)
 			}
 
 			project = proj

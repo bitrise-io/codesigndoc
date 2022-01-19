@@ -126,9 +126,10 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 				return fmt.Errorf("Failed to open project (%s), error: %s", xcodeCmd.ProjectFilePath, err)
 			}
 
-			projectScheme, _, err := project.Scheme(xcodeCmd.Scheme)
+			projectScheme, _, err := proj.Scheme(xcodeCmd.Scheme)
+
 			if err != nil {
-				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeCmd.Scheme, project.Path, err)
+				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeCmd.Scheme, proj.Path, err)
 			}
 
 			project = proj
