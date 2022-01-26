@@ -153,10 +153,10 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 					continue
 				}
 
-				possibleProject, _ := xcodeproj.Open(projectLocation)
-				projectScheme, _, _ := possibleProject.Scheme(xcodeCmd.Scheme)
+				possibleProject, err := xcodeproj.Open(projectLocation)
+				projectScheme, _, err := possibleProject.Scheme(xcodeCmd.Scheme)
 
-				if projectScheme != nil {
+				if projectScheme != nil && err == nil {
 					project = possibleProject
 					scheme = *projectScheme
 

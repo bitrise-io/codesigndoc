@@ -158,10 +158,10 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 					continue
 				}
 
-				possibleProject, _ := xcodeproj.Open(projectLocation)
-				projectScheme, _, _ := possibleProject.Scheme(xcodeUITestsCmd.Scheme)
+				possibleProject, err := xcodeproj.Open(projectLocation)
+				projectScheme, _, err := possibleProject.Scheme(xcodeUITestsCmd.Scheme)
 
-				if projectScheme != nil {
+				if projectScheme != nil && err == nil {
 					project = possibleProject
 					scheme = *projectScheme
 
