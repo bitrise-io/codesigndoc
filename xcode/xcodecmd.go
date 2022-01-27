@@ -45,7 +45,7 @@ type CommandModel struct {
 	//	watchOS Simulator
 	//	tvOS
 	//	tvOS Simulator
-	DESTINATION string
+	Destination string
 }
 
 // GenerateArchive : generates the archive for subsequent "Scan"
@@ -94,8 +94,8 @@ func (xccmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...st
 		baseArgs = append(baseArgs, "-sdk", xccmd.SDK)
 	}
 
-	if xccmd.DESTINATION != "" {
-		baseArgs = append(baseArgs, "-destination", xccmd.DESTINATION)
+	if xccmd.Destination != "" {
+		baseArgs = append(baseArgs, "-destination", xccmd.Destination)
 	}
 
 	if xccmd.CodeSignIdentity != "" {

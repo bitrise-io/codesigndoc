@@ -44,7 +44,7 @@ type CommandModel struct {
 	//	watchOS Simulator
 	//	tvOS
 	//	tvOS Simulator
-	DESTINATION string
+	Destination string
 }
 
 // RunBuildForTesting runs the build-for-tesing xcode command
@@ -93,8 +93,8 @@ func (xcuitestcmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs
 		baseArgs = append(baseArgs, "-sdk", xcuitestcmd.SDK)
 	}
 
-	if xcuitestcmd.DESTINATION != "" {
-		baseArgs = append(baseArgs, "-destination", xcuitestcmd.DESTINATION)
+	if xcuitestcmd.Destination != "" {
+		baseArgs = append(baseArgs, "-destination", xcuitestcmd.Destination)
 	}
 
 	return append(baseArgs, xcodebuildActionArgs...), nil
@@ -142,7 +142,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 	} else {
 		proj, err := xcodeproj.Open(xcuitestcmd.ProjectFilePath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Failed to open project (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
+			return nil, nil, fmt.Errorf("failed to open project (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
 		}
 
 		schemes, err = proj.Schemes()

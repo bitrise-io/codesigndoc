@@ -13,12 +13,10 @@ import (
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/stringutil"
 	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
@@ -121,60 +119,34 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	}
 
 	if paramXcodeDestination != "" {
-		xcodeUITestsCmd.DESTINATION = paramXcodeDestination
+		xcodeUITestsCmd.Destination = paramXcodeDestination
 	} else {
 		var project xcodeproj.XcodeProj
 		var scheme xcscheme.Scheme
 
 		if xcodeproj.IsXcodeProj(xcodeUITestsCmd.ProjectFilePath) {
-			proj, err := xcodeproj.Open(xcodeUITestsCmd.ProjectFilePath)
+			proj, projectScheme, _, err := codesigndocutility.OpenArchivableProject(xcodeUITestsCmd.ProjectFilePath, xcodeUITestsCmd.Scheme, "")
 			if err != nil {
-				return fmt.Errorf("Failed to open project (%s), error: %s", xcodeUITestsCmd.ProjectFilePath, err)
+				return err
 			}
 
-			projectScheme, _, err := proj.Scheme(xcodeUITestsCmd.Scheme)
-			if err != nil {
-				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeUITestsCmd.Scheme, proj.Path, err)
-			}
-
-			project = proj
+			project = *proj
 			scheme = *projectScheme
 		} else {
-			workspace, err := xcworkspace.Open(xcodeUITestsCmd.ProjectFilePath)
+			proj, projectScheme, _, err := codesigndocutility.OpenArchivableWorkspace(xcodeUITestsCmd.ProjectFilePath, xcodeUITestsCmd.Scheme, "")
 			if err != nil {
 				return err
 			}
 
-			projects, err := workspace.ProjectFileLocations()
-			if err != nil {
-				return err
-			}
-
-			for _, projectLocation := range projects {
-				if exist, err := pathutil.IsPathExists(projectLocation); err != nil {
-					return fmt.Errorf("failed to check if project exist at: %s, error: %s", projectLocation, err)
-				} else if !exist {
-					// at this point we are interested the schemes visible for the workspace
-					continue
-				}
-
-				possibleProject, err := xcodeproj.Open(projectLocation)
-				projectScheme, _, err := possibleProject.Scheme(xcodeUITestsCmd.Scheme)
-
-				if projectScheme != nil && err == nil {
-					project = possibleProject
-					scheme = *projectScheme
-
-					break
-				}
-			}
+			project = *proj
+			scheme = *projectScheme
 		}
 
 		platform, err := codesigndocutility.BuildableTargetPlatform(&project, &scheme, "", codesigndocutility.XcodeBuild{})
 		if err == nil {
 			destination := "generic/platform=" + string(platform)
 
-			xcodeUITestsCmd.DESTINATION = destination
+			xcodeUITestsCmd.Destination = destination
 
 			fmt.Print("Setting -destination flag to: ", destination)
 		}

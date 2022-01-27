@@ -16,7 +16,6 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
@@ -115,61 +114,34 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	}
 
 	if paramXcodeDestination != "" {
-		xcodeCmd.DESTINATION = paramXcodeDestination
+		xcodeCmd.Destination = paramXcodeDestination
 	} else {
 		var project xcodeproj.XcodeProj
 		var scheme xcscheme.Scheme
 
 		if xcodeproj.IsXcodeProj(xcodeCmd.ProjectFilePath) {
-			proj, err := xcodeproj.Open(xcodeCmd.ProjectFilePath)
+			proj, projectScheme, _, err := utility.OpenArchivableProject(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
 			if err != nil {
-				return fmt.Errorf("Failed to open project (%s), error: %s", xcodeCmd.ProjectFilePath, err)
+				return err
 			}
 
-			projectScheme, _, err := proj.Scheme(xcodeCmd.Scheme)
-
-			if err != nil {
-				return fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", xcodeCmd.Scheme, proj.Path, err)
-			}
-
-			project = proj
+			project = *proj
 			scheme = *projectScheme
 		} else {
-			workspace, err := xcworkspace.Open(xcodeCmd.ProjectFilePath)
+			proj, projectScheme, _, err := utility.OpenArchivableWorkspace(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
 			if err != nil {
 				return err
 			}
 
-			projects, err := workspace.ProjectFileLocations()
-			if err != nil {
-				return err
-			}
-
-			for _, projectLocation := range projects {
-				if exist, err := pathutil.IsPathExists(projectLocation); err != nil {
-					return fmt.Errorf("failed to check if project exist at: %s, error: %s", projectLocation, err)
-				} else if !exist {
-					// at this point we are interested the schemes visible for the workspace
-					continue
-				}
-
-				possibleProject, err := xcodeproj.Open(projectLocation)
-				projectScheme, _, err := possibleProject.Scheme(xcodeCmd.Scheme)
-
-				if projectScheme != nil && err == nil {
-					project = possibleProject
-					scheme = *projectScheme
-
-					break
-				}
-			}
+			project = *proj
+			scheme = *projectScheme
 		}
 
 		platform, err := utility.BuildableTargetPlatform(&project, &scheme, "", utility.XcodeBuild{})
 		if err == nil {
 			destination := "generic/platform=" + string(platform)
 
-			xcodeCmd.DESTINATION = destination
+			xcodeCmd.Destination = destination
 
 			fmt.Print("Setting -destination flag to: ", destination)
 		}
