@@ -37,7 +37,7 @@ func init() {
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
-	xcodeUITestsCmd.Flags().StringVar(&paramXcodeDestination, "xcodebuild-destination", "", "The -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination. If a value is specified for this flag it'll be passed to xcodebuild.")
+	xcodeUITestsCmd.Flags().StringVar(&paramXcodeDestination, "xcodebuild-destination", "", "The xcodebuild -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`. If a value is specified for this flag it'll be passed to xcodebuild.")
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
