@@ -158,7 +158,7 @@ func OpenArchivableProject(pth, schemeName, configurationName string) (*xcodepro
 	return &xcodeProj, scheme, configurationName, nil
 }
 
-// OpenArchivableWorkspace
+// OpenArchivableWorkspace ...
 func OpenArchivableWorkspace(pth, schemeName, configurationName string) (*xcodeproj.XcodeProj, *xcscheme.Scheme, string, error) {
 	workspace, err := xcworkspace.Open(pth)
 	if err != nil {
