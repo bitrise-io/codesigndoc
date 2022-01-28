@@ -114,12 +114,12 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	if paramXcodeDestination != "" {
 		xcodeCmd.Destination = paramXcodeDestination
 	} else {
-		project, scheme, _, err := utility.OpenArchivableProject(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
+		project, scheme, configuration, err := utility.OpenArchivableProject(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
 		if err != nil {
 			return err
 		}
 
-		platform, err := utility.BuildableTargetPlatform(project, scheme, "", utility.XcodeBuild{})
+		platform, err := utility.BuildableTargetPlatform(project, scheme, configuration, utility.XcodeBuild{})
 		if err == nil {
 			destination := "generic/platform=" + string(platform)
 

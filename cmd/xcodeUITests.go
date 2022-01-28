@@ -119,12 +119,12 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	if paramXcodeDestination != "" {
 		xcodeUITestsCmd.Destination = paramXcodeDestination
 	} else {
-		project, scheme, _, err := codesigndocutility.OpenArchivableProject(xcodeUITestsCmd.ProjectFilePath, xcodeUITestsCmd.Scheme, "")
+		project, scheme, configuration, err := codesigndocutility.OpenArchivableProject(xcodeUITestsCmd.ProjectFilePath, xcodeUITestsCmd.Scheme, "")
 		if err != nil {
 			return err
 		}
 
-		platform, err := codesigndocutility.BuildableTargetPlatform(project, scheme, "", codesigndocutility.XcodeBuild{})
+		platform, err := codesigndocutility.BuildableTargetPlatform(project, scheme, configuration, codesigndocutility.XcodeBuild{})
 		if err == nil {
 			destination := "generic/platform=" + string(platform)
 
