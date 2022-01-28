@@ -14,8 +14,6 @@ import (
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"github.com/bitrise-io/goinp/goinp"
 	"github.com/spf13/cobra"
 )
@@ -116,34 +114,18 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	if paramXcodeDestination != "" {
 		xcodeCmd.Destination = paramXcodeDestination
 	} else {
-		var project xcodeproj.XcodeProj
-		var scheme xcscheme.Scheme
-
-		if xcodeproj.IsXcodeProj(xcodeCmd.ProjectFilePath) {
-			proj, projectScheme, _, err := utility.OpenArchivableProject(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
-			if err != nil {
-				return err
-			}
-
-			project = *proj
-			scheme = *projectScheme
-		} else {
-			proj, projectScheme, _, err := utility.OpenArchivableWorkspace(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
-			if err != nil {
-				return err
-			}
-
-			project = *proj
-			scheme = *projectScheme
+		project, scheme, _, err := utility.OpenArchivableProject(xcodeCmd.ProjectFilePath, xcodeCmd.Scheme, "")
+		if err != nil {
+			return err
 		}
 
-		platform, err := utility.BuildableTargetPlatform(&project, &scheme, "", utility.XcodeBuild{})
+		platform, err := utility.BuildableTargetPlatform(project, scheme, "", utility.XcodeBuild{})
 		if err == nil {
 			destination := "generic/platform=" + string(platform)
 
 			xcodeCmd.Destination = destination
 
-			fmt.Print("Setting -destination flag to: ", destination)
+			fmt.Print("Setting xcodebuild -destination flag to: ", destination)
 		}
 	}
 

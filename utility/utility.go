@@ -7,13 +7,11 @@ import (
 	"strings"
 
 	"github.com/bitrise-io/go-utils/log"
-	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
 	"github.com/bitrise-io/go-xcode/xcodeproject/schemeint"
 	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcworkspace"
 )
 
 // ProfileExportFileNameNoPath creates a file name for the given profile with pattern: uuid.escaped_profile_name.[mobileprovision|provisionprofile]
@@ -156,43 +154,4 @@ func OpenArchivableProject(pth, schemeName, configurationName string) (*xcodepro
 		return nil, nil, "", err
 	}
 	return &xcodeProj, scheme, configurationName, nil
-}
-
-// OpenArchivableWorkspace ...
-func OpenArchivableWorkspace(pth, schemeName, configurationName string) (*xcodeproj.XcodeProj, *xcscheme.Scheme, string, error) {
-	workspace, err := xcworkspace.Open(pth)
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	projects, err := workspace.ProjectFileLocations()
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	for _, projectLocation := range projects {
-		if exist, err := pathutil.IsPathExists(projectLocation); err != nil {
-			return nil, nil, "", fmt.Errorf("failed to check if project exist at: %s, error: %s", projectLocation, err)
-		} else if !exist {
-			// at this point we are interested the schemes visible for the workspace
-			continue
-		}
-
-		possibleProject, err := xcodeproj.Open(projectLocation)
-		projectScheme, _, err := possibleProject.Scheme(schemeName)
-
-		if projectScheme != nil && err == nil {
-			if configurationName == "" {
-				configurationName = projectScheme.ArchiveAction.BuildConfiguration
-			}
-
-			if configurationName == "" {
-				return nil, nil, "", fmt.Errorf("no configuration provided nor default defined for the scheme's (%s) archive action", schemeName)
-			}
-
-			return &possibleProject, projectScheme, configurationName, err
-		}
-	}
-
-	return nil, nil, "", fmt.Errorf("failed to find project in workspace")
 }
