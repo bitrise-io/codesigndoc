@@ -101,6 +101,13 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc
      * Xcode project scanner for UI test targets: `./codesigndoc scan xcodeuitests`
      * Xamarin project scanner: `./codesigndoc scan xamarin`
 
+**Optional xcodebuild flags:**  
+ 
+`-sdk`: If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos") 
+ 
+`-destination`: The xcodebuild -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`.  
+
+
 ## Manually finding the required base code signing files for an Xcode project or workspace
 
 If you'd want to manually check which files are **required** for archiving your
