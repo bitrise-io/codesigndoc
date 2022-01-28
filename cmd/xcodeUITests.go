@@ -8,6 +8,7 @@ import (
 
 	"github.com/bitrise-io/codesigndoc/codesign"
 	"github.com/bitrise-io/codesigndoc/codesigndocuitests"
+	codesigndocutility "github.com/bitrise-io/codesigndoc/utility"
 	"github.com/bitrise-io/codesigndoc/xcodeuitest"
 	"github.com/bitrise-io/go-utils/colorstring"
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -34,6 +35,7 @@ func init() {
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodeProjectFilePath, "file", "", "Xcode Project/Workspace file path")
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodeScheme, "scheme", "", "Xcode Scheme")
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodebuildSDK, "xcodebuild-sdk", "", "xcodebuild -sdk param. If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos")
+	xcodeUITestsCmd.Flags().StringVar(&paramXcodeDestination, "xcodebuild-destination", "", "The xcodebuild -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`. If a value is specified for this flag it'll be passed to xcodebuild.")
 }
 
 func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
@@ -112,6 +114,24 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 
 	if paramXcodebuildSDK != "" {
 		xcodeUITestsCmd.SDK = paramXcodebuildSDK
+	}
+
+	if paramXcodeDestination != "" {
+		xcodeUITestsCmd.Destination = paramXcodeDestination
+	} else {
+		project, scheme, configuration, err := codesigndocutility.OpenArchivableProject(xcodeUITestsCmd.ProjectFilePath, xcodeUITestsCmd.Scheme, "")
+		if err != nil {
+			return err
+		}
+
+		platform, err := codesigndocutility.BuildableTargetPlatform(project, scheme, configuration, codesigndocutility.XcodeBuild{})
+		if err == nil {
+			destination := "generic/platform=" + string(platform)
+
+			xcodeUITestsCmd.Destination = destination
+
+			fmt.Print("Setting xcodebuild -destination flag to: ", destination)
+		}
 	}
 
 	fmt.Println()

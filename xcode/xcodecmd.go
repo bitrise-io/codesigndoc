@@ -35,6 +35,17 @@ type CommandModel struct {
 	// For more info about the possible values please see xcodebuild's docs about the -sdk flag.
 	// Only passed to xcodebuild if not empty!
 	SDK string
+
+	// DESTINATION: configure which device or Simulator will be used by the tool
+	// The supported platforms are:
+	//	OS X, your Mac
+	//	iOS, a connected iOS device
+	//	iOS Simulator
+	//	watchOS
+	//	watchOS Simulator
+	//	tvOS
+	//	tvOS Simulator
+	Destination string
 }
 
 // GenerateArchive : generates the archive for subsequent "Scan"
@@ -81,6 +92,10 @@ func (xccmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs ...st
 
 	if xccmd.SDK != "" {
 		baseArgs = append(baseArgs, "-sdk", xccmd.SDK)
+	}
+
+	if xccmd.Destination != "" {
+		baseArgs = append(baseArgs, "-destination", xccmd.Destination)
 	}
 
 	if xccmd.CodeSignIdentity != "" {
