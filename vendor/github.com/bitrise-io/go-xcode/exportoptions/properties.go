@@ -149,6 +149,11 @@ const UploadSymbolsKey = "uploadSymbols"
 // UploadSymbolsDefault ...
 const UploadSymbolsDefault = true
 
+const (
+	manageAppVersionKey     = "manageAppVersionAndBuildNumber"
+	manageAppVersionDefault = true
+)
+
 // ProvisioningProfilesKey ...
 const ProvisioningProfilesKey = "provisioningProfiles"
 

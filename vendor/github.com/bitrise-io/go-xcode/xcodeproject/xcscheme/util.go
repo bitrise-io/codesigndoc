@@ -20,13 +20,24 @@ func FindSchemesIn(root string) (schemes []Scheme, err error) {
 		return nil, err
 	}
 
-	for _, pth := range append(sharedPths, userPths...) {
-		scheme, err := Open(pth)
-		if err != nil {
-			return nil, err
+	for _, schemePaths := range []struct {
+		schemes  []string
+		isShared bool
+	}{
+		{sharedPths, true},
+		{userPths, false},
+	} {
+		for _, pth := range schemePaths.schemes {
+			scheme, err := Open(pth)
+			if err != nil {
+				return nil, err
+			}
+
+			scheme.IsShared = schemePaths.isShared
+			schemes = append(schemes, scheme)
 		}
-		schemes = append(schemes, scheme)
 	}
+
 	return
 }
 

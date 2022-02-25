@@ -16,8 +16,8 @@ import (
 	"github.com/bitrise-io/go-utils/log"
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-utils/pretty"
+	"github.com/bitrise-io/go-xcode/xcodebuild"
 	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"golang.org/x/text/unicode/norm"
 )
@@ -101,29 +101,45 @@ func (p XcodeProj) TargetCodeSignEntitlements(target, configuration string) (ser
 	return codeSignEntitlements, nil
 }
 
-// TargetInformationPropertyListPath ...
-func (p XcodeProj) TargetInformationPropertyListPath(target, configuration string) (string, error) {
+// TargetInfoplistPath ...
+func (p XcodeProj) TargetInfoplistPath(target, configuration string) (string, error) {
 	return p.buildSettingsFilePath(target, configuration, "INFOPLIST_FILE")
 }
 
-// TargetInformationPropertyList ...
-func (p XcodeProj) TargetInformationPropertyList(target, configuration string) (serialized.Object, error) {
-	informationPropertyListPth, err := p.TargetInformationPropertyListPath(target, configuration)
+// ReadTargetInfoplist ...
+func (p XcodeProj) ReadTargetInfoplist(target, configuration string) (serialized.Object, int, error) {
+	informationPropertyListPth, err := p.TargetInfoplistPath(target, configuration)
 	if err != nil {
-		return nil, err
+		return nil, plist.InvalidFormat, err
 	}
 
 	informationPropertyListContent, err := fileutil.ReadBytesFromFile(informationPropertyListPth)
 	if err != nil {
-		return nil, err
+		return nil, plist.InvalidFormat, err
 	}
 
 	var informationPropertyList serialized.Object
-	if _, err := plist.Unmarshal([]byte(informationPropertyListContent), &informationPropertyList); err != nil {
-		return nil, err
+	format, err := plist.Unmarshal([]byte(informationPropertyListContent), &informationPropertyList)
+	if err != nil {
+		return nil, plist.InvalidFormat, err
 	}
 
-	return informationPropertyList, nil
+	return informationPropertyList, format, nil
+}
+
+// WriteTargetInfoplist ...
+func (p XcodeProj) WriteTargetInfoplist(infoplist serialized.Object, format int, target, configuration string) error {
+	b, err := plist.MarshalIndent(infoplist, format, "\t")
+	if err != nil {
+		return err
+	}
+
+	pth, err := p.TargetInfoplistPath(target, configuration)
+	if err != nil {
+		return err
+	}
+
+	return fileutil.WriteBytesToFile(pth, b)
 }
 
 // ForceTargetBundleID updates the projects bundle ID for the specified target
@@ -169,7 +185,7 @@ func (p XcodeProj) TargetBundleID(target, configuration string) (string, error) 
 		return Resolve(bundleID, buildSettings)
 	}
 
-	informationPropertyList, err := p.TargetInformationPropertyList(target, configuration)
+	informationPropertyList, _, err := p.ReadTargetInfoplist(target, configuration)
 	if err != nil {
 		return "", err
 	}
@@ -189,9 +205,9 @@ func (p XcodeProj) TargetBundleID(target, configuration string) (string, error) 
 // Resolve returns the resolved bundleID. We need this, because the bundleID is not exposed in the .pbxproj file ( raw ).
 // If the raw BundleID contains an environment variable we have to replace it.
 //
-//**Example:**
-//BundleID in the .pbxproj: Bitrise.Test.$(PRODUCT_NAME:rfc1034identifier).Suffix
-//BundleID after the env is expanded: Bitrise.Test.Sample.Suffix
+// **Example:**
+// BundleID in the .pbxproj: Bitrise.Test.$(PRODUCT_NAME:rfc1034identifier).Suffix
+// BundleID after the env is expanded: Bitrise.Test.Sample.Suffix
 func Resolve(bundleID string, buildSettings serialized.Object) (string, error) {
 	resolvedBundleIDs := map[string]bool{}
 	resolved := bundleID
@@ -283,7 +299,11 @@ func envInBuildSettings(envKey string, buildSettings serialized.Object) (string,
 
 // TargetBuildSettings ...
 func (p XcodeProj) TargetBuildSettings(target, configuration string, customOptions ...string) (serialized.Object, error) {
-	return xcodebuild.ShowProjectBuildSettings(p.Path, target, configuration, customOptions...)
+	commandModel := xcodebuild.NewShowBuildSettingsCommand(p.Path)
+	commandModel.SetTarget(target)
+	commandModel.SetConfiguration(configuration)
+	commandModel.SetCustomOptions(customOptions)
+	return commandModel.RunAndReturnSettings()
 }
 
 // Scheme returns the project's scheme by name and the project's absolute path.

@@ -6,7 +6,6 @@ import (
 
 	"github.com/bitrise-io/go-xcode/plistutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
-	"github.com/bitrise-io/go-xcode/utility"
 
 	"github.com/bitrise-io/go-utils/pathutil"
 )
@@ -54,18 +53,10 @@ func newMacosBaseApplication(path string) (macosBaseApplication, error) {
 		}
 	}
 
-	entitlements := plistutil.PlistData{}
-	{
-		entitlementsPath := filepath.Join(path, "Contents/Resources/archived-expanded-entitlements.xcent")
-		if exist, err := pathutil.IsPathExists(entitlementsPath); err != nil {
-			return macosBaseApplication{}, fmt.Errorf("failed to check if entitlements exists at: %s, error: %s", entitlementsPath, err)
-		} else if exist {
-			plist, err := plistutil.NewPlistDataFromFile(entitlementsPath)
-			if err != nil {
-				return macosBaseApplication{}, err
-			}
-			entitlements = plist
-		}
+	executable := filepath.Join("/Contents/MacOS/", executableNameFromInfoPlist(infoPlist))
+	entitlements, err := getEntitlements(path, executable)
+	if err != nil {
+		return macosBaseApplication{}, err
 	}
 
 	return macosBaseApplication{
@@ -108,7 +99,7 @@ func NewMacosApplication(path string) (MacosApplication, error) {
 
 	extensions := []MacosExtension{}
 	{
-		pattern := filepath.Join(utility.EscapeGlobPath(path), "Contents/PlugIns/*.appex")
+		pattern := filepath.Join(pathutil.EscapeGlobPath(path), "Contents/PlugIns/*.appex")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return MacosApplication{}, fmt.Errorf("failed to search for watch application's extensions using pattern: %s, error: %s", pattern, err)
@@ -155,7 +146,7 @@ func NewMacosArchive(path string) (MacosArchive, error) {
 
 	application := MacosApplication{}
 	{
-		pattern := filepath.Join(utility.EscapeGlobPath(path), "Products/Applications/*.app")
+		pattern := filepath.Join(pathutil.EscapeGlobPath(path), "Products/Applications/*.app")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return MacosArchive{}, err

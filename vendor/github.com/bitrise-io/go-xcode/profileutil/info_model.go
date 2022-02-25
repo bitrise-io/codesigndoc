@@ -127,12 +127,23 @@ func NewProvisioningProfileInfo(provisioningProfile pkcs7.PKCS7) (ProvisioningPr
 		return ProvisioningProfileInfoModel{}, err
 	}
 
-	platform, _ := data.GetStringArray("Platform")
-	profileType := ProfileTypeMacOs
-	if len(platform) != 0 {
-		if strings.ToLower(platform[0]) == string(ProfileTypeIos) {
-			profileType = ProfileTypeIos
-		}
+	platforms, _ := data.GetStringArray("Platform")
+	if len(platforms) == 0 {
+		return ProvisioningProfileInfoModel{}, fmt.Errorf("missing Platform array in profile")
+	}
+
+	platform := strings.ToLower(platforms[0])
+	var profileType ProfileType
+
+	switch platform {
+	case string(ProfileTypeIos):
+		profileType = ProfileTypeIos
+	case string(ProfileTypeMacOs):
+		profileType = ProfileTypeMacOs
+	case string(ProfileTypeTvOs):
+		profileType = ProfileTypeTvOs
+	default:
+		return ProvisioningProfileInfoModel{}, fmt.Errorf("unknown platform type: %s", platform)
 	}
 
 	profile := PlistData(data)

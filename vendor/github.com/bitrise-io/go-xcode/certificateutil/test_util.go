@@ -28,14 +28,13 @@ func GenerateTestCertificate(serial int64, teamID, teamName, commonName string, 
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 	}
 
-	// generate private key
-	privatekey, err := rsa.GenerateKey(rand.Reader, 2048)
+	CAprivatekey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Self-signed certificate, parent is the template
-	CAcertData, err := x509.CreateCertificate(rand.Reader, CAtemplate, CAtemplate, &privatekey.PublicKey, privatekey)
+	CAcertData, err := x509.CreateCertificate(rand.Reader, CAtemplate, CAtemplate, &CAprivatekey.PublicKey, CAprivatekey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,13 +59,12 @@ func GenerateTestCertificate(serial int64, teamID, teamName, commonName string, 
 		KeyUsage: x509.KeyUsageDigitalSignature,
 	}
 
-	// generate private key
-	privatekey, err = rsa.GenerateKey(rand.Reader, 2048)
+	privatekey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	certData, err := x509.CreateCertificate(rand.Reader, template, CAcert, &privatekey.PublicKey, privatekey)
+	certData, err := x509.CreateCertificate(rand.Reader, template, CAcert, &privatekey.PublicKey, CAprivatekey)
 	if err != nil {
 		return nil, nil, err
 	}

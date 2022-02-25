@@ -17,6 +17,8 @@ const (
 	LegacyTargetType    TargetType = "PBXLegacyTarget"
 )
 
+const appClipProductType = "com.apple.product-type.application.on-demand-install-capable"
+
 // Target ...
 type Target struct {
 	Type                   TargetType
@@ -43,18 +45,29 @@ func (t Target) DependentTargets() []Target {
 	return targets
 }
 
+// DependesOn ...
+func (t Target) DependesOn(targetID string) bool {
+	for _, targetDependency := range t.Dependencies {
+		childTarget := targetDependency.Target
+		if childTarget.ID == targetID {
+			return true
+		}
+	}
+	return false
+}
+
 // DependentExecutableProductTargets ...
-func (t Target) DependentExecutableProductTargets(includeUITest bool) []Target {
+func (t Target) DependentExecutableProductTargets() []Target {
 	var targets []Target
 	for _, targetDependency := range t.Dependencies {
 		childTarget := targetDependency.Target
-		if !childTarget.IsExecutableProduct() && (!includeUITest || !childTarget.IsUITestProduct()) {
+		if !childTarget.IsExecutableProduct() {
 			continue
 		}
 
 		targets = append(targets, childTarget)
 
-		childDependentTargets := childTarget.DependentExecutableProductTargets(includeUITest)
+		childDependentTargets := childTarget.DependentExecutableProductTargets()
 		targets = append(targets, childDependentTargets...)
 	}
 
@@ -76,6 +89,14 @@ func (t Target) IsExecutableProduct() bool {
 	return t.IsAppProduct() || t.IsAppExtensionProduct()
 }
 
+// IsTest identifies test targets
+// Based on https://github.com/CocoaPods/Xcodeproj/blob/907c81763a7660978fda93b2f38f05de0cbb51ad/lib/xcodeproj/project/object/native_target.rb#L470
+func (t Target) IsTest() bool {
+	return t.IsTestProduct() ||
+		t.IsUITestProduct() ||
+		t.ProductType == "com.apple.product-type.bundle" // OCTest bundle
+}
+
 // IsTestProduct ...
 func (t Target) IsTestProduct() bool {
 	return filepath.Ext(t.ProductType) == ".unit-test"
@@ -84,6 +105,22 @@ func (t Target) IsTestProduct() bool {
 // IsUITestProduct ...
 func (t Target) IsUITestProduct() bool {
 	return filepath.Ext(t.ProductType) == ".ui-testing"
+}
+
+func (t Target) isAppClipProduct() bool {
+	return t.ProductType == appClipProductType
+}
+
+// CanExportAppClip ...
+func (t Target) CanExportAppClip() bool {
+	deps := t.DependentTargets()
+	for _, target := range deps {
+		if target.isAppClipProduct() {
+			return true
+		}
+	}
+
+	return false
 }
 
 func parseTarget(id string, objects serialized.Object) (Target, error) {

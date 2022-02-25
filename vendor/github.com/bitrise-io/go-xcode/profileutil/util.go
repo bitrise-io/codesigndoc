@@ -5,7 +5,6 @@ import (
 
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
-	"github.com/bitrise-io/go-xcode/utility"
 	"github.com/fullsailor/pkcs7"
 )
 
@@ -16,7 +15,10 @@ type ProfileType string
 const ProfileTypeIos ProfileType = "ios"
 
 // ProfileTypeMacOs ...
-const ProfileTypeMacOs ProfileType = "macOs"
+const ProfileTypeMacOs ProfileType = "macos"
+
+// ProfileTypeTvOs ...
+const ProfileTypeTvOs ProfileType = "tvos"
 
 // ProvProfileSystemDirPath ...
 const ProvProfileSystemDirPath = "~/Library/MobileDevice/Provisioning Profiles"
@@ -47,7 +49,7 @@ func InstalledProvisioningProfiles(profileType ProfileType) ([]*pkcs7.PKCS7, err
 		return nil, err
 	}
 
-	pattern := filepath.Join(utility.EscapeGlobPath(absProvProfileDirPath), "*"+ext)
+	pattern := filepath.Join(pathutil.EscapeGlobPath(absProvProfileDirPath), "*"+ext)
 	pths, err := filepath.Glob(pattern)
 	if err != nil {
 		return nil, err
