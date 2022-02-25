@@ -21,8 +21,7 @@ import (
 
 var xcodeUITestsCmd = &cobra.Command{
 	Use:   "xcodeuitests",
-	Short: "Xcode project scanner for UI tests",
-	Long:  `Scan an Xcode project for UI test targets`,
+	Short: "for Xcode Build For Testing action",
 
 	SilenceUsage:  true,
 	SilenceErrors: true,

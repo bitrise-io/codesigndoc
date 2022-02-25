@@ -2,17 +2,14 @@
 
 Your friendly iOS Code Signing Doctor.
 
-Using this tool is as easy as running `codesigndoc scan` and following the guide
-it prints. At the end of the process you'll have all the code signing files
-(`.p12` Identity file including the Certificate and Private Key, and the
-required Provisioning Profiles) required to do a successful Xcode Archive of
-your Xcode project.
+`codesigndoc` collects all the code signing files required for  
+Xcode Archive and IPA export or Xcode Build For Testing action.
 
 What this tool does:
 
-1. Gathers all information required to do a clean Xcode Archive of your project.
-1. Runs a clean Xcode Archive on your project.
-1. From the generated `.xcarchive` file it collects the Code Signing settings Xcode used during the Archive.
+1. Gathers all information required for the specified Xcode action.
+1. Runs a clean Xcode Archive or Xcode Build For Testing on your project.
+1. From the generated artifact it collects the Code Signing settings Xcode used during the action.
 1. Prints the list of required code signing files.
 1. Optionally it can also search for, and export these files.
 

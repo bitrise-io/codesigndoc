@@ -21,8 +21,7 @@ import (
 // xcodeCmd represents the xcode command.
 var xcodeCmd = &cobra.Command{
 	Use:   "xcode",
-	Short: "Xcode project scanner",
-	Long:  `Scan an Xcode project`,
+	Short: "for Xcode Archive and IPA export actions",
 
 	SilenceUsage:  true,
 	SilenceErrors: true,
