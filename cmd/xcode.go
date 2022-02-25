@@ -18,7 +18,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// xcodeCmd represents the xcode command
+// xcodeCmd represents the xcode command.
 var xcodeCmd = &cobra.Command{
 	Use:   "xcode",
 	Short: "Xcode project scanner",
@@ -50,7 +50,7 @@ func absOutputDir() (string, error) {
 	absExportOutputDirPath, err := pathutil.AbsPath(confExportOutputDirPath)
 	log.Debugf("absExportOutputDirPath: %s", absExportOutputDirPath)
 	if err != nil {
-		return absExportOutputDirPath, fmt.Errorf("Failed to determine absolute path of export dir: %s", confExportOutputDirPath)
+		return absExportOutputDirPath, fmt.Errorf("failed to determine absolute path of export dir: %s", confExportOutputDirPath)
 	}
 	return absExportOutputDirPath, nil
 }
@@ -66,10 +66,10 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
 		log.Infof("Scan the directory for project files")
-		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
+		log.Warnf("You can specify the Xcode project/workspace file to scan with the --file flag.")
 
-		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
-		// If can't find any, ask the user to drag-and-drop the file
+		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproj) file,
+		// if can't find any, ask the user to drag-and-drop the file
 		projpth, err := findXcodeProject()
 		if err != nil {
 			return err
@@ -138,7 +138,7 @@ func scanXcodeProject(_ *cobra.Command, _ []string) error {
 
 			log.Infof("💡  "+colorstring.Yellow("Saving xcodebuild output into file")+": %s", xcodebuildOutputFilePath)
 			if err := fileutil.WriteStringToFile(xcodebuildOutputFilePath, xcodebuildOutput); err != nil {
-				return fmt.Errorf("Failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
+				return fmt.Errorf("failed to save xcodebuild output into file (%s), error: %s", xcodebuildOutputFilePath, err)
 			}
 		}
 		return nil

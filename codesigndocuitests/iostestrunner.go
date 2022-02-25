@@ -20,7 +20,7 @@ type IOSTestRunner struct {
 	ProvisioningProfile profileutil.ProvisioningProfileInfoModel
 }
 
-// NewIOSTestRunners is the *-Runner.app which is generated with the xcodebuild build-for-testing command
+// NewIOSTestRunners is the *-Runner.app which is generated with the xcodebuild build-for-testing command.
 func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 	runnerPattern := filepath.Join(utility.EscapeGlobPath(path), "*-Runner.app")
 	possibleTestRunnerPths, err := filepath.Glob(runnerPattern)
@@ -34,13 +34,13 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 
 	var testRunners []*IOSTestRunner
 	for _, testRunnerPath := range possibleTestRunnerPths {
-		infoPlist := plistutil.PlistData{}
+		var infoPlist plistutil.PlistData
 		{
 			infoPlistPath := filepath.Join(testRunnerPath, "Info.plist")
 			if exist, err := pathutil.IsPathExists(infoPlistPath); err != nil {
 				return nil, fmt.Errorf("failed to check if Info.plist exists at: %s, error: %s", infoPlistPath, err)
 			} else if !exist {
-				return nil, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
+				return nil, fmt.Errorf("an Info.plist not exists at: %s", infoPlistPath)
 			}
 
 			plist, err := plistutil.NewPlistDataFromFile(infoPlistPath)
@@ -51,7 +51,7 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 			infoPlist = plist
 		}
 
-		provisioningProfile := profileutil.ProvisioningProfileInfoModel{}
+		var provisioningProfile profileutil.ProvisioningProfileInfoModel
 		{
 			provisioningProfilePath := filepath.Join(testRunnerPath, "embedded.mobileprovision")
 			if exist, err := pathutil.IsPathExists(provisioningProfilePath); err != nil {
@@ -67,7 +67,7 @@ func NewIOSTestRunners(path string) ([]*IOSTestRunner, error) {
 			provisioningProfile = profile
 		}
 
-		entitlements := plistutil.PlistData{}
+		var entitlements plistutil.PlistData
 		{
 			cmd := command.New("codesign", "-d", "--entitlements", "-", testRunnerPath)
 			out, err := cmd.RunAndReturnTrimmedOutput()

@@ -30,7 +30,7 @@ func substituteVersionInfo(tmpl *template.Template, data VersionInfo, targetPth 
 }
 
 func main() {
-	log.Infof("Only update wrapper versions when release is availabe.")
+	log.Infof("Only update wrapper versions when release is available.")
 
 	tmpl := template.Must(template.ParseFiles("install_wrap.sh.template"))
 

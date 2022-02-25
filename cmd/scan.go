@@ -16,7 +16,7 @@ const (
 	writeFilesFlag = "write-files"
 )
 
-// scanCmd represents the scan command
+// scanCmd represents the scan command.
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scan a project's code signing settings",
@@ -65,13 +65,13 @@ func init() {
 	RootCmd.AddCommand(scanCmd)
 	scanCmd.PersistentFlags().BoolVar(&isAskForPassword, "ask-pass", false, "Ask for .p12 password, instead of using an empty password")
 	scanCmd.PersistentFlags().BoolVar(&certificatesOnly, "certs-only", false, "Collect Certificates (Identities) only")
-	scanCmd.PersistentFlags().String(writeFilesFlag, "always", `Set wether to export build logs and codesigning files to the ./codesigndoc_exports directory. Defaults to "always". Valid values: "always", "fallback", "disable".
+	scanCmd.PersistentFlags().String(writeFilesFlag, "always", `Set whether to export build logs and codesigning files to the ./codesigndoc_exports directory. Defaults to "always". Valid values: "always", "fallback", "disable".
 - always: Writes artifacts in every case.
 - fallback: Does not write artifacts if the automatic upload option is chosen interactively or by providing the auth-token and app-slug flag. Writes build log only on failure.
 - disabled: Do not write any files to the export directory.`)
 	// Flags used to automatically upload artifacts.
 	scanCmd.PersistentFlags().StringVar(&personalAccessToken, authTokenFlag, "", `Bitrise personal access token. By default codesigndoc will ask for it interactively.
-Will upload codesigning files automatically if provided. Requires the app-slug paramater to be also set.`)
+Will upload codesigning files automatically if provided. Requires the app-slug parameter to be also set.`)
 	scanCmd.PersistentFlags().StringVar(&appSlug, appSlugFlag, "", `Bitrise app slug. By default codesigndoc will ask for it interactively.
 Will upload codesigning files automatically if provided. Requires the auth-token parameter to be also set.`)
 }

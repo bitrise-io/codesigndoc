@@ -38,7 +38,7 @@ func init() {
 	xcodeUITestsCmd.Flags().StringVar(&paramXcodeDestination, "xcodebuild-destination", "", "The xcodebuild -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`. If a value is specified for this flag it'll be passed to xcodebuild.")
 }
 
-func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
+func scanXcodeUITestsProject(*cobra.Command, []string) error {
 	absExportOutputDirPath, err := absOutputDir()
 	if err != nil {
 		return err
@@ -56,11 +56,11 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 	projectPath := paramXcodeProjectFilePath
 	if projectPath == "" {
 		log.Infof("Scan the directory for project files")
-		log.Warnf("You can specify the Xcode project/workscape file to scan with the --file flag.")
+		log.Warnf("You can specify the Xcode project/workspace file to scan with the --file flag.")
 
 		//
-		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
-		// If can't find any, ask the user to drag-and-drop the file
+		// Scan the directory for Xcode Project (.xcworkspace / .xcodeproj) file,
+		// if can't find any, ask the user to drag-and-drop the file
 		projpth, err := findXcodeProject()
 		if err != nil {
 			return err
@@ -93,7 +93,7 @@ func scanXcodeUITestsProject(cmd *cobra.Command, args []string) error {
 			fmt.Println()
 			log.Infof("Schemes with UITest target enabled:")
 
-			// Iterate trough the scheme arrays and get the scheme names
+			// Iterate through the scheme arrays and get the scheme names
 			var schemesWitUITestNames []string
 			{
 				for _, schemeWithUITest := range schemesWitUITests {

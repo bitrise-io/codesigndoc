@@ -12,7 +12,7 @@ import (
 	"github.com/bitrise-io/goinp/goinp"
 )
 
-// Scans the root dir for the provided project files
+// Scans the root dir for the provided project files.
 func scanForProjectFiles() ([]string, error) {
 	searchDir, err := os.Getwd()
 	if err != nil {
@@ -43,8 +43,8 @@ func scanForProjectFiles() ([]string, error) {
 	return paths, nil
 }
 
-// findProject scans the directory for Xcode Project (.xcworkspace / .xcodeproject) file first
-// If can't find any, ask the user to drag-and-drop the file
+// findProject scans the directory for Xcode Project (.xcworkspace / .xcodeproj) file,
+// if can't find any, ask the user to drag-and-drop the file.
 func findXcodeProject() (string, error) {
 	var projpth string
 

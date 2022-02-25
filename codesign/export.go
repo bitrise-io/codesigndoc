@@ -19,40 +19,40 @@ import (
 	"github.com/bitrise-io/goinp/goinp"
 )
 
-// UploadConfig contains configuration to automatically upload artifacts to bitrise.io
+// UploadConfig contains configuration to automatically upload artifacts to bitrise.io.
 type UploadConfig struct {
 	PersonalAccessToken string
 	AppSlug             string
 }
 
-// WriteFilesConfig controls writing artifacts as files
+// WriteFilesConfig controls writing artifacts as files.
 type WriteFilesConfig struct {
 	WriteFiles       WriteFilesLevel
 	AbsOutputDirPath string
 }
 
-// WriteFilesLevel describes if codesigning files should be written to the output directory
+// WriteFilesLevel describes if codesigning files should be written to the output directory.
 type WriteFilesLevel int
 
 const (
-	// Invalid represents an invalid value
+	// Invalid represents an invalid value.
 	Invalid WriteFilesLevel = iota
-	// WriteFilesAlways writes build logs and codesigning files always
+	// WriteFilesAlways writes build logs and codesigning files always.
 	WriteFilesAlways
-	// WriteFilesFallback writes artifacts when upload was not chosen or failed
+	// WriteFilesFallback writes artifacts when upload was not chosen or failed.
 	WriteFilesFallback
-	// WriteFilesDisabled does not write any files
+	// WriteFilesDisabled does not write any files.
 	WriteFilesDisabled
 )
 
-// ExportReport describes the output of codesigning files export
+// ExportReport describes the output of codesigning files export.
 type ExportReport struct {
 	CertificatesUploaded         bool
 	ProvisioningProfilesUploaded bool
 	CodesignFilesWritten         bool
 }
 
-// ExportCodesigningFiles exports certificates from the Keychain and provisoining profiles from their directory
+// ExportCodesigningFiles exports certificates from the Keychain and provisioning profiles from their directory.
 func ExportCodesigningFiles(certificatesRequired []certificateutil.CertificateInfoModel, profilesRequired []profileutil.ProvisioningProfileInfoModel, askForPassword bool) (models.Certificates, []models.ProvisioningProfile, error) {
 	certificates, err := exportIdentities(certificatesRequired, askForPassword)
 	if err != nil {
@@ -67,13 +67,13 @@ func ExportCodesigningFiles(certificatesRequired []certificateutil.CertificateIn
 	return certificates, profiles, nil
 }
 
-// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder
+// UploadAndWriteCodesignFiles exports then uploads codesign files to bitrise.io and saves them to output folder.
 func UploadAndWriteCodesignFiles(certificates models.Certificates, provisioningProfiles []models.ProvisioningProfile, writeFilesConfig WriteFilesConfig, uploadConfig UploadConfig) (ExportReport, error) {
 	var client *bitrise.Client
 	// both or none CLI flags are required
 	if uploadConfig.PersonalAccessToken != "" && uploadConfig.AppSlug != "" {
-		// Upload automatically if token is provided as CLI paramter, do not export to filesystem
-		// Used to upload artifacts as part of an other CLI tool
+		// Upload automatically if token is provided as CLI parameter, do not export to filesystem.
+		// Used to upload artifacts as part of another CLI tool
 		var err error
 		client, err = bitrise.NewClient(uploadConfig.PersonalAccessToken)
 		if err != nil {
@@ -157,7 +157,7 @@ func writeFiles(identities models.Certificates, provisioningProfiles []models.Pr
 	return nil
 }
 
-// exportIdentities exports the given certificates merged in a single .p12 file
+// exportIdentities exports the given certificates merged in a single .p12 file.
 func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAskForPassword bool) (models.Certificates, error) {
 	if len(certificates) == 0 {
 		return models.Certificates{}, nil
@@ -173,7 +173,7 @@ func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAsk
 	fmt.Println()
 	log.Infof("Exporting the Identities (Certificates):")
 
-	identitiesWithKeychainRefs := []osxkeychain.IdentityWithRefModel{}
+	var identitiesWithKeychainRefs []osxkeychain.IdentityWithRefModel
 	defer osxkeychain.ReleaseIdentityWithRefList(identitiesWithKeychainRefs)
 
 	for _, certificate := range certificates {
@@ -190,10 +190,10 @@ func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAsk
 		identitiesWithKeychainRefs = append(identitiesWithKeychainRefs, *identityRef)
 	}
 
-	identityKechainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
+	identityKeychainRefs := osxkeychain.CreateEmptyCFTypeRefSlice()
 	for _, aIdentityWithRefItm := range identitiesWithKeychainRefs {
 		fmt.Println("exporting Identity:", aIdentityWithRefItm.Label)
-		identityKechainRefs = append(identityKechainRefs, aIdentityWithRefItm.KeychainRef)
+		identityKeychainRefs = append(identityKeychainRefs, aIdentityWithRefItm.KeychainRef)
 	}
 
 	fmt.Println()
@@ -210,7 +210,7 @@ func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAsk
 	log.Warnf("you will have to accept (Allow) those to be able to export the Identities!")
 	fmt.Println()
 
-	identities, err := osxkeychain.ExportFromKeychain(identityKechainRefs, isAskForPassword)
+	identities, err := osxkeychain.ExportFromKeychain(identityKeychainRefs, isAskForPassword)
 	if err != nil {
 		return models.Certificates{}, fmt.Errorf("failed to export from Keychain: %s", err)
 	}
@@ -220,12 +220,12 @@ func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAsk
 	}, nil
 }
 
-// writeIdentities writes identities to a file path
-func writeIdentities(identites []byte, absExportOutputDirPath string) error {
-	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identites, 0600)
+// writeIdentities writes identities to a file path.
+func writeIdentities(identities []byte, absExportOutputDirPath string) error {
+	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identities, 0600)
 }
 
-// exportProvisioningProfiles returns provisioning profies
+// exportProvisioningProfiles returns provisioning profiles.
 func exportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoModel) ([]models.ProvisioningProfile, error) {
 	if len(profiles) == 0 {
 		return nil, nil
@@ -266,7 +266,7 @@ func exportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoMo
 	return exportedProfiles, nil
 }
 
-// writeProvisioningProfiles writes provisioning profiles to the filesystem
+// writeProvisioningProfiles writes provisioning profiles to the filesystem.
 func writeProvisioningProfiles(profiles []models.ProvisioningProfile, absExportOutputDirPath string) error {
 	for _, profile := range profiles {
 		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)

@@ -18,7 +18,7 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 `
 
 // CollectCodesignFiles collects the codesigning files for the UITests-Runner.app
-// and filters them for the specified export method
+// and filters them for the specified export method.
 func CollectCodesignFiles(buildPath string, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 	// Find out the XcArchive type
 	certificateType := codesign.IOSCertificate
@@ -50,8 +50,8 @@ func CollectCodesignFiles(buildPath string, certificatesOnly bool) ([]certificat
 }
 
 func getFilesToExport(buildPath string, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
+	var certificatesToExport []certificateutil.CertificateInfoModel
+	var profilesToExport []profileutil.ProvisioningProfileInfoModel
 
 	if certificatesOnly {
 		exportCertificate, err := collectExportCertificate(installedCertificates)

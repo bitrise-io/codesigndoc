@@ -12,7 +12,7 @@ var (
 	enableVerboseLog = false
 )
 
-// RootCmd represents the base command when called without any subcommands
+// RootCmd represents the base command when called without any subcommands.
 var RootCmd = &cobra.Command{
 	Use:   "codesigndoc",
 	Short: "Your friendly iOS Code Signing Doctor",
