@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/bitrise-io/bitrise-init v0.0.0-20210520122036-d213de321eb8
 	github.com/bitrise-io/go-utils v0.0.0-20210520073355-367fa34178f5
-	github.com/bitrise-io/go-xamarin v0.0.0-20210519123500-acea30f4caad
 	github.com/bitrise-io/go-xcode v0.0.0-20210520114025-bdbec53ee59f
 	github.com/bitrise-io/goinp v0.0.0-20210504152833-8559b0680ab1
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect

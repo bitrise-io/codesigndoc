@@ -18,7 +18,7 @@ var RootCmd = &cobra.Command{
 	Short: "Your friendly iOS Code Signing Doctor",
 	Long: `Your friendly iOS Code Signing Doctor
 
-Using this tool is as easy as running "codesigndoc scan xcode/xamarin" and following the guide it prints.
+Using this tool is as easy as running "codesigndoc scan xcode" and following the guide it prints.
 
 At the end of the process you'll have all the code signing files
 (.p12 Identity file including the Certificate and Private Key,

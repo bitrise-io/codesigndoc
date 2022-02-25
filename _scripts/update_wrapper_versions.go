@@ -64,14 +64,4 @@ func main() {
 	); err != nil {
 		panic(fmt.Sprintf("%s", err))
 	}
-
-	if err := substituteVersionInfo(tmpl,
-		VersionInfo{
-			ScanCmd: "xamarin",
-			Version: version.VERSION,
-		},
-		"install_wrap-xamarin.sh",
-	); err != nil {
-		panic(fmt.Sprintf("%s", err))
-	}
 }

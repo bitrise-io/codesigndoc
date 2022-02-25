@@ -5,7 +5,6 @@ github.com/bitrise-io/bitrise/models
 github.com/bitrise-io/bitrise-init/analytics
 github.com/bitrise-io/bitrise-init/models
 github.com/bitrise-io/bitrise-init/scanners/ios
-github.com/bitrise-io/bitrise-init/scanners/xamarin
 github.com/bitrise-io/bitrise-init/steps
 github.com/bitrise-io/bitrise-init/utility
 # github.com/bitrise-io/envman v0.0.0-20210517135508-b2b4fe89eac5
@@ -32,18 +31,6 @@ github.com/bitrise-io/go-utils/sliceutil
 github.com/bitrise-io/go-utils/stringutil
 github.com/bitrise-io/go-utils/urlutil
 github.com/bitrise-io/go-utils/ziputil
-# github.com/bitrise-io/go-xamarin v0.0.0-20210519123500-acea30f4caad
-## explicit
-github.com/bitrise-io/go-xamarin/analyzers/project
-github.com/bitrise-io/go-xamarin/analyzers/solution
-github.com/bitrise-io/go-xamarin/builder
-github.com/bitrise-io/go-xamarin/constants
-github.com/bitrise-io/go-xamarin/tools
-github.com/bitrise-io/go-xamarin/tools/buildtools
-github.com/bitrise-io/go-xamarin/tools/buildtools/msbuild
-github.com/bitrise-io/go-xamarin/tools/buildtools/xbuild
-github.com/bitrise-io/go-xamarin/tools/nunit
-github.com/bitrise-io/go-xamarin/utility
 # github.com/bitrise-io/go-xcode v0.0.0-20210520114025-bdbec53ee59f
 ## explicit
 github.com/bitrise-io/go-xcode/certificateutil

@@ -80,8 +80,7 @@ Will upload codesigning files automatically if provided. Requires the auth-token
 type Tool string
 
 const (
-	toolXcode   Tool = "Xcode"
-	toolXamarin Tool = "Visual Studio"
+	toolXcode Tool = "Xcode"
 )
 
 // ArchiveError ...

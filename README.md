@@ -10,11 +10,9 @@ your Xcode project.
 
 What this tool does:
 
-1. Gathers all information required to do a clean Xcode / Xamarin Studio Archive
-   of your project.
-1. Runs a clean Xcode / Xamarin Studio Archive on your project.
-1. From the generated xcarchive file it collects the Code Signing settings Xcode
-   / Xamarin Studio used during the Archive.
+1. Gathers all information required to do a clean Xcode Archive of your project.
+1. Runs a clean Xcode Archive on your project.
+1. From the generated `.xcarchive` file it collects the Code Signing settings Xcode used during the Archive.
 1. Prints the list of required code signing files.
 1. Optionally it can also search for, and export these files.
 
@@ -73,19 +71,6 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 </p>
 </details>
 
-
-#### Xamarin
-<details><summary>For Archiving & Exporting IPA for <code>Xamarin</code> project (solution):</summary>
-<p>
-
-```
-bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc/master/_scripts/install_wrap-xamarin.sh)"
-```
-</p>
-</details>
-
-----
-
 ### Manual install & run
 
 1. download the current release - it's a single, stand-alone binary
@@ -99,13 +84,12 @@ bash -l -c "$(curl -sfL https://raw.githubusercontent.com/bitrise-io/codesigndoc
    * if you followed the previous examples:
      * Xcode project scanner: `./codesigndoc scan xcode`
      * Xcode project scanner for UI test targets: `./codesigndoc scan xcodeuitests`
-     * Xamarin project scanner: `./codesigndoc scan xamarin`
 
 **Optional xcodebuild flags:**  
  
-`-sdk`: If a value is specified for this flag it'll be passed to xcodebuild as the value of the -sdk flag. For more info about the values please see xcodebuild's -sdk flag docs. Example value: iphoneos") 
+`-sdk`: If a value is specified for this flag it'll be passed to xcodebuild as the value of the `-sdk` flag. For more info about the values please see xcodebuild's `-sdk` flag docs. Example value: `iphoneos`") 
  
-`-destination`: The xcodebuild -destination option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`.  
+`-destination`: The xcodebuild `-destination` option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`.  
 
 
 ## Manually finding the required base code signing files for an Xcode project or workspace
