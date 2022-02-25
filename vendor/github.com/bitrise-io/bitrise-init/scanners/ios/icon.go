@@ -12,54 +12,29 @@ import (
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 )
 
-// lookupIconBySchemeName returns possible ios app icons for a scheme.
-func lookupIconBySchemeName(projectPath string, schemeName string, basepath string) (models.Icons, error) {
-	project, err := xcodeproj.Open(projectPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open project file: %s, error: %s", projectPath, err)
+func getMainTarget(project xcodeproj.XcodeProj, scheme xcscheme.Scheme) (xcodeproj.Target, error) {
+	entry, found := scheme.AppBuildActionEntry()
+	if !found {
+		return xcodeproj.Target{}, fmt.Errorf("scheme (%s) does not contain app buildable reference in project (%s)", scheme.Name, project.Path)
 	}
 
-	scheme, _, err := project.Scheme(schemeName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find scheme (%s) in project (%s), error: %s", schemeName, project.Path, err)
+	blueprintID := entry.BuildableReference.BlueprintIdentifier
+	mainTarget, found := project.Proj.Target(blueprintID)
+	if !found {
+		return xcodeproj.Target{}, fmt.Errorf("no target found for blueprint ID (%s) in project (%s)", blueprintID, project.Path)
 	}
 
-	blueprintID := getBlueprintID(*scheme)
-	if blueprintID == "" {
-		log.TDebugf("scheme (%s) does not contain app buildable reference in project (%s)", scheme.Name, project.Path)
+	return mainTarget, nil
+}
+
+func lookupIconByScheme(project xcodeproj.XcodeProj, scheme xcscheme.Scheme, basePath string) (models.Icons, error) {
+	mainTarget, err := getMainTarget(project, scheme)
+	if err != nil {
+		log.TDebugf("%s", err)
 		return nil, nil
 	}
 
-	// Search for the main target
-	mainTarget, found := targetByBlueprintID(project.Proj.Targets, blueprintID)
-	if !found {
-		return nil, fmt.Errorf("no target found for blueprint ID (%s) project (%s)", blueprintID, project.Path)
-	}
-
-	return lookupIconByTarget(projectPath, mainTarget, basepath)
-}
-
-// lookupIconByTargetName returns possible ios app icons for a target.
-func lookupIconByTargetName(projectPath string, targetName string, basepath string) (models.Icons, error) {
-	target, err := nameToTarget(projectPath, targetName)
-	if err != nil {
-		return nil, err
-	}
-
-	return lookupIconByTarget(projectPath, target, basepath)
-}
-
-func nameToTarget(projectPath string, targetName string) (xcodeproj.Target, error) {
-	project, err := xcodeproj.Open(projectPath)
-	if err != nil {
-		return xcodeproj.Target{}, fmt.Errorf("failed to open project file: %s, error: %s", projectPath, err)
-	}
-
-	target, found := targetByName(project, targetName)
-	if !found {
-		return xcodeproj.Target{}, fmt.Errorf("not found target: %s, in project: %s", targetName, projectPath)
-	}
-	return target, nil
+	return lookupIconByTarget(project.Path, mainTarget, basePath)
 }
 
 func lookupIconByTarget(projectPath string, target xcodeproj.Target, basepath string) (models.Icons, error) {
@@ -96,34 +71,4 @@ func lookupIconByTarget(projectPath string, target xcodeproj.Target, basepath st
 		return nil, err
 	}
 	return icons, nil
-}
-
-func getBlueprintID(scheme xcscheme.Scheme) string {
-	var blueprintID string
-	for _, entry := range scheme.BuildAction.BuildActionEntries {
-		if entry.BuildableReference.IsAppReference() {
-			blueprintID = entry.BuildableReference.BlueprintIdentifier
-			break
-		}
-	}
-	return blueprintID
-}
-
-func targetByBlueprintID(targets []xcodeproj.Target, blueprintID string) (xcodeproj.Target, bool) {
-	for _, target := range targets {
-		if target.ID == blueprintID {
-			return target, true
-		}
-	}
-	return xcodeproj.Target{}, false
-}
-
-func targetByName(proj xcodeproj.XcodeProj, target string) (xcodeproj.Target, bool) {
-	projTargets := proj.Proj.Targets
-	for _, t := range projTargets {
-		if t.Name == target {
-			return t, true
-		}
-	}
-	return xcodeproj.Target{}, false
 }

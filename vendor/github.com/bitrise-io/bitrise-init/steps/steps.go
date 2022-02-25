@@ -7,6 +7,12 @@ import (
 	stepmanModels "github.com/bitrise-io/stepman/models"
 )
 
+// PrepareListParams describes the default prepare Step options.
+type PrepareListParams struct {
+	ShouldIncludeCache       bool
+	ShouldIncludeActivateSSH bool
+}
+
 func stepIDComposite(ID, version string) string {
 	if version != "" {
 		return ID + "@" + version
@@ -33,8 +39,9 @@ func stepListItem(stepIDComposite, title, runIf string, inputs ...envmanModels.E
 
 // DefaultPrepareStepList ...
 func DefaultPrepareStepList(isIncludeCache bool) []bitriseModels.StepListItemModel {
+	runIfCondition := `{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}`
 	stepList := []bitriseModels.StepListItemModel{
-		ActivateSSHKeyStepListItem(),
+		ActivateSSHKeyStepListItem(runIfCondition),
 		GitCloneStepListItem(),
 	}
 
@@ -43,6 +50,23 @@ func DefaultPrepareStepList(isIncludeCache bool) []bitriseModels.StepListItemMod
 	}
 
 	return append(stepList, ScriptSteplistItem(ScriptDefaultTitle))
+}
+
+// DefaultPrepareStepListV2 ...
+func DefaultPrepareStepListV2(params PrepareListParams) []bitriseModels.StepListItemModel {
+	stepList := []bitriseModels.StepListItemModel{}
+
+	if params.ShouldIncludeActivateSSH {
+		stepList = append(stepList, ActivateSSHKeyStepListItem(""))
+	}
+
+	stepList = append(stepList, GitCloneStepListItem())
+
+	if params.ShouldIncludeCache {
+		stepList = append(stepList, CachePullStepListItem())
+	}
+
+	return stepList
 }
 
 // DefaultDeployStepList ...
@@ -58,11 +82,23 @@ func DefaultDeployStepList(isIncludeCache bool) []bitriseModels.StepListItemMode
 	return stepList
 }
 
+// DefaultDeployStepListV2 ...
+func DefaultDeployStepListV2(shouldIncludeCache bool) []bitriseModels.StepListItemModel {
+	stepList := []bitriseModels.StepListItemModel{}
+
+	if shouldIncludeCache {
+		stepList = append(stepList, CachePushStepListItem())
+	}
+
+	stepList = append(stepList, DeployToBitriseIoStepListItem())
+
+	return stepList
+}
+
 // ActivateSSHKeyStepListItem ...
-func ActivateSSHKeyStepListItem() bitriseModels.StepListItemModel {
+func ActivateSSHKeyStepListItem(runIfCondition string) bitriseModels.StepListItemModel {
 	stepIDComposite := stepIDComposite(ActivateSSHKeyID, ActivateSSHKeyVersion)
-	runIf := `{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}`
-	return stepListItem(stepIDComposite, "", runIf)
+	return stepListItem(stepIDComposite, "", runIfCondition)
 }
 
 // AndroidLintStepListItem ...
@@ -167,34 +203,15 @@ func XcodeArchiveStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitri
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
-// XcodeTestStepListItem ...
-func XcodeTestStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(XcodeTestID, XcodeTestVersion)
+// XcodeBuildForTestStepListItem ...
+func XcodeBuildForTestStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
+	stepIDComposite := stepIDComposite(XcodeBuildForTestID, XcodeBuildForTestVersion)
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
-// XamarinUserManagementStepListItem ...
-func XamarinUserManagementStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(XamarinUserManagementID, XamarinUserManagementVersion)
-	runIf := ".IsCI"
-	return stepListItem(stepIDComposite, "", runIf, inputs...)
-}
-
-// NugetRestoreStepListItem ...
-func NugetRestoreStepListItem() bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(NugetRestoreID, NugetRestoreVersion)
-	return stepListItem(stepIDComposite, "", "")
-}
-
-// XamarinComponentsRestoreStepListItem ...
-func XamarinComponentsRestoreStepListItem() bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(XamarinComponentsRestoreID, XamarinComponentsRestoreVersion)
-	return stepListItem(stepIDComposite, "", "")
-}
-
-// XamarinArchiveStepListItem ...
-func XamarinArchiveStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(XamarinArchiveID, XamarinArchiveVersion)
+// XcodeTestStepListItem ...
+func XcodeTestStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
+	stepIDComposite := stepIDComposite(XcodeTestID, XcodeTestVersion)
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
@@ -247,19 +264,42 @@ func KarmaJasmineTestRunnerStepListItem(inputs ...envmanModels.EnvironmentItemMo
 }
 
 // NpmStepListItem ...
-func NpmStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
+func NpmStepListItem(command, workdir string) bitriseModels.StepListItemModel {
+	var inputs []envmanModels.EnvironmentItemModel
+	if workdir != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"workdir": workdir})
+	}
+	if command != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"command": command})
+	}
+
 	stepIDComposite := stepIDComposite(NpmID, NpmVersion)
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
-// ExpoDetachStepListItem ...
-func ExpoDetachStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
-	stepIDComposite := stepIDComposite(ExpoDetachID, ExpoDetachVersion)
+// RunEASBuildStepListItem ...
+func RunEASBuildStepListItem(workdir, platform string) bitriseModels.StepListItemModel {
+	var inputs []envmanModels.EnvironmentItemModel
+	if platform != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"platform": platform})
+	}
+	if workdir != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"work_dir": workdir})
+	}
+	stepIDComposite := stepIDComposite(RunEASBuildID, RunEASBuildVersion)
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }
 
 // YarnStepListItem ...
-func YarnStepListItem(inputs ...envmanModels.EnvironmentItemModel) bitriseModels.StepListItemModel {
+func YarnStepListItem(command, workdir string) bitriseModels.StepListItemModel {
+	var inputs []envmanModels.EnvironmentItemModel
+	if workdir != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"workdir": workdir})
+	}
+	if command != "" {
+		inputs = append(inputs, envmanModels.EnvironmentItemModel{"command": command})
+	}
+
 	stepIDComposite := stepIDComposite(YarnID, YarnVersion)
 	return stepListItem(stepIDComposite, "", "", inputs...)
 }

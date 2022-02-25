@@ -13,7 +13,7 @@ import (
 	"github.com/bitrise-io/go-utils/pathutil"
 )
 
-func runRubyScriptForOutput(scriptContent, gemfileContent, inDir string, withEnvs []string) (string, error) {
+func runRubyScriptForOutput(scriptContent, gemfileContent string, withEnvs []string) (string, error) {
 	tmpDir, err := pathutil.NormalizedOSTempDirPath("__bitrise-init__")
 	if err != nil {
 		return "", err
@@ -32,10 +32,7 @@ func runRubyScriptForOutput(scriptContent, gemfileContent, inDir string, withEnv
 		}
 
 		cmd := command.New("bundle", "install")
-
-		if inDir != "" {
-			cmd.SetDir(inDir)
-		}
+		cmd.SetDir(tmpDir)
 
 		withEnvs = append(withEnvs, "BUNDLE_GEMFILE="+gemfilePth)
 		cmd.AppendEnvs(withEnvs...)
@@ -62,9 +59,9 @@ func runRubyScriptForOutput(scriptContent, gemfileContent, inDir string, withEnv
 		cmd = command.New("ruby", rubyScriptPth)
 	}
 
-	if inDir != "" {
-		cmd.SetDir(inDir)
-	}
+	// Set the temp dir as working dir, so the project defined `.ruby-version` does not cause ruby resolution to fail:
+	// [ ... ] ruby script failed, error: rbenv: version `2.7.4' is not installed (set by /[ ... ]/MyTestApp/.ruby-version)
+	cmd.SetDir(tmpDir)
 
 	if len(withEnvs) > 0 {
 		cmd.AppendEnvs(withEnvs...)

@@ -1,6 +1,6 @@
 # github.com/bitrise-io/bitrise v0.0.0-20210519130014-380842fb41c1
 github.com/bitrise-io/bitrise/models
-# github.com/bitrise-io/bitrise-init v0.0.0-20210520122036-d213de321eb8
+# github.com/bitrise-io/bitrise-init v0.0.0-20220223091922-37dca4521588
 ## explicit
 github.com/bitrise-io/bitrise-init/analytics
 github.com/bitrise-io/bitrise-init/models
@@ -12,7 +12,6 @@ github.com/bitrise-io/envman/models
 # github.com/bitrise-io/go-plist v0.0.0-20210301100253-4b1a112ccd10
 github.com/bitrise-io/go-plist
 # github.com/bitrise-io/go-steputils v1.0.1
-github.com/bitrise-io/go-steputils/command/rubyscript
 github.com/bitrise-io/go-steputils/step
 # github.com/bitrise-io/go-utils v1.0.1
 ## explicit
@@ -43,7 +42,6 @@ github.com/bitrise-io/go-xcode/profileutil
 github.com/bitrise-io/go-xcode/utility
 github.com/bitrise-io/go-xcode/xcarchive
 github.com/bitrise-io/go-xcode/xcodebuild
-github.com/bitrise-io/go-xcode/xcodeproj
 github.com/bitrise-io/go-xcode/xcodeproject/schemeint
 github.com/bitrise-io/go-xcode/xcodeproject/serialized
 github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj

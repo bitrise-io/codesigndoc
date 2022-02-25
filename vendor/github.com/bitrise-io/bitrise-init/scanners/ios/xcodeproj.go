@@ -2,8 +2,8 @@ package ios
 
 import (
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-utils/sliceutil"
 	"github.com/bitrise-io/go-xcode/pathfilters"
-	"github.com/bitrise-io/go-xcode/xcodeproj"
 )
 
 // XcodeProjectType ...
@@ -16,82 +16,68 @@ const (
 	XcodeProjectTypeMacOS XcodeProjectType = "macos"
 )
 
-// FindWorkspaceInList ...
-func FindWorkspaceInList(workspacePth string, workspaces []xcodeproj.WorkspaceModel) (xcodeproj.WorkspaceModel, bool) {
-	for _, workspace := range workspaces {
-		if workspace.Pth == workspacePth {
-			return workspace, true
+func findInList(path string, containers []container) (container, bool) {
+	for _, container := range containers {
+		if container.path() == path {
+			return container, true
 		}
 	}
-	return xcodeproj.WorkspaceModel{}, false
+	return nil, false
 }
 
-// FindProjectInList ...
-func FindProjectInList(projectPth string, projects []xcodeproj.ProjectModel) (xcodeproj.ProjectModel, bool) {
+func removeProjectFromList(projectPth string, projects []container) []container {
+	newProjects := []container{}
 	for _, project := range projects {
-		if project.Pth == projectPth {
-			return project, true
-		}
-	}
-	return xcodeproj.ProjectModel{}, false
-}
-
-// RemoveProjectFromList ...
-func RemoveProjectFromList(projectPth string, projects []xcodeproj.ProjectModel) []xcodeproj.ProjectModel {
-	newProjects := []xcodeproj.ProjectModel{}
-	for _, project := range projects {
-		if project.Pth != projectPth {
+		if project.path() != projectPth {
 			newProjects = append(newProjects, project)
 		}
 	}
 	return newProjects
 }
 
-// ReplaceWorkspaceInList ...
-func ReplaceWorkspaceInList(workspaces []xcodeproj.WorkspaceModel, workspace xcodeproj.WorkspaceModel) []xcodeproj.WorkspaceModel {
-	updatedWorkspaces := []xcodeproj.WorkspaceModel{}
-	for _, w := range workspaces {
-		if w.Pth == workspace.Pth {
-			updatedWorkspaces = append(updatedWorkspaces, workspace)
-		} else {
-			updatedWorkspaces = append(updatedWorkspaces, w)
-		}
-	}
-	return updatedWorkspaces
-}
+func createStandaloneProjectsAndWorkspaces(projectFiles, workspaceFiles []string) (containers, error) {
+	var (
+		workspaces         []container
+		standaloneProjects []container
+	)
 
-// CreateStandaloneProjectsAndWorkspaces ...
-func CreateStandaloneProjectsAndWorkspaces(projectFiles, workspaceFiles []string) ([]xcodeproj.ProjectModel, []xcodeproj.WorkspaceModel, error) {
-	workspaces := []xcodeproj.WorkspaceModel{}
 	for _, workspaceFile := range workspaceFiles {
-		workspace, err := xcodeproj.NewWorkspace(workspaceFile, projectFiles...)
+		workspace, err := newWorkspace(workspaceFile)
 		if err != nil {
-			return []xcodeproj.ProjectModel{}, []xcodeproj.WorkspaceModel{}, err
+			return containers{}, err
 		}
+
 		workspaces = append(workspaces, workspace)
 	}
 
-	standaloneProjects := []xcodeproj.ProjectModel{}
 	for _, projectFile := range projectFiles {
 		workspaceContains := false
 		for _, workspace := range workspaces {
-			_, found := FindProjectInList(projectFile, workspace.Projects)
-			if found {
+			workspaceProjectFiles, err := workspace.projectPaths()
+			if err != nil {
+				return containers{}, err
+			}
+
+			if found := sliceutil.IsStringInSlice(projectFile, workspaceProjectFiles); found {
 				workspaceContains = true
 				break
 			}
 		}
 
 		if !workspaceContains {
-			project, err := xcodeproj.NewProject(projectFile)
+			project, err := newProject(projectFile)
 			if err != nil {
-				return []xcodeproj.ProjectModel{}, []xcodeproj.WorkspaceModel{}, err
+				return containers{}, err
 			}
+
 			standaloneProjects = append(standaloneProjects, project)
 		}
 	}
 
-	return standaloneProjects, workspaces, nil
+	return containers{
+		standaloneProjects: standaloneProjects,
+		workspaces:         workspaces,
+	}, nil
 }
 
 // FilterRelevantProjectFiles ...

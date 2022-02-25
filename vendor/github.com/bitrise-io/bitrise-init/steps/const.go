@@ -25,7 +25,7 @@ const (
 	// AndroidBuildID ...
 	AndroidBuildID = "android-build"
 	// AndroidBuildVersion ...
-	AndroidBuildVersion = "0"
+	AndroidBuildVersion = "1"
 )
 
 const (
@@ -67,7 +67,7 @@ const (
 	// DeployToBitriseIoID ...
 	DeployToBitriseIoID = "deploy-to-bitrise-io"
 	// DeployToBitriseIoVersion ...
-	DeployToBitriseIoVersion = "1"
+	DeployToBitriseIoVersion = "2"
 )
 
 const (
@@ -90,7 +90,7 @@ const (
 	// InstallMissingAndroidToolsID ...
 	InstallMissingAndroidToolsID = "install-missing-android-tools"
 	// InstallMissingAndroidToolsVersion ...
-	InstallMissingAndroidToolsVersion = "2"
+	InstallMissingAndroidToolsVersion = "3"
 )
 
 const (
@@ -125,42 +125,21 @@ const (
 	// XcodeArchiveID ...
 	XcodeArchiveID = "xcode-archive"
 	// XcodeArchiveVersion ...
-	XcodeArchiveVersion = "3"
+	XcodeArchiveVersion = "4"
 )
 
 const (
 	// XcodeTestID ...
 	XcodeTestID = "xcode-test"
 	// XcodeTestVersion ...
-	XcodeTestVersion = "2"
+	XcodeTestVersion = "4"
 )
 
 const (
-	// XamarinUserManagementID ...
-	XamarinUserManagementID = "xamarin-user-management"
-	// XamarinUserManagementVersion ...
-	XamarinUserManagementVersion = "1"
-)
-
-const (
-	// NugetRestoreID ...
-	NugetRestoreID = "nuget-restore"
-	// NugetRestoreVersion ...
-	NugetRestoreVersion = "1"
-)
-
-const (
-	// XamarinComponentsRestoreID ...
-	XamarinComponentsRestoreID = "xamarin-components-restore"
-	// XamarinComponentsRestoreVersion ...
-	XamarinComponentsRestoreVersion = "0"
-)
-
-const (
-	// XamarinArchiveID ...
-	XamarinArchiveID = "xamarin-archive"
-	// XamarinArchiveVersion ...
-	XamarinArchiveVersion = "1"
+	// XcodeBuildForTestID ...
+	XcodeBuildForTestID = "xcode-build-for-test"
+	// XcodeBuildForTestVersion ...
+	XcodeBuildForTestVersion = "1"
 )
 
 const (
@@ -174,7 +153,7 @@ const (
 	// ExportXCArchiveID ...
 	ExportXCArchiveID = "export-xcarchive"
 	// ExportXCArchiveVersion ...
-	ExportXCArchiveVersion = "3"
+	ExportXCArchiveVersion = "4"
 )
 
 const (
@@ -188,7 +167,7 @@ const (
 	// CordovaArchiveID ...
 	CordovaArchiveID = "cordova-archive"
 	// CordovaArchiveVersion ...
-	CordovaArchiveVersion = "2"
+	CordovaArchiveVersion = "3"
 )
 
 const (
@@ -232,6 +211,16 @@ const (
 	// ExpoDetachVersion ...
 	ExpoDetachVersion = "1"
 )
+
+const (
+	// RunEASBuildID ...
+	RunEASBuildID = "run-eas-build"
+	// RunEASBuildVersion ...
+	RunEASBuildVersion = "0"
+)
+
+// RunEASBuildPlatforms ...
+var RunEASBuildPlatforms = []string{"all", "android", "ios"}
 
 const (
 	// YarnID ...
