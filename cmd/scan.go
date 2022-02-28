@@ -19,8 +19,8 @@ const (
 // scanCmd represents the scan command.
 var scanCmd = &cobra.Command{
 	Use:   "scan",
-	Short: "Scan a project's code signing settings",
-	Long: `Scan a project's code signing settings,
+	Short: "Scans the project's code signing settings",
+	Long: `Scan the project's code signing settings,
 and export the require code signing files.`,
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {

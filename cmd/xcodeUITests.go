@@ -21,7 +21,9 @@ import (
 
 var xcodeUITestsCmd = &cobra.Command{
 	Use:   "xcodeuitests",
-	Short: "for Xcode Build For Testing action",
+	Short: "Scans the project's code signing settings for Xcode Build For Testing action",
+	Long: `Scans the project's code signing settings for Xcode Build For Testing action
+and export the require code signing files.`,
 
 	SilenceUsage:  true,
 	SilenceErrors: true,

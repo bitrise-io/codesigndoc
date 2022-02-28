@@ -21,7 +21,9 @@ import (
 // xcodeCmd represents the xcode command.
 var xcodeCmd = &cobra.Command{
 	Use:   "xcode",
-	Short: "for Xcode Archive and IPA export actions",
+	Short: "Scans the project's code signing settings for Xcode Archive and IPA export actions",
+	Long: `Scans the project's code signing settings for Xcode Archive and IPA export actions
+and export the require code signing files.`,
 
 	SilenceUsage:  true,
 	SilenceErrors: true,
