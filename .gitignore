@@ -3,5 +3,5 @@ Identities.p12
 _bin
 codesigndoc_exports
 .gows.user.yml
-
 .DS_Store
+.idea/

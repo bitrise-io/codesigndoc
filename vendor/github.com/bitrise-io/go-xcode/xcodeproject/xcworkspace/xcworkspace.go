@@ -8,8 +8,8 @@ import (
 
 	"github.com/bitrise-io/go-utils/fileutil"
 	"github.com/bitrise-io/go-utils/pathutil"
+	"github.com/bitrise-io/go-xcode/xcodebuild"
 	"github.com/bitrise-io/go-xcode/xcodeproject/serialized"
-	"github.com/bitrise-io/go-xcode/xcodeproject/xcodebuild"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcodeproj"
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 	"golang.org/x/text/unicode/norm"
@@ -50,7 +50,11 @@ func (w Workspace) Scheme(name string) (*xcscheme.Scheme, string, error) {
 
 // SchemeBuildSettings ...
 func (w Workspace) SchemeBuildSettings(scheme, configuration string, customOptions ...string) (serialized.Object, error) {
-	return xcodebuild.ShowWorkspaceBuildSettings(w.Path, scheme, configuration, customOptions...)
+	commandModel := xcodebuild.NewShowBuildSettingsCommand(w.Path)
+	commandModel.SetScheme(scheme)
+	commandModel.SetConfiguration(configuration)
+	commandModel.SetCustomOptions(customOptions)
+	return commandModel.RunAndReturnSettings()
 }
 
 // Schemes ...

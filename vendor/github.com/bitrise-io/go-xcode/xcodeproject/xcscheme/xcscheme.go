@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/bitrise-io/go-utils/fileutil"
@@ -12,15 +13,20 @@ import (
 
 // BuildableReference ...
 type BuildableReference struct {
+	BuildableIdentifier string `xml:"BuildableIdentifier,attr"`
 	BlueprintIdentifier string `xml:"BlueprintIdentifier,attr"`
-	BlueprintName       string `xml:"BlueprintName,attr"`
 	BuildableName       string `xml:"BuildableName,attr"`
+	BlueprintName       string `xml:"BlueprintName,attr"`
 	ReferencedContainer string `xml:"ReferencedContainer,attr"`
 }
 
 // IsAppReference ...
 func (r BuildableReference) IsAppReference() bool {
 	return filepath.Ext(r.BuildableName) == ".app"
+}
+
+func (r BuildableReference) isTestProduct() bool {
+	return filepath.Ext(r.BuildableName) == ".xctest"
 }
 
 // ReferencedContainerAbsPath ...
@@ -32,19 +38,26 @@ func (r BuildableReference) ReferencedContainerAbsPath(schemeContainerDir string
 
 	base := s[1]
 	absPth := filepath.Join(schemeContainerDir, base)
+
 	return pathutil.AbsPath(absPth)
 }
 
 // BuildActionEntry ...
 type BuildActionEntry struct {
-	BuildForTesting    string `xml:"buildForTesting,attr"`
-	BuildForArchiving  string `xml:"buildForArchiving,attr"`
+	BuildForTesting   string `xml:"buildForTesting,attr"`
+	BuildForRunning   string `xml:"buildForRunning,attr"`
+	BuildForProfiling string `xml:"buildForProfiling,attr"`
+	BuildForArchiving string `xml:"buildForArchiving,attr"`
+	BuildForAnalyzing string `xml:"buildForAnalyzing,attr"`
+
 	BuildableReference BuildableReference
 }
 
 // BuildAction ...
 type BuildAction struct {
-	BuildActionEntries []BuildActionEntry `xml:"BuildActionEntries>BuildActionEntry"`
+	ParallelizeBuildables     string             `xml:"parallelizeBuildables,attr"`
+	BuildImplicitDependencies string             `xml:"buildImplicitDependencies,attr"`
+	BuildActionEntries        []BuildActionEntry `xml:"BuildActionEntries>BuildActionEntry"`
 }
 
 // TestableReference ...
@@ -53,25 +66,90 @@ type TestableReference struct {
 	BuildableReference BuildableReference
 }
 
+func (r TestableReference) isTestable() bool {
+	return r.Skipped == "NO" && r.BuildableReference.isTestProduct()
+}
+
+// MacroExpansion ...
+type MacroExpansion struct {
+	BuildableReference BuildableReference
+}
+
+// AdditionalOptions ...
+type AdditionalOptions struct {
+}
+
 // TestAction ...
 type TestAction struct {
-	Testables          []TestableReference `xml:"Testables>TestableReference"`
-	BuildConfiguration string              `xml:"buildConfiguration,attr"`
+	BuildConfiguration           string `xml:"buildConfiguration,attr"`
+	SelectedDebuggerIdentifier   string `xml:"selectedDebuggerIdentifier,attr"`
+	SelectedLauncherIdentifier   string `xml:"selectedLauncherIdentifier,attr"`
+	ShouldUseLaunchSchemeArgsEnv string `xml:"shouldUseLaunchSchemeArgsEnv,attr"`
+
+	Testables         []TestableReference `xml:"Testables>TestableReference"`
+	MacroExpansion    MacroExpansion
+	AdditionalOptions AdditionalOptions
+}
+
+// BuildableProductRunnable ...
+type BuildableProductRunnable struct {
+	RunnableDebuggingMode string `xml:"runnableDebuggingMode,attr"`
+	BuildableReference    BuildableReference
+}
+
+// LaunchAction ...
+type LaunchAction struct {
+	BuildConfiguration             string `xml:"buildConfiguration,attr"`
+	SelectedDebuggerIdentifier     string `xml:"selectedDebuggerIdentifier,attr"`
+	SelectedLauncherIdentifier     string `xml:"selectedLauncherIdentifier,attr"`
+	LaunchStyle                    string `xml:"launchStyle,attr"`
+	UseCustomWorkingDirectory      string `xml:"useCustomWorkingDirectory,attr"`
+	IgnoresPersistentStateOnLaunch string `xml:"ignoresPersistentStateOnLaunch,attr"`
+	DebugDocumentVersioning        string `xml:"debugDocumentVersioning,attr"`
+	DebugServiceExtension          string `xml:"debugServiceExtension,attr"`
+	AllowLocationSimulation        string `xml:"allowLocationSimulation,attr"`
+	BuildableProductRunnable       BuildableProductRunnable
+	AdditionalOptions              AdditionalOptions
+}
+
+// ProfileAction ...
+type ProfileAction struct {
+	BuildConfiguration           string `xml:"buildConfiguration,attr"`
+	ShouldUseLaunchSchemeArgsEnv string `xml:"shouldUseLaunchSchemeArgsEnv,attr"`
+	SavedToolIdentifier          string `xml:"savedToolIdentifier,attr"`
+	UseCustomWorkingDirectory    string `xml:"useCustomWorkingDirectory,attr"`
+	DebugDocumentVersioning      string `xml:"debugDocumentVersioning,attr"`
+	BuildableProductRunnable     BuildableProductRunnable
+}
+
+// AnalyzeAction ...
+type AnalyzeAction struct {
+	BuildConfiguration string `xml:"buildConfiguration,attr"`
 }
 
 // ArchiveAction ...
 type ArchiveAction struct {
-	BuildConfiguration string `xml:"buildConfiguration,attr"`
+	BuildConfiguration       string `xml:"buildConfiguration,attr"`
+	RevealArchiveInOrganizer string `xml:"revealArchiveInOrganizer,attr"`
 }
 
 // Scheme ...
 type Scheme struct {
-	BuildAction   BuildAction
-	ArchiveAction ArchiveAction
-	TestAction    TestAction
+	// The last known Xcode version.
+	LastUpgradeVersion string `xml:"LastUpgradeVersion,attr"`
+	// The version of `.xcscheme` files supported.
+	Version string `xml:"version,attr"`
 
-	Name string
-	Path string
+	BuildAction   BuildAction
+	TestAction    TestAction
+	LaunchAction  LaunchAction
+	ProfileAction ProfileAction
+	AnalyzeAction AnalyzeAction
+	ArchiveAction ArchiveAction
+
+	Name     string `xml:"-"`
+	Path     string `xml:"-"`
+	IsShared bool   `xml:"-"`
 }
 
 // Open ...
@@ -92,6 +170,58 @@ func Open(pth string) (Scheme, error) {
 	return scheme, nil
 }
 
+// XMLToken ...
+type XMLToken int
+
+const (
+	invalid XMLToken = iota
+	// XMLStart ...
+	XMLStart
+	// XMLEnd ...
+	XMLEnd
+	// XMLAttribute ...
+	XMLAttribute
+)
+
+// Marshal ...
+func (s Scheme) Marshal() ([]byte, error) {
+	contents, err := xml.Marshal(s)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal Scheme: %v", err)
+	}
+
+	contentsNewline := strings.ReplaceAll(string(contents), "><", ">\n<")
+
+	// Place XML Attributes on separate lines
+	re := regexp.MustCompile(`\s([^=<>/]*)\s?=\s?"([^=<>/]*)"`)
+	contentsNewline = re.ReplaceAllString(contentsNewline, "\n$1 = \"$2\"")
+
+	var contentsIndented string
+
+	indent := 0
+	for _, line := range strings.Split(contentsNewline, "\n") {
+		currentLine := XMLAttribute
+		if strings.HasPrefix(line, "</") {
+			currentLine = XMLEnd
+		} else if strings.HasPrefix(line, "<") {
+			currentLine = XMLStart
+		}
+
+		if currentLine == XMLEnd && indent != 0 {
+			indent--
+		}
+
+		contentsIndented += strings.Repeat("   ", indent)
+		contentsIndented += line + "\n"
+
+		if currentLine == XMLStart {
+			indent++
+		}
+	}
+
+	return []byte(xml.Header + contentsIndented), nil
+}
+
 // AppBuildActionEntry ...
 func (s Scheme) AppBuildActionEntry() (BuildActionEntry, bool) {
 	var entry BuildActionEntry
@@ -107,4 +237,15 @@ func (s Scheme) AppBuildActionEntry() (BuildActionEntry, bool) {
 	}
 
 	return entry, (entry.BuildableReference.BlueprintIdentifier != "")
+}
+
+// IsTestable returns true if Test is a valid action
+func (s Scheme) IsTestable() bool {
+	for _, testEntry := range s.TestAction.Testables {
+		if testEntry.isTestable() {
+			return true
+		}
+	}
+
+	return false
 }

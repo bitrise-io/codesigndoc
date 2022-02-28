@@ -4,7 +4,7 @@ import (
 	"github.com/bitrise-io/go-xcode/profileutil"
 )
 
-// FilterLatestProfiles renmoves older versions of the same profile
+// FilterLatestProfiles removes older versions of the same profile.
 func FilterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) []profileutil.ProvisioningProfileInfoModel {
 	profilesByBundleIDAndName := map[string][]profileutil.ProvisioningProfileInfoModel{}
 	for _, profile := range profiles {
@@ -19,7 +19,7 @@ func FilterLatestProfiles(profiles []profileutil.ProvisioningProfileInfoModel) [
 		profilesByBundleIDAndName[bundleIDAndName] = profs
 	}
 
-	filteredProfiles := []profileutil.ProvisioningProfileInfoModel{}
+	var filteredProfiles []profileutil.ProvisioningProfileInfoModel
 	for _, profiles := range profilesByBundleIDAndName {
 		var latestProfile *profileutil.ProvisioningProfileInfoModel
 		for _, profile := range profiles {

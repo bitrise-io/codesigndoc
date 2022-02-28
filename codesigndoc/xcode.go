@@ -12,7 +12,7 @@ import (
 	"github.com/bitrise-io/go-xcode/utility"
 )
 
-// BuildXcodeArchive builds an Xcode archive
+// BuildXcodeArchive builds an Xcode archive.
 func BuildXcodeArchive(xcodeCmd xcode.CommandModel, handleBuildLog func(string) error) (archivePath string, err error) {
 	// Output tools versions
 	xcodebuildVersion, err := utility.GetXcodeVersion()

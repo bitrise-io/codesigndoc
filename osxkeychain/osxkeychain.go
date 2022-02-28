@@ -84,13 +84,6 @@ func ReleaseRef(refItem C.CFTypeRef) {
 	C.CFRelease(refItem)
 }
 
-// ReleaseRefList ...
-func ReleaseRefList(refItems []C.CFTypeRef) {
-	for _, itm := range refItems {
-		ReleaseRef(itm)
-	}
-}
-
 // ReleaseIdentityWithRefList ...
 func ReleaseIdentityWithRefList(refItems []IdentityWithRefModel) {
 	for _, itm := range refItems {
@@ -109,7 +102,7 @@ func GetCertificateDataFromIdentityRef(identityRef C.CFTypeRef) (*x509.Certifica
 	var secCertificateRef C.SecCertificateRef
 	osStatusCode := C.SecIdentityCopyCertificate(secIdentityRef, &secCertificateRef)
 	if osStatusCode != C.errSecSuccess {
-		return nil, fmt.Errorf("Failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
+		return nil, fmt.Errorf("failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
 	}
 
 	certificateCFData := C.SecCertificateCopyData(secCertificateRef)
@@ -135,7 +128,7 @@ type IdentityWithRefModel struct {
 func FindAndValidateIdentity(identityLabel string) (*IdentityWithRefModel, error) {
 	foundIdentityRefs, err := FindIdentity(identityLabel)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to find Identity, error: %s", err)
+		return nil, fmt.Errorf("failed to find Identity, error: %s", err)
 	}
 	if len(foundIdentityRefs) < 1 {
 		return nil, nil
@@ -148,7 +141,7 @@ func FindAndValidateIdentity(identityLabel string) (*IdentityWithRefModel, error
 	for _, aIdentityRef := range foundIdentityRefs {
 		cert, err := GetCertificateDataFromIdentityRef(aIdentityRef.KeychainRef)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to read certificate data, error: %s", err)
+			return nil, fmt.Errorf("failed to read certificate data, error: %s", err)
 		}
 
 		if err := certificateutil.CheckValidity(*cert); err != nil {
@@ -180,19 +173,19 @@ func FindIdentity(identityLabel string) ([]IdentityWithRefModel, error) {
 	var resultRefs C.CFTypeRef
 	osStatusCode := C.SecItemCopyMatching((C.CFDictionaryRef)(queryDict), &resultRefs)
 	if osStatusCode != C.errSecSuccess {
-		return nil, fmt.Errorf("Failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
+		return nil, fmt.Errorf("failed to call SecItemCopyMatch - OSStatus: %d", osStatusCode)
 	}
 	defer C.CFRelease(C.CFTypeRef(resultRefs))
 
 	identitiesArrRef := C.CFArrayRef(resultRefs)
 	identitiesCount := C.CFArrayGetCount(identitiesArrRef)
 	if identitiesCount < 1 {
-		return nil, fmt.Errorf("No Identity (certificate + related private key) found in your Keychain")
+		return nil, fmt.Errorf("no Identity (certificate + related private key) found in your Keychain")
 	}
 	log.Debugf("identitiesCount: %d", identitiesCount)
 
 	// filter the identities, by label
-	retIdentityRefs := []IdentityWithRefModel{}
+	var retIdentityRefs []IdentityWithRefModel
 	for i := C.CFIndex(0); i < identitiesCount; i++ {
 		aIdentityRef := C.CFArrayGetValueAtIndex(identitiesArrRef, i)
 		log.Debugf("aIdentityRef: %#v", aIdentityRef)

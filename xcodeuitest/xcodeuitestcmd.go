@@ -47,7 +47,7 @@ type CommandModel struct {
 	Destination string
 }
 
-// RunBuildForTesting runs the build-for-tesing xcode command
+// RunBuildForTesting runs the build-for-testing xcode command.
 func (xcuitestcmd CommandModel) RunBuildForTesting() (string, string, error) {
 	xcoutput := ""
 	var err error
@@ -100,7 +100,7 @@ func (xcuitestcmd CommandModel) transformToXcodebuildParams(xcodebuildActionArgs
 	return append(baseArgs, xcodebuildActionArgs...), nil
 }
 
-// RunXcodebuildCommand TODO comment
+// RunXcodebuildCommand ...
 func (xcuitestcmd CommandModel) RunXcodebuildCommand(xcodebuildActionArgs ...string) (string, error) {
 	xcodeCmdParamsToRun, err := xcuitestcmd.transformToXcodebuildParams(xcodebuildActionArgs...)
 
@@ -125,7 +125,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 	if xcworkspace.IsWorkspace(xcuitestcmd.ProjectFilePath) {
 		workspace, err := xcworkspace.Open(xcuitestcmd.ProjectFilePath)
 		if err != nil {
-			return nil, nil, fmt.Errorf("Failed to open workspace (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
+			return nil, nil, fmt.Errorf("failed to open workspace (%s), error: %s", xcuitestcmd.ProjectFilePath, err)
 		}
 
 		schemesByContainer, err := workspace.Schemes()
@@ -133,7 +133,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 			return nil, nil, err
 		}
 
-		// Remove Cocoapod schemes
+		// Remove CocoaPods schemes
 		for container, containerSchemes := range schemesByContainer {
 			if strings.ToLower(path.Base(container)) != "pods.xcodeproj" {
 				schemes = append(schemes, containerSchemes...)
@@ -173,7 +173,7 @@ func (xcuitestcmd CommandModel) ScanSchemes() (schemes []xcscheme.Scheme, scheme
 	return
 }
 
-// Return true if the provided scheme has BuildActionEntry with BuildForTesting = YES and one of this entries has target with *ui-testing product type.
+// Return true if the provided scheme has BuildActionEntry with BuildForTesting = YES and one of these entries has a target with *ui-testing product type.
 func schemesHasUITest(scheme xcscheme.Scheme, proj xcodeproj.Proj) bool {
 	var testables []xcscheme.TestableReference
 

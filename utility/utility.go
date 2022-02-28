@@ -14,7 +14,7 @@ import (
 	"github.com/bitrise-io/go-xcode/xcodeproject/xcscheme"
 )
 
-// ProfileExportFileNameNoPath creates a file name for the given profile with pattern: uuid.escaped_profile_name.[mobileprovision|provisionprofile]
+// ProfileExportFileNameNoPath creates a file name for the given profile with pattern: uuid.escaped_profile_name.[mobileprovision|provisionprofile].
 func ProfileExportFileNameNoPath(info profileutil.ProvisioningProfileInfoModel) string {
 	replaceRexp, err := regexp.Compile("[^A-Za-z0-9_.-]")
 	if err != nil {
@@ -121,7 +121,7 @@ func getPlatform(buildSettings serialized.Object) (Platform, error) {
 	case strings.HasPrefix(sdk, "watchos"):
 		return watchOS, nil
 	default:
-		return "", fmt.Errorf("unkown SDKROOT: %s", sdk)
+		return "", fmt.Errorf("unknown SDKROOT: %s", sdk)
 	}
 }
 

@@ -19,13 +19,16 @@ type AppStoreOptionsModel struct {
 	// for app-store exports
 	UploadBitcode bool
 	UploadSymbols bool
+	// Should Xcode manage the app's build number when uploading to App Store Connect? Defaults to YES.
+	ManageAppVersion bool
 }
 
 // NewAppStoreOptions ...
 func NewAppStoreOptions() AppStoreOptionsModel {
 	return AppStoreOptionsModel{
-		UploadBitcode: UploadBitcodeDefault,
-		UploadSymbols: UploadSymbolsDefault,
+		UploadBitcode:    UploadBitcodeDefault,
+		UploadSymbols:    UploadSymbolsDefault,
+		ManageAppVersion: manageAppVersionDefault,
 	}
 }
 
@@ -41,6 +44,9 @@ func (options AppStoreOptionsModel) Hash() map[string]interface{} {
 	}
 	if options.UploadSymbols != UploadSymbolsDefault {
 		hash[UploadSymbolsKey] = options.UploadSymbols
+	}
+	if options.ManageAppVersion != manageAppVersionDefault {
+		hash[manageAppVersionKey] = options.ManageAppVersion
 	}
 	if options.ICloudContainerEnvironment != "" {
 		hash[ICloudContainerEnvironmentKey] = options.ICloudContainerEnvironment

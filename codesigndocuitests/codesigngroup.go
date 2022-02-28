@@ -13,12 +13,11 @@ import (
 	"github.com/bitrise-io/go-xcode/certificateutil"
 	"github.com/bitrise-io/go-xcode/export"
 	"github.com/bitrise-io/go-xcode/exportoptions"
-	"github.com/bitrise-io/go-xcode/plistutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
 	"github.com/bitrise-io/goinp/goinp"
 )
 
-// extractCertificatesAndProfiles returns the certificates and provisioning profiles of the given codesign group
+// extractCertificatesAndProfiles returns the certificates and provisioning profiles of the given codesign group.
 func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel) {
 	certificateMap := map[string]certificateutil.CertificateInfoModel{}
 	profilesMap := map[string]profileutil.ProvisioningProfileInfoModel{}
@@ -31,8 +30,8 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]c
 		}
 	}
 
-	certificates := []certificateutil.CertificateInfoModel{}
-	profiles := []profileutil.ProvisioningProfileInfoModel{}
+	var certificates []certificateutil.CertificateInfoModel
+	var profiles []profileutil.ProvisioningProfileInfoModel
 	for _, certificate := range certificateMap {
 		certificates = append(certificates, certificate)
 	}
@@ -42,7 +41,7 @@ func extractCertificatesAndProfiles(codeSignGroups ...export.CodeSignGroup) ([]c
 	return certificates, profiles
 }
 
-// codesignMethod returns which code sign method type is allowed by the given codesign group
+// codesignMethod returns which code sign method type is allowed by the given codesign group.
 func codesignMethod(group export.CodeSignGroup) string {
 	for _, profile := range group.BundleIDProfileMap() {
 		return string(profile.ExportType)
@@ -50,7 +49,7 @@ func codesignMethod(group export.CodeSignGroup) string {
 	return ""
 }
 
-// printCodesignGroup prints the given codesign group
+// printCodesignGroup prints the given codesign group.
 func printCodesignGroup(group export.CodeSignGroup) {
 	fmt.Printf("%s %s (%s)\n", colorstring.Green("development team:"), group.Certificate().TeamName, group.Certificate().TeamID)
 	fmt.Printf("%s %s [%s]\n", colorstring.Green("codesign identity:"), group.Certificate().CommonName, group.Certificate().Serial)
@@ -66,7 +65,7 @@ func printCodesignGroup(group export.CodeSignGroup) {
 	}
 }
 
-// collectExportCertificate returns the certificate to use for the UITest-Runner
+// collectExportCertificate returns the certificate to use for the UITest-Runner.
 func collectExportCertificate(installedCertificates []certificateutil.CertificateInfoModel) ([]certificateutil.CertificateInfoModel, error) {
 	var selectedCertificates []certificateutil.CertificateInfoModel
 
@@ -115,13 +114,11 @@ func selectFilteredCertificates(selectedCodeSignMethod, selectedTeam string, ins
 		})
 
 		log.Debugf("DeveloperDistribution certificates: %v\n", certsForSelectedCodeSign)
-		break
 	default:
 		certsForSelectedCodeSign = certificateutil.FilterCertificateInfoModelsByFilterFunc(installedCertificates, func(certInfo certificateutil.CertificateInfoModel) bool {
 			return codesign.IsDistributionCertificate(certInfo)
 		})
 		log.Debugf("Distribution certificates: %v\n", certsForSelectedCodeSign)
-		break
 	}
 
 	filteredCertificatesByTeam := codesign.MapCertificatesByTeam(certsForSelectedCodeSign)
@@ -132,10 +129,10 @@ func selectFilteredCertificates(selectedCodeSignMethod, selectedTeam string, ins
 		return nil, nil
 	}
 
-	// If we already selected a team, we can skip it. (e.g mac app-store export)
+	// If we already selected a team, we can skip it. (e.g. mac app-store export)
 	if selectedTeam == "" {
 		// Use different team for export than archive.
-		teams := []string{}
+		var teams []string
 		for team := range filteredCertificatesByTeam {
 			if hasCertificateForDistType(selectedCodeSignMethod, filteredCertificatesByTeam[team]) {
 				teams = append(teams, team)
@@ -151,7 +148,7 @@ func selectFilteredCertificates(selectedCodeSignMethod, selectedTeam string, ins
 
 	// Find the specific development certificate.
 	filteredTeamCertificates := filteredCertificatesByTeam[selectedTeam]
-	certificateOptions := []string{}
+	var certificateOptions []string
 
 	for _, certInfo := range filteredTeamCertificates {
 		certificateOption := fmt.Sprintf("%s [%s]", certInfo.CommonName, certInfo.Serial)
@@ -180,9 +177,9 @@ func selectFilteredCertificates(selectedCodeSignMethod, selectedTeam string, ins
 	return selectedCertificates, nil
 }
 
-// collectExportCodeSignGroups returns the codesigngroups required for the UITest target with the selected code signing methods
+// collectExportCodeSignGroups returns the codesign groups required for the UITest target with the selected code signing methods.
 func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) ([]export.CodeSignGroup, error) {
-	collectedCodeSignGroups := []export.CodeSignGroup{}
+	var collectedCodeSignGroups []export.CodeSignGroup
 
 	codeSignGroups := collectExportSelectableCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
@@ -194,7 +191,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 	log.Infof("Code signing for target with %s bundle ID", strings.TrimRight(testRunnerID, "-Runner"))
 
 	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
-	for true {
+	for {
 		selectedCodeSignMethod, err := goinp.SelectFromStringsWithDefault("Select the code signing method", 1, codeSignMethods)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read input: %s", err)
@@ -229,8 +226,8 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 		}
 
 		// Select certificate
-		certificates := []certificateutil.CertificateInfoModel{}
-		certificateOptions := []string{}
+		var certificates []certificateutil.CertificateInfoModel
+		var certificateOptions []string
 		for _, group := range filteredCodeSignGroups {
 			certificate := group.Certificate
 			certificates = append(certificates, certificate)
@@ -238,7 +235,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 			certificateOptions = append(certificateOptions, certificateOption)
 		}
 
-		selectedCertificateOption := ""
+		var selectedCertificateOption string
 		if len(certificateOptions) == 1 {
 			selectedCertificateOption = certificateOptions[0]
 
@@ -281,13 +278,13 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 		selectedBundleIDProfileMap := map[string]profileutil.ProvisioningProfileInfoModel{}
 		for bundleID, profiles := range bundleIDProfilesMap {
 			profiles = codesign.FilterLatestProfiles(profiles)
-			profileOptions := []string{}
+			var profileOptions []string
 			for _, profile := range profiles {
 				profileOption := fmt.Sprintf("%s (%s)", profile.Name, profile.UUID)
 				profileOptions = append(profileOptions, profileOption)
 			}
 
-			selectedProfileOption := ""
+			var selectedProfileOption string
 			if len(profileOptions) == 1 {
 				selectedProfileOption = profileOptions[0]
 
@@ -314,9 +311,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 			return nil, fmt.Errorf("failed to find Provisioning Profiles for UITest target signing")
 		}
 
-		var collectedCodeSignGroup export.CodeSignGroup
-
-		collectedCodeSignGroup = export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
+		collectedCodeSignGroup := export.NewIOSGroup(*selectedCertificate, selectedBundleIDProfileMap)
 
 		fmt.Println()
 		log.Infof("Codesign settings will be used for %s method:", codesignMethod(collectedCodeSignGroup))
@@ -339,13 +334,12 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 	return collectedCodeSignGroups, nil
 }
 
-// collectExportSelectableCodeSignGroups returns every possible codesigngroup which can be used to sign the UITest-Runner
+// collectExportSelectableCodeSignGroups returns every possible codesign group which can be used to sign the UITest-Runner.
 func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel) []export.SelectableCodeSignGroup {
-	bundleIDEntitlemenstMap := map[string]plistutil.PlistData{}
-	bundleIDEntitlemenstMap = testRunner.BundleIDEntitlementsMap()
+	bundleIDEEntitlementsMap := testRunner.BundleIDEntitlementsMap()
 
-	bundleIDs := []string{}
-	for bundleID := range bundleIDEntitlemenstMap {
+	var bundleIDs []string
+	for bundleID := range bundleIDEEntitlementsMap {
 		bundleIDs = append(bundleIDs, bundleID)
 	}
 	codeSignGroups := export.CreateSelectableCodeSignGroups(installedCertificates, installedProfiles, bundleIDs)
@@ -360,7 +354,7 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 	}
 
 	codeSignGroups = export.FilterSelectableCodeSignGroups(codeSignGroups,
-		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEntitlemenstMap),
+		export.CreateEntitlementsSelectableCodeSignGroupFilter(bundleIDEEntitlementsMap),
 	)
 
 	fmt.Println()
@@ -393,8 +387,8 @@ func collectExportSelectableCodeSignGroups(testRunner IOSTestRunner, installedCe
 	return codeSignGroups
 }
 
-// hasCertificateForDistType returns true if the provided certificate list has certificate for the selected cert type.
-// If isDistCert == true it will search for Distribution Certificates. If it's == false it will search for Developmenttion Certificates.
+// hasCertificateForDistType returns true if the provided certificate list has certificates for the selected cert type.
+// If isDistCert == true it will search for Distribution Certificates. If it's == false it will search for Development Certificates.
 // If the team doesn't have any certificate for the selected cert type, it will return false.
 func hasCertificateForDistType(exportMethod string, certificates []certificateutil.CertificateInfoModel) bool {
 	if exportMethod == "development" {

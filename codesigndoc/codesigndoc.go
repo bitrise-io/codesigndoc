@@ -20,7 +20,7 @@ const collectCodesigningFilesInfo = `To collect available code sign files, we se
 `
 
 // CollectCodesignFiles collects the codesigning files required to create an xcode archive
-// and filers them for the specified export method
+// and filers them for the specified export method.
 func CollectCodesignFiles(archivePath string, certificatesOnly bool) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 	// Find out the XcArchive type
 	isMacOs, err := xcarchive.IsMacOS(archivePath)
@@ -78,24 +78,24 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 
 	var certificate certificateutil.CertificateInfoModel
 	var archive Archive
-	var achiveCodeSignGroup export.CodeSignGroup
+	var archiveCodeSignGroup export.CodeSignGroup
 
 	if macOS {
-		archive, achiveCodeSignGroup, err = getMacOSCodeSignGroup(archivePath, installedCertificates)
+		archive, archiveCodeSignGroup, err = getMacOSCodeSignGroup(archivePath, installedCertificates)
 		if err != nil {
 			return nil, nil, err
 		}
-		certificate = achiveCodeSignGroup.Certificate()
+		certificate = archiveCodeSignGroup.Certificate()
 	} else {
-		archive, achiveCodeSignGroup, err = getIOSCodeSignGroup(archivePath, installedCertificates)
+		archive, archiveCodeSignGroup, err = getIOSCodeSignGroup(archivePath, installedCertificates)
 		if err != nil {
 			return nil, nil, err
 		}
-		certificate = achiveCodeSignGroup.Certificate()
+		certificate = archiveCodeSignGroup.Certificate()
 	}
 
-	certificatesToExport := []certificateutil.CertificateInfoModel{}
-	profilesToExport := []profileutil.ProvisioningProfileInfoModel{}
+	var certificatesToExport []certificateutil.CertificateInfoModel
+	var profilesToExport []profileutil.ProvisioningProfileInfoModel
 
 	if certificatesOnly {
 		exportCertificate, err := collectExportCertificate(macOS, certificate, installedCertificates, installedInstallerCertificates)
@@ -106,7 +106,7 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 		certificatesToExport = append(certificatesToExport, certificate)
 		certificatesToExport = append(certificatesToExport, exportCertificate...)
 	} else {
-		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(archive, certificate, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, achiveCodeSignGroup)
+		certificatesToExport, profilesToExport, err = collectCertificatesAndProfiles(archive, installedCertificates, installedProfiles, certificatesToExport, profilesToExport, archiveCodeSignGroup)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -115,10 +115,10 @@ func getFilesToExport(archivePath string, installedCertificates []certificateuti
 	return certificatesToExport, profilesToExport, nil
 }
 
-func collectCertificatesAndProfiles(archive Archive, certificate certificateutil.CertificateInfoModel,
+func collectCertificatesAndProfiles(archive Archive,
 	installedCertificates []certificateutil.CertificateInfoModel, installedProfiles []profileutil.ProvisioningProfileInfoModel,
 	certificatesToExport []certificateutil.CertificateInfoModel, profilesToExport []profileutil.ProvisioningProfileInfoModel,
-	achiveCodeSignGroup export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
+	archiveCodeSignGroup export.CodeSignGroup) ([]certificateutil.CertificateInfoModel, []profileutil.ProvisioningProfileInfoModel, error) {
 
 	_, macOS := archive.(xcarchive.MacosArchive)
 
@@ -146,7 +146,7 @@ func collectCertificatesAndProfiles(archive Archive, certificate certificateutil
 		return nil, nil, errors.New("no export code sign groups collected")
 	}
 
-	codeSignGroups := append(exportCodeSignGroups, achiveCodeSignGroup)
+	codeSignGroups := append(exportCodeSignGroups, archiveCodeSignGroup)
 	certificates, profiles := extractCertificatesAndProfiles(codeSignGroups...)
 	certificatesToExport = append(certificatesToExport, certificates...)
 	profilesToExport = append(profilesToExport, profiles...)

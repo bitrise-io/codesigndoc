@@ -12,17 +12,14 @@ var (
 	enableVerboseLog = false
 )
 
-// RootCmd represents the base command when called without any subcommands
+// RootCmd represents the base command when called without any subcommands.
 var RootCmd = &cobra.Command{
 	Use:   "codesigndoc",
 	Short: "Your friendly iOS Code Signing Doctor",
 	Long: `Your friendly iOS Code Signing Doctor
 
-Using this tool is as easy as running "codesigndoc scan xcode/xamarin" and following the guide it prints.
-
-At the end of the process you'll have all the code signing files
-(.p12 Identity file including the Certificate and Private Key,
-and the required Provisioning Profiles) required to do a successful Archive of your iOS project.`,
+codesigndoc collects all the code signing files required for
+Xcode Archive and IPA export or Xcode Build For Testing action.`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		log.SetEnableDebugLog(enableVerboseLog)

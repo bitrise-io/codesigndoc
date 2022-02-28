@@ -1,16 +1,17 @@
 package xcarchive
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/bitrise-io/go-utils/pathutil"
 	"github.com/bitrise-io/go-xcode/plistutil"
 	"github.com/bitrise-io/go-xcode/profileutil"
-	"github.com/bitrise-io/go-xcode/utility"
 )
 
-type iosBaseApplication struct {
+// IosBaseApplication ...
+type IosBaseApplication struct {
 	Path                string
 	InfoPlist           plistutil.PlistData
 	Entitlements        plistutil.PlistData
@@ -18,23 +19,24 @@ type iosBaseApplication struct {
 }
 
 // BundleIdentifier ...
-func (app iosBaseApplication) BundleIdentifier() string {
+func (app IosBaseApplication) BundleIdentifier() string {
 	bundleID, _ := app.InfoPlist.GetString("CFBundleIdentifier")
 	return bundleID
 }
 
-func newIosBaseApplication(path string) (iosBaseApplication, error) {
+// NewIosBaseApplication ...
+func NewIosBaseApplication(path string) (IosBaseApplication, error) {
 	infoPlist := plistutil.PlistData{}
 	{
 		infoPlistPath := filepath.Join(path, "Info.plist")
 		if exist, err := pathutil.IsPathExists(infoPlistPath); err != nil {
-			return iosBaseApplication{}, fmt.Errorf("failed to check if Info.plist exists at: %s, error: %s", infoPlistPath, err)
+			return IosBaseApplication{}, fmt.Errorf("failed to check if Info.plist exists at: %s, error: %s", infoPlistPath, err)
 		} else if !exist {
-			return iosBaseApplication{}, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
+			return IosBaseApplication{}, fmt.Errorf("Info.plist not exists at: %s", infoPlistPath)
 		}
 		plist, err := plistutil.NewPlistDataFromFile(infoPlistPath)
 		if err != nil {
-			return iosBaseApplication{}, err
+			return IosBaseApplication{}, err
 		}
 		infoPlist = plist
 	}
@@ -43,33 +45,25 @@ func newIosBaseApplication(path string) (iosBaseApplication, error) {
 	{
 		provisioningProfilePath := filepath.Join(path, "embedded.mobileprovision")
 		if exist, err := pathutil.IsPathExists(provisioningProfilePath); err != nil {
-			return iosBaseApplication{}, fmt.Errorf("failed to check if profile exists at: %s, error: %s", provisioningProfilePath, err)
+			return IosBaseApplication{}, fmt.Errorf("failed to check if profile exists at: %s, error: %s", provisioningProfilePath, err)
 		} else if !exist {
-			return iosBaseApplication{}, fmt.Errorf("profile not exists at: %s", provisioningProfilePath)
+			return IosBaseApplication{}, fmt.Errorf("profile not exists at: %s", provisioningProfilePath)
 		}
 
 		profile, err := profileutil.NewProvisioningProfileInfoFromFile(provisioningProfilePath)
 		if err != nil {
-			return iosBaseApplication{}, err
+			return IosBaseApplication{}, err
 		}
 		provisioningProfile = profile
 	}
 
-	entitlements := plistutil.PlistData{}
-	{
-		entitlementsPath := filepath.Join(path, "archived-expanded-entitlements.xcent")
-		if exist, err := pathutil.IsPathExists(entitlementsPath); err != nil {
-			return iosBaseApplication{}, fmt.Errorf("failed to check if entitlements exists at: %s, error: %s", entitlementsPath, err)
-		} else if exist {
-			plist, err := plistutil.NewPlistDataFromFile(entitlementsPath)
-			if err != nil {
-				return iosBaseApplication{}, err
-			}
-			entitlements = plist
-		}
+	executable := executableNameFromInfoPlist(infoPlist)
+	entitlements, err := getEntitlements(path, executable)
+	if err != nil {
+		return IosBaseApplication{}, err
 	}
 
-	return iosBaseApplication{
+	return IosBaseApplication{
 		Path:                path,
 		InfoPlist:           infoPlist,
 		Entitlements:        entitlements,
@@ -79,12 +73,12 @@ func newIosBaseApplication(path string) (iosBaseApplication, error) {
 
 // IosExtension ...
 type IosExtension struct {
-	iosBaseApplication
+	IosBaseApplication
 }
 
 // NewIosExtension ...
 func NewIosExtension(path string) (IosExtension, error) {
-	baseApp, err := newIosBaseApplication(path)
+	baseApp, err := NewIosBaseApplication(path)
 	if err != nil {
 		return IosExtension{}, err
 	}
@@ -96,24 +90,24 @@ func NewIosExtension(path string) (IosExtension, error) {
 
 // IosWatchApplication ...
 type IosWatchApplication struct {
-	iosBaseApplication
+	IosBaseApplication
 	Extensions []IosExtension
 }
 
 // IosClipApplication ...
 type IosClipApplication struct {
-	iosBaseApplication
+	IosBaseApplication
 }
 
 // NewIosWatchApplication ...
 func NewIosWatchApplication(path string) (IosWatchApplication, error) {
-	baseApp, err := newIosBaseApplication(path)
+	baseApp, err := NewIosBaseApplication(path)
 	if err != nil {
 		return IosWatchApplication{}, err
 	}
 
 	extensions := []IosExtension{}
-	pattern := filepath.Join(utility.EscapeGlobPath(path), "PlugIns/*.appex")
+	pattern := filepath.Join(pathutil.EscapeGlobPath(path), "PlugIns/*.appex")
 	pths, err := filepath.Glob(pattern)
 	if err != nil {
 		return IosWatchApplication{}, fmt.Errorf("failed to search for watch application's extensions using pattern: %s, error: %s", pattern, err)
@@ -128,26 +122,26 @@ func NewIosWatchApplication(path string) (IosWatchApplication, error) {
 	}
 
 	return IosWatchApplication{
-		iosBaseApplication: baseApp,
+		IosBaseApplication: baseApp,
 		Extensions:         extensions,
 	}, nil
 }
 
 // NewIosClipApplication ...
 func NewIosClipApplication(path string) (IosClipApplication, error) {
-	baseApp, err := newIosBaseApplication(path)
+	baseApp, err := NewIosBaseApplication(path)
 	if err != nil {
 		return IosClipApplication{}, err
 	}
 
 	return IosClipApplication{
-		iosBaseApplication: baseApp,
+		IosBaseApplication: baseApp,
 	}, nil
 }
 
 // IosApplication ...
 type IosApplication struct {
-	iosBaseApplication
+	IosBaseApplication
 	WatchApplication *IosWatchApplication
 	ClipApplication  *IosClipApplication
 	Extensions       []IosExtension
@@ -155,14 +149,14 @@ type IosApplication struct {
 
 // NewIosApplication ...
 func NewIosApplication(path string) (IosApplication, error) {
-	baseApp, err := newIosBaseApplication(path)
+	baseApp, err := NewIosBaseApplication(path)
 	if err != nil {
 		return IosApplication{}, err
 	}
 
 	var watchApp *IosWatchApplication
 	{
-		pattern := filepath.Join(utility.EscapeGlobPath(path), "Watch/*.app")
+		pattern := filepath.Join(pathutil.EscapeGlobPath(path), "Watch/*.app")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return IosApplication{}, err
@@ -179,7 +173,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 
 	var clipApp *IosClipApplication
 	{
-		pattern := filepath.Join(utility.EscapeGlobPath(path), "AppClips/*.app")
+		pattern := filepath.Join(pathutil.EscapeGlobPath(path), "AppClips/*.app")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return IosApplication{}, err
@@ -196,7 +190,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 
 	extensions := []IosExtension{}
 	{
-		pattern := filepath.Join(utility.EscapeGlobPath(path), "PlugIns/*.appex")
+		pattern := filepath.Join(pathutil.EscapeGlobPath(path), "PlugIns/*.appex")
 		pths, err := filepath.Glob(pattern)
 		if err != nil {
 			return IosApplication{}, fmt.Errorf("failed to search for watch application's extensions using pattern: %s, error: %s", pattern, err)
@@ -212,7 +206,7 @@ func NewIosApplication(path string) (IosApplication, error) {
 	}
 
 	return IosApplication{
-		iosBaseApplication: baseApp,
+		IosBaseApplication: baseApp,
 		WatchApplication:   watchApp,
 		ClipApplication:    clipApp,
 		Extensions:         extensions,
@@ -282,7 +276,7 @@ func applicationFromPlist(InfoPlist plistutil.PlistData) (string, bool) {
 }
 
 func applicationFromArchive(path string) (string, error) {
-	pattern := filepath.Join(utility.EscapeGlobPath(path), "Products/Applications/*.app")
+	pattern := filepath.Join(pathutil.EscapeGlobPath(path), "Products/Applications/*.app")
 	pths, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", err
@@ -378,4 +372,13 @@ func (archive IosArchive) BundleIDProfileInfoMap() map[string]profileutil.Provis
 // FindDSYMs ...
 func (archive IosArchive) FindDSYMs() ([]string, []string, error) {
 	return findDSYMs(archive.Path)
+}
+
+// TeamID ...
+func (archive IosArchive) TeamID() (string, error) {
+	bundleIDProfileInfoMap := archive.BundleIDProfileInfoMap()
+	for _, profileInfo := range bundleIDProfileInfoMap {
+		return profileInfo.TeamID, nil
+	}
+	return "", errors.New("team id not found")
 }
