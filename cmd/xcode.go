@@ -23,7 +23,7 @@ var xcodeCmd = &cobra.Command{
 	Use:   "xcode",
 	Short: "Scans the project's code signing settings for Xcode Archive and IPA export actions",
 	Long: `Scans the project's code signing settings for Xcode Archive and IPA export actions
-and export the require code signing files.`,
+and exports the required code signing files.`,
 
 	SilenceUsage:  true,
 	SilenceErrors: true,

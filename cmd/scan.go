@@ -20,8 +20,8 @@ const (
 var scanCmd = &cobra.Command{
 	Use:   "scan",
 	Short: "Scans the project's code signing settings",
-	Long: `Scan the project's code signing settings,
-and export the require code signing files.`,
+	Long: `Scans the project's code signing settings,
+and exports the required code signing files.`,
 	TraverseChildren: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		switch cmd.Flag(writeFilesFlag).Value.String() {
