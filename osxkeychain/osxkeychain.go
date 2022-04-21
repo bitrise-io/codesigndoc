@@ -11,8 +11,8 @@ import (
 )
 
 /*
-#cgo arm64 amd64 CFLAGS: -mmacosx-version-min=10.7 -D__MAC_OS_X_VERSION_MAX_ALLOWED=1060
-#cgo arm64 amd64 LDFLAGS: -framework CoreFoundation -framework Security
+#cgo CFLAGS: -mmacosx-version-min=10.7 -D__MAC_OS_X_VERSION_MAX_ALLOWED=1060
+#cgo LDFLAGS: -framework CoreFoundation -framework Security
 #include <stdlib.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
