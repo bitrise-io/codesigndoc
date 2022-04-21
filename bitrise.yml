@@ -29,6 +29,7 @@ workflows:
             export GOARCH=amd64
             export OS=Linux
             export GOOS=linux
+            export CGO_ENABLED=0
             go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
 
   update-wrapper-versions:
