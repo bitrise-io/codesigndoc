@@ -8,6 +8,27 @@ workflows:
     - golint:
     - errcheck:
     - go-test:
+    - script:
+        title: Test cgo config by building all possible binaries
+        inputs:
+        - content: |-
+            set -ex
+            
+            export ARCH=x86_64
+            export GOARCH=amd64
+            export GOOS=darwin
+            export OS=Darwin
+            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
+            
+            export ARCH=arm64
+            export GOARCH=arm64
+            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
+            
+            export ARCH=x86_64
+            export GOARCH=amd64
+            export OS=Linux
+            export GOOS=linux
+            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
 
   update-wrapper-versions:
     steps:
