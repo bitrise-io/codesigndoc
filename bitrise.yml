@@ -8,6 +8,23 @@ workflows:
     - golint:
     - errcheck:
     - go-test:
+    - script:
+        title: Test cgo config by building all possible binaries
+        inputs:
+        - content: |-
+            set -ex
+            
+            export ARCH=x86_64
+            export GOARCH=amd64
+            export GOOS=darwin
+            export OS=Darwin
+            export CGO_ENABLED=1 # needed for cross-compilation of C code in `osxkeychain` package
+            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
+            
+            export ARCH=arm64
+            export GOARCH=arm64
+            export CGO_ENABLED=1 # needed for cross-compilation of C code in `osxkeychain` package
+            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
 
   update-wrapper-versions:
     steps:
