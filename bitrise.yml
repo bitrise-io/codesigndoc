@@ -23,7 +23,6 @@ workflows:
             
             export ARCH=arm64
             export GOARCH=arm64
-            export CGO_ENABLED=1
             export CGO_ENABLED=1 # needed for cross-compilation of C code in `osxkeychain` package
             go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
 
