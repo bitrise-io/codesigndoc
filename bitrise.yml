@@ -1,32 +1,32 @@
-format_version: 7
+format_version: "11"
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 workflows:
-  test:  
+  test:
     steps:
-    - go-list:
-    - golint:
-    - errcheck:
-    - go-test:
+    - go-list: { }
+    - golint: { }
+    - errcheck: { }
+    - go-test: { }
+
+  create-release:
+    description: Creates Darwin binaries, then publishes a GitHub release
+    envs:
+    - GITHUB_TOKEN: $GIT_BOT_USER_ACCESS_TOKEN # Goreleaser expects this env var
+    steps:
     - script:
-        title: Test cgo config by building all possible binaries
+        title: Goreleaser (create binaries + publish to GH)
+        deps:
+          brew:
+          - name: goreleaser
         inputs:
-        - content: |-
+        - content: |
+            #!/usr/bin/env bash
             set -ex
-            
-            export ARCH=x86_64
-            export GOARCH=amd64
-            export GOOS=darwin
-            export OS=Darwin
-            export CGO_ENABLED=1 # needed for cross-compilation of C code in `osxkeychain` package
-            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
-            
-            export ARCH=arm64
-            export GOARCH=arm64
-            export CGO_ENABLED=1 # needed for cross-compilation of C code in `osxkeychain` package
-            go build -o "$BITRISE_DEPLOY_DIR/codesigndoc-$OS-$ARCH"
+            goreleaser release
 
   update-wrapper-versions:
+    description: Updates the versions in scripts (see README)
     steps:
     - script:
         title: Creating release install_wrap
@@ -35,3 +35,17 @@ workflows:
             cd ./_scripts
             go run update_wrapper_versions.go
             cd -
+
+  test-binary-build:
+    description: Tests the release build process by creating a snapshot release (without publishing)
+    steps:
+    - script:
+        title: Goreleaser (create snapshot binaries)
+        deps:
+          brew:
+          - name: goreleaser
+        inputs:
+        - content: |
+            #!/usr/bin/env bash
+            set -ex
+            goreleaser release --snapshot --rm-dist
