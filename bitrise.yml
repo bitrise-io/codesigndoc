@@ -25,6 +25,17 @@ workflows:
             set -ex
             goreleaser release
 
+  update-wrapper-versions:
+    description: Updates the versions in scripts (see README)
+    steps:
+    - script:
+        title: Creating release install_wrap
+        inputs:
+        - content: |-
+            cd ./_scripts
+            go run update_wrapper_versions.go
+            cd -
+
   test-binary-build:
     description: Tests the release build process by creating a snapshot release (without publishing)
     steps:
