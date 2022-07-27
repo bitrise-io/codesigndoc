@@ -5,3 +5,5 @@ codesigndoc_exports
 .gows.user.yml
 .DS_Store
 .idea/
+
+dist/
