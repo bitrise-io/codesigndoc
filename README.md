@@ -84,9 +84,9 @@ If the UITest scanner cannot find the desired scheme, follow these steps:
 
 **Optional xcodebuild flags:**  
  
-`-sdk`: If a value is specified for this flag it'll be passed to xcodebuild as the value of the `-sdk` flag. For more info about the values please see xcodebuild's `-sdk` flag docs. Example value: `iphoneos`") 
+`--xcodebuild-sdk`: If a value is specified for this flag it'll be passed to xcodebuild as the value of the `-sdk` flag. For more info about the values please see xcodebuild's `-sdk` flag docs. Example: `--xcodebuild-sdk iphoneos`
  
-`-destination`: The xcodebuild `-destination` option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`.  
+`--xcodebuild-destination`: The xcodebuild `-destination` option takes as its argument a destination specifier describing the device (or devices) to use as a destination i.e `generic/platform=iOS`.  
 
 
 ## Manually finding the required base code signing files for an Xcode project or workspace
