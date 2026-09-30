@@ -187,7 +187,7 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 		}
 	}
 
-	log.Debugf("Request body: %s", string(b.Bytes()))
+	log.Debugf("Request body: %s", b.String())
 
 	req, err := http.NewRequest(requestMethod, url, bytes.NewReader(b.Bytes()))
 	if err != nil {

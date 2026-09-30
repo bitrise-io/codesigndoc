@@ -261,7 +261,7 @@ func collectExportCodeSignGroups(archive Archive, installedCertificates []certif
 
 	codeSignGroups := collectExportSelectableCodeSignGroups(archive, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
-		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo)
+		return nil, errors.New(strings.TrimSpace("no code sign files (Codesign Identities and Provisioning Profiles) are installed to export an ipa\n" + collectCodesigningFilesInfo))
 	}
 
 	exportMethods := []string{"development", "app-store"}

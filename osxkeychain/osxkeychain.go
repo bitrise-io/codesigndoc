@@ -67,7 +67,7 @@ func ExportFromKeychain(itemRefsToExport []C.CFTypeRef, isAskForPassword bool) (
 	defer C.CFRelease(C.CFTypeRef(exportedData))
 
 	dataBytes := convertCFDataRefToGoBytes(exportedData)
-	if dataBytes == nil || len(dataBytes) < 1 {
+	if len(dataBytes) < 1 {
 		return nil, errors.New("ExportFromKeychain: failed to convert export data - nil or empty")
 	}
 	log.Debugf("Export - success")
@@ -277,7 +277,7 @@ func getCFDictValueUTF8String(dict C.CFDictionaryRef, key C.CFTypeRef) (string, 
 	log.Debugf("strLen: %d", strLen)
 	charUTF8Len := C.CFStringGetMaximumSizeForEncoding(strLen, C.kCFStringEncodingUTF8) + 1
 	log.Debugf("charUTF8Len: %d", charUTF8Len)
-	cstrBytes := make([]byte, charUTF8Len, charUTF8Len)
+	cstrBytes := make([]byte, charUTF8Len)
 	if C.Boolean(0) == C.CFStringGetCString(valCFStringRef, (*C.char)(unsafe.Pointer(&cstrBytes[0])), charUTF8Len, C.kCFStringEncodingUTF8) {
 		return "", errors.New("getCFDictValueUTF8String: CFStringGetCString: failed to convert value to string")
 	}
