@@ -188,7 +188,7 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 
 	testRunnerID, _ := testRunner.InfoPlist.GetString("CFBundleIdentifier")
 	fmt.Println()
-	log.Infof("Code signing for target with %s bundle ID", strings.TrimRight(testRunnerID, "-Runner"))
+	log.Infof("Code signing for target with %s bundle ID", strings.TrimSuffix(testRunnerID, "-Runner"))
 
 	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
 	for {

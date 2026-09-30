@@ -207,8 +207,8 @@ func performRequest(bitriseClient *Client, request *http.Request) (body []byte, 
 
 	// The client must close the response body when finished with it
 	defer func() {
-		if cerr := response.Body.Close(); err != nil {
-			cerr = fmt.Errorf("Failed to close response body, error: %s", cerr)
+		if cerr := response.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body, error: %s", cerr)
 		}
 	}()
 
