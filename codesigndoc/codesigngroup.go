@@ -518,42 +518,51 @@ func hasCertificateForDistType(exportMethod string, certificates []certificateut
 	}
 }
 
+// codeSignGroupForArchive resolves the code sign group for an already-parsed
+// archive. The per-platform helpers below differ only in the archive type they
+// build and the concrete group type they expect back.
+func codeSignGroupForArchive(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, isMacArchive bool) (export.CodeSignGroup, error) {
+	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, isMacArchive)
+	if err != nil {
+		return nil, fmt.Errorf("failed to analyze archive, error: %s", err)
+	}
+	return codeSignGroup, nil
+}
+
 func getIOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.IosArchive, *export.IosCodeSignGroup, error) {
 	archive, err := xcarchive.NewIosArchive(archivePath)
 	if err != nil {
-		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.IosArchive{}, nil, fmt.Errorf("failed to analyze archive, error: %s", err)
 	}
 
-	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, false)
+	group, err := codeSignGroupForArchive(archive, installedCertificates, false)
 	if err != nil {
-		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.IosArchive{}, nil, err
 	}
 
-	archiveCodeSignGroup, ok := codeSignGroup.(*export.IosCodeSignGroup)
+	iosGroup, ok := group.(*export.IosCodeSignGroup)
 	if !ok {
-		return xcarchive.IosArchive{}, &export.IosCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.IosArchive{}, nil, fmt.Errorf("unexpected code sign group type: %T", group)
 	}
-
-	return archive, archiveCodeSignGroup, nil
+	return archive, iosGroup, nil
 }
 
 func getMacOSCodeSignGroup(archivePath string, installedCertificates []certificateutil.CertificateInfoModel) (xcarchive.MacosArchive, *export.MacCodeSignGroup, error) {
 	archive, err := xcarchive.NewMacosArchive(archivePath)
 	if err != nil {
-		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.MacosArchive{}, nil, fmt.Errorf("failed to analyze archive, error: %s", err)
 	}
 
-	codeSignGroup, err := getCodeSignGroup(archive, installedCertificates, true)
+	group, err := codeSignGroupForArchive(archive, installedCertificates, true)
 	if err != nil {
-		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.MacosArchive{}, nil, err
 	}
 
-	archiveCodeSignGroup, ok := codeSignGroup.(*export.MacCodeSignGroup)
+	macGroup, ok := group.(*export.MacCodeSignGroup)
 	if !ok {
-		return xcarchive.MacosArchive{}, &export.MacCodeSignGroup{}, fmt.Errorf("failed to analyze archive, error: %s", err)
+		return xcarchive.MacosArchive{}, nil, fmt.Errorf("unexpected code sign group type: %T", group)
 	}
-
-	return archive, archiveCodeSignGroup, nil
+	return archive, macGroup, nil
 }
 
 func getCodeSignGroup(archive Archive, installedCertificates []certificateutil.CertificateInfoModel, isMacArchive bool) (export.CodeSignGroup, error) {
