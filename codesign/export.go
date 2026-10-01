@@ -3,7 +3,6 @@ package codesign
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -132,7 +131,7 @@ func writeFiles(identities models.Certificates, provisioningProfiles []models.Pr
 		return fmt.Errorf("failed to create output directory for codesigning files, error: %s", err)
 	}
 
-	entries, err := ioutil.ReadDir(writeFilesConfig.AbsOutputDirPath)
+	entries, err := os.ReadDir(writeFilesConfig.AbsOutputDirPath)
 	if err != nil && err != os.ErrNotExist {
 		return fmt.Errorf("failed to check output directory contents, error: %s", err)
 	}
@@ -222,7 +221,7 @@ func exportIdentities(certificates []certificateutil.CertificateInfoModel, isAsk
 
 // writeIdentities writes identities to a file path.
 func writeIdentities(identities []byte, absExportOutputDirPath string) error {
-	return ioutil.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identities, 0600)
+	return os.WriteFile(filepath.Join(absExportOutputDirPath, "Identities.p12"), identities, 0600)
 }
 
 // exportProvisioningProfiles returns provisioning profiles.
@@ -253,7 +252,7 @@ func exportProvisioningProfiles(profiles []profileutil.ProvisioningProfileInfoMo
 			return nil, fmt.Errorf("failed to parse exported profile, error: %s", err)
 		}
 
-		contents, err := ioutil.ReadFile(pth)
+		contents, err := os.ReadFile(pth)
 		if err != nil {
 			return nil, fmt.Errorf("could not read provisioning profile file, error: %s", err)
 		}
@@ -271,7 +270,7 @@ func writeProvisioningProfiles(profiles []models.ProvisioningProfile, absExportO
 	for _, profile := range profiles {
 		exportFileName := utility.ProfileExportFileNameNoPath(profile.Info)
 		exportPth := filepath.Join(absExportOutputDirPath, exportFileName)
-		if err := ioutil.WriteFile(exportPth, profile.Content, 0600); err != nil {
+		if err := os.WriteFile(exportPth, profile.Content, 0600); err != nil {
 			return fmt.Errorf("failed to write file, error: %s", err)
 		}
 	}

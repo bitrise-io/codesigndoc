@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -212,7 +211,7 @@ func performRequest(bitriseClient *Client, request *http.Request) (body []byte, 
 		}
 	}()
 
-	body, err = ioutil.ReadAll(response.Body)
+	body, err = io.ReadAll(response.Body)
 	if err != nil {
 		return []byte{}, response.StatusCode, fmt.Errorf("failed to read response body, error: %s", err)
 	}
