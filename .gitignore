@@ -7,3 +7,4 @@ codesigndoc_exports
 .idea/
 
 dist/
+/bin

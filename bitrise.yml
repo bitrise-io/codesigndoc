@@ -1,13 +1,35 @@
-format_version: "11"
+format_version: "13"
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 
 workflows:
   test:
     steps:
-    - go-list: { }
-    - golint: { }
-    - errcheck: { }
-    - go-test: { }
+    - script@1:
+        title: yamlfmt
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -eo pipefail
+            set -x
+            go run github.com/google/yamlfmt/cmd/yamlfmt@v0.21.0 -lint -conf .ymlfmt -match_type doublestar -exclude "_tmp/**,.bitrise.secrets.yml,.git/**,.github/**,vendor/**" '**/*.yml'
+    - script@1:
+        title: golangci-lint
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -eo pipefail
+            set -x
+            curl -sSfL https://golangci-lint.run/install.sh | sh -s v2.13.2
+            ./bin/golangci-lint run --timeout 5m --color always --config .golangci.yml
+    - script@1:
+        title: go build & test
+        inputs:
+        - content: |-
+            #!/bin/env bash
+            set -exo pipefail
+
+            go build ./...
+            go test -v ./...
 
   create-release:
     description: Creates Darwin binaries, then publishes a GitHub release
@@ -45,7 +67,7 @@ workflows:
           brew:
           - name: goreleaser
         inputs:
-        - content: |
+        - content: |-
             #!/usr/bin/env bash
             set -ex
             goreleaser release --snapshot --rm-dist
