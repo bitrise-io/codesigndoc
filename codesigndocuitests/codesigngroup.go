@@ -183,12 +183,12 @@ func collectExportCodeSignGroups(testRunner IOSTestRunner, installedCertificates
 
 	codeSignGroups := collectExportSelectableCodeSignGroups(testRunner, installedCertificates, installedProfiles)
 	if len(codeSignGroups) == 0 {
-		return nil, errors.New("no code sign files (Codesign Identities and Provisioning Profiles) are installed to sing the UITest target\n" + collectCodesigningFilesInfo)
+		return nil, errors.New(strings.TrimSpace("no code sign files (Codesign Identities and Provisioning Profiles) are installed to sing the UITest target\n" + collectCodesigningFilesInfo))
 	}
 
 	testRunnerID, _ := testRunner.InfoPlist.GetString("CFBundleIdentifier")
 	fmt.Println()
-	log.Infof("Code signing for target with %s bundle ID", strings.TrimRight(testRunnerID, "-Runner"))
+	log.Infof("Code signing for target with %s bundle ID", strings.TrimSuffix(testRunnerID, "-Runner"))
 
 	codeSignMethods := []string{"development", "app-store", "ad-hoc", "enterprise"}
 	for {

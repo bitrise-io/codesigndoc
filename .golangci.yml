@@ -1,0 +1,30 @@
+version: "2"
+
+linters:
+  enable:
+  - revive
+  - unparam
+  - dupl
+
+  settings:
+    revive:
+      rules:
+      - name: empty-block
+        disabled: true
+    dupl:
+      threshold: 110
+
+  exclusions:
+    presets:
+    - comments
+    - common-false-positives
+    - legacy
+    - std-error-handling
+
+    rules:
+    - linters:
+      - staticcheck
+      text: QF1003 # https://staticcheck.dev/docs/checks#QF1003
+    - path: _test\.go$
+      linters:
+      - dupl

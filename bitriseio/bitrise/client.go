@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -187,7 +186,7 @@ func createRequest(requestMethod string, url string, headers map[string]string, 
 		}
 	}
 
-	log.Debugf("Request body: %s", string(b.Bytes()))
+	log.Debugf("Request body: %s", b.String())
 
 	req, err := http.NewRequest(requestMethod, url, bytes.NewReader(b.Bytes()))
 	if err != nil {
@@ -207,12 +206,12 @@ func performRequest(bitriseClient *Client, request *http.Request) (body []byte, 
 
 	// The client must close the response body when finished with it
 	defer func() {
-		if cerr := response.Body.Close(); err != nil {
-			cerr = fmt.Errorf("Failed to close response body, error: %s", cerr)
+		if cerr := response.Body.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close response body, error: %s", cerr)
 		}
 	}()
 
-	body, err = ioutil.ReadAll(response.Body)
+	body, err = io.ReadAll(response.Body)
 	if err != nil {
 		return []byte{}, response.StatusCode, fmt.Errorf("failed to read response body, error: %s", err)
 	}
